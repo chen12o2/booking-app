@@ -18,11 +18,11 @@
   --line:#DCD0B4;
   --ink:#26221B;
   --ink-soft:#6B6356;
-  --stamp:#B23A2E;
-  --stamp-dark:#8C2C22;
-  --ledger:#3B5D50;
-  --ledger-dark:#2B4740;
-  --gold:#B8862E;
+  --stamp:#BF8B3D;
+  --stamp-dark:#8F6420;
+  --ledger:#7A5C2E;
+  --ledger-dark:#5C4720;
+  --gold:#C9A15A;
   --white:#FFFDF8;
   --shadow: 0 8px 24px rgba(38,34,27,0.10);
   --radius: 14px;
@@ -1991,7 +1991,7 @@ function drawPoster(){
   for(let y=10; y<h; y+=14){ for(let x=10; x<w; x+=14){ ctx.beginPath(); ctx.arc(x,y,1.2,0,Math.PI*2); ctx.fill(); } }
 
   // header band
-  ctx.fillStyle = '#3B5D50';
+  ctx.fillStyle = '#7A5C2E';
   ctx.fillRect(0,0,w,190);
 
   // seal circle
@@ -2029,7 +2029,7 @@ function drawPoster(){
   ctx.font = '700 20px "Noto Serif TC", serif';
   ctx.fillText('營業時間', 40, y);
   ctx.font = '400 22px "Space Mono", monospace';
-  ctx.fillStyle = '#2B4740';
+  ctx.fillStyle = '#5C4720';
   y += 34;
   ctx.fillText(String(BUSINESS.openHour).padStart(2,'0')+':00 – '+String(BUSINESS.closeHour).padStart(2,'0')+':00', 40, y);
   ctx.font = '400 15px "Noto Sans TC", sans-serif';
@@ -2048,7 +2048,7 @@ function drawPoster(){
     ctx.fillStyle = '#26221B';
     ctx.fillText(s.icon+'  '+s.name, 40, y);
     ctx.font = '700 17px "Space Mono", monospace';
-    ctx.fillStyle = '#B23A2E';
+    ctx.fillStyle = '#8F6420';
     ctx.textAlign = 'right';
     ctx.fillText('$'+s.price, w-40, y);
     ctx.textAlign = 'left';
@@ -2067,7 +2067,7 @@ function drawPoster(){
 
   ctx.textAlign = 'right';
   ctx.font = '700 13px "Space Mono", monospace';
-  ctx.fillStyle = '#B8862E';
+  ctx.fillStyle = '#C9A15A';
   ctx.fillText('掃描或搜尋店名立即預約', w-40, h-30);
   ctx.textAlign = 'left';
 }
