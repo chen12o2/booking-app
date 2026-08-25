@@ -1160,13 +1160,23 @@ function statusClass(s){
 function renderConfirmTicket(b){
   document.getElementById('confirmTicket').innerHTML = ticketHtml(b, true);
 }
+function bookingServices(b){
+  if(b.services && b.services.length) return b.services;
+  if(b.service) return [b.service];
+  return [];
+}
+function bookingTotal(b){
+  return bookingServices(b).reduce((sum,s)=>sum+(s.price||0),0);
+}
 function ticketHtml(b, big){
   let perfCircles = '';
   for(let i=0;i<10;i++){ perfCircles += '<div class="circle"></div>'; }
+  const svcs = bookingServices(b);
+  const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '（服務已刪除）';
   return `
     <div class="ticket-head">
       <div class="tk-eyebrow">${big? 'BOOKING CONFIRMED' : 'E-TICKET'}</div>
-      <h2>${b.service.name}</h2>
+      <h2>${svcLabel}</h2>
       <div class="tk-sub">${BUSINESS.name}</div>
       ${big? '<div class="stamp-seal">已<br>確認</div>' : ''}
     </div>
@@ -1180,7 +1190,7 @@ function ticketHtml(b, big){
       <div class="ticket-row"><span class="lbl">時間</span><span class="val">${b.time}</span></div>
       <div class="ticket-row"><span class="lbl">服務人員</span><span class="val">${b.staff.name}</span></div>
       <div class="ticket-row"><span class="lbl">預約人</span><span class="val">${b.customer.name}</span></div>
-      <div class="ticket-row"><span class="lbl">費用</span><span class="val">$${b.service.price}</span></div>
+      <div class="ticket-row"><span class="lbl">費用</span><span class="val">$${bookingTotal(b)}</span></div>
       <div class="ticket-row"><span class="lbl">狀態</span><span class="val"><span class="status-pill ${statusClass(b.status)}">${statusLabel(b.status)}</span></span></div>
       <div class="ticket-code mono">${b.code}</div>
     </div>
@@ -1268,17 +1278,20 @@ function renderAbout(){
    ICS / SHARE / TOAST
    ============================================================ */
 function downloadIcs(b){
+  const svcs = bookingServices(b);
+  const totalDuration = svcs.reduce((sum,s)=>sum+(s.duration||30),0) || 30;
+  const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '（服務已刪除）';
   const [y,m,d] = b.date.split('-').map(Number);
   const [hh,mm] = b.time.split(':').map(Number);
   const start = new Date(y,m-1,d,hh,mm);
-  const end = new Date(start.getTime() + b.service.duration*60000);
+  const end = new Date(start.getTime() + totalDuration*60000);
   const fmt = dt => dt.getFullYear()+String(dt.getMonth()+1).padStart(2,'0')+String(dt.getDate()).padStart(2,'0')+'T'+String(dt.getHours()).padStart(2,'0')+String(dt.getMinutes()).padStart(2,'0')+'00';
   const ics = [
     'BEGIN:VCALENDAR','VERSION:2.0','BEGIN:VEVENT',
     'UID:'+b.code+'@booking',
     'DTSTART:'+fmt(start),
     'DTEND:'+fmt(end),
-    'SUMMARY:'+b.service.name+' - '+BUSINESS.name,
+    'SUMMARY:'+svcLabel+' - '+BUSINESS.name,
     'DESCRIPTION:預約編號 '+b.code,
     'END:VEVENT','END:VCALENDAR'
   ].join('\r\n');
@@ -1291,7 +1304,9 @@ function downloadIcs(b){
   showToast('行事曆檔案已下載');
 }
 function shareBooking(b){
-  const text = `【${BUSINESS.name}】預約成功\n服務：${b.service.name}\n時間：${b.date} ${b.time}\n預約編號：${b.code}`;
+  const svcs = bookingServices(b);
+  const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '（服務已刪除）';
+  const text = `【${BUSINESS.name}】預約成功\n服務：${svcLabel}\n時間：${b.date} ${b.time}\n預約編號：${b.code}`;
   if(navigator.share){
     navigator.share({ title:'預約資訊', text }).catch(()=>{});
   } else {

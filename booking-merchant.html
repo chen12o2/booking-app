@@ -173,6 +173,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .status-upcoming{ background:#EAF2EC; color:var(--ledger-dark); }
 .status-done{ background:#EFEAE0; color:var(--ink-soft); }
 .status-cancelled{ background:#F7E5E1; color:var(--stamp-dark); }
+.status-noshow{ background:#F7E5E1; color:var(--stamp-dark); }
 
 .empty-state{ text-align:center; padding:60px 20px; color:var(--ink-soft); }
 .empty-state .ic{ font-size:38px; margin-bottom:10px; }
@@ -199,6 +200,40 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .detail-row .val{ font-weight:700; text-align:right; }
 .sheet-actions{ display:flex; gap:10px; margin-top:16px; }
 .sheet-actions .btn{ flex:1; padding:12px 8px; font-size:13px; }
+
+/* 預約詳情卡片（客戶頭像 + 服務明細） */
+.bkt-code{ font-family:'Space Mono',monospace; font-size:12px; color:var(--ink-soft); margin-bottom:10px; }
+.bkt-header{ display:flex; gap:14px; margin-bottom:16px; }
+.bkt-avatar{
+  width:52px; height:52px; border-radius:50%; flex-shrink:0; background:var(--paper-2);
+  display:flex; align-items:center; justify-content:center; font-family:'Noto Serif TC',serif;
+  font-weight:700; font-size:19px; color:var(--gold);
+}
+.bkt-who h4{ margin:0 0 4px; font-size:16px; font-weight:700; }
+.bkt-who .ln{ font-size:12.5px; color:var(--ink-soft); line-height:1.6; }
+.bkt-service-card{ background:var(--white); border:1.5px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:14px; }
+.bkt-svc-row{ display:flex; justify-content:space-between; font-size:13.5px; margin-bottom:4px; }
+.bkt-svc-row .nm{ font-weight:700; }
+.bkt-svc-row .tm{ font-size:11.5px; color:var(--ink-soft); }
+.bkt-total{ display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--line); margin-top:10px; padding-top:10px; }
+.bkt-total .lbl{ font-size:13px; font-weight:700; }
+.bkt-total .amt{ font-family:'Space Mono',monospace; font-weight:700; color:var(--stamp-dark); font-size:16px; }
+.bkt-link-row{ text-align:center; margin-top:14px; }
+.bkt-link-row a{ font-size:12.5px; color:var(--ledger-dark); text-decoration:underline; cursor:pointer; }
+.bkt-danger-row{ text-align:center; margin-top:10px; }
+.bkt-danger-row a{ font-size:12.5px; color:var(--stamp-dark); text-decoration:underline; cursor:pointer; }
+.btn-noshow{ background:transparent; border:1.5px solid var(--stamp); color:var(--stamp-dark); }
+.btn-success{ background:var(--ledger); color:var(--white); }
+.item-check-row{
+  display:flex; align-items:center; gap:12px; padding:12px 14px; border:1.5px solid var(--line);
+  border-radius:10px; margin-bottom:8px; cursor:pointer; background:var(--white);
+}
+.item-check-row.checked{ border-color:var(--ledger); background:#F4F8F5; }
+.item-check-row input{ width:18px; height:18px; flex-shrink:0; accent-color:var(--ledger); }
+.item-check-row .icr-body{ flex:1; font-size:13.5px; }
+.item-check-row .icr-body .nm{ font-weight:700; }
+.item-check-row .icr-body .mt{ font-size:11.5px; color:var(--ink-soft); }
+.item-check-row .icr-price{ font-family:'Space Mono',monospace; font-size:13px; font-weight:700; color:var(--stamp-dark); }
 .sheet-close{ position:absolute; top:16px; right:18px; width:30px; height:30px; border-radius:50%; background:var(--paper-2); display:flex; align-items:center; justify-content:center; cursor:pointer; }
 
 /* ---- CRUD cards (services / staff) ---- */
@@ -362,6 +397,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
           <div class="filter-chip active" data-status="all" onclick="setStatusFilter('all')">全部</div>
           <div class="filter-chip" data-status="upcoming" onclick="setStatusFilter('upcoming')">即將到來</div>
           <div class="filter-chip" data-status="done" onclick="setStatusFilter('done')">已完成</div>
+          <div class="filter-chip" data-status="noshow" onclick="setStatusFilter('noshow')">未到</div>
           <div class="filter-chip" data-status="cancelled" onclick="setStatusFilter('cancelled')">已取消</div>
         </div>
         <div class="field" style="margin-bottom:14px;">
@@ -470,6 +506,21 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
       <div class="sheet-handle"></div>
       <h3>預約詳情</h3>
       <div id="bookingDetailBody"></div>
+    </div>
+  </div>
+
+  <!-- ============ EDIT ITEMS SHEET ============ -->
+  <div class="sheet-backdrop" id="editItemsSheetBackdrop" onclick="if(event.target===this)closeEditItems()">
+    <div class="sheet" style="position:relative;">
+      <div class="sheet-close" onclick="closeEditItems()">✕</div>
+      <div class="sheet-handle"></div>
+      <h3>編輯項目</h3>
+      <div class="field-hint" id="editItemsWho" style="margin-bottom:14px;"></div>
+      <div class="field-hint" style="margin-bottom:8px; font-weight:700; color:var(--ink);">服務（可複選）</div>
+      <div id="editItemsList"></div>
+      <div class="sheet-actions">
+        <button class="btn btn-primary" style="width:100%;" onclick="saveEditItems()">儲存</button>
+      </div>
     </div>
   </div>
 
@@ -916,8 +967,19 @@ function goScreen(id, opts={}){
 function fmtDateKey(d){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
-function statusLabel(s){ return { upcoming:'即將到來', done:'已完成', cancelled:'已取消' }[s] || s; }
-function statusClass(s){ return { upcoming:'status-upcoming', done:'status-done', cancelled:'status-cancelled' }[s] || ''; }
+function statusLabel(s){ return { upcoming:'即將到來', done:'已完成', cancelled:'已取消', noshow:'未到' }[s] || s; }
+function statusClass(s){ return { upcoming:'status-upcoming', done:'status-done', cancelled:'status-cancelled', noshow:'status-noshow' }[s] || ''; }
+/* 一筆預約可能只有單一 service（舊資料／顧客頁建立），
+   也可能有多個 services（商家後台「編輯項目」後），統一用這兩個
+   輔助函式取得完整清單與總金額 */
+function bookingServices(b){
+  if(b.services && b.services.length) return b.services;
+  if(b.service) return [b.service];
+  return [];
+}
+function bookingTotal(b){
+  return bookingServices(b).reduce((sum,s)=>sum+(s.price||0),0);
+}
 
 function renderDashboard(){
   document.getElementById('dashBizName').textContent = BUSINESS.name;
@@ -934,7 +996,7 @@ function renderDashboard(){
     const bd = new Date(y,m-1,d);
     return bd>=today && bd<weekEnd && b.status!=='cancelled';
   }).length;
-  const revenue = all.filter(b=>b.status==='done').reduce((sum,b)=>sum+(b.service?b.service.price:0),0);
+  const revenue = all.filter(b=>b.status==='done').reduce((sum,b)=>sum+bookingTotal(b),0);
 
   document.getElementById('statToday').textContent = todayCount;
   document.getElementById('statWeek').textContent = weekCount;
@@ -959,11 +1021,13 @@ function setStatusFilter(s){
   renderBookingsList();
 }
 function bookingCardHtml(b){
+  const svcs = bookingServices(b);
+  const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '（服務已刪除）';
   return `
     <div class="bk-card" onclick="openBookingSheet('${b.id}')">
       <div class="bk-top">
         <div>
-          <h3>${b.service ? b.service.name : '（服務已刪除）'}</h3>
+          <h3>${svcLabel}</h3>
           <div class="sub">${b.customer.name} · ${b.customer.phone}</div>
         </div>
         <span class="status-pill ${statusClass(b.status)}">${statusLabel(b.status)}</span>
@@ -971,7 +1035,7 @@ function bookingCardHtml(b){
       <div class="bk-meta">
         <span>📅 <b>${b.date} ${b.time}</b></span>
         <span>👤 <b>${b.staff ? b.staff.name : '—'}</b></span>
-        <span>$<b>${b.service ? b.service.price : 0}</b></span>
+        <span>$<b>${bookingTotal(b)}</b></span>
       </div>
     </div>`;
 }
@@ -1236,43 +1300,213 @@ async function saveManualBooking(){
   }
 }
 
+function visitCount(b){
+  const key = b.customerId;
+  if(key){ return loadBookings().filter(x=>x.customerId===key).length; }
+  return loadBookings().filter(x=>x.customer && x.customer.phone===b.customer.phone).length;
+}
 function openBookingSheet(id){
   const b = loadBookings().find(x=>x.id===id);
   if(!b) return;
   const body = document.getElementById('bookingDetailBody');
+  const age = b.customer.birthday ? calcAge(b.customer.birthday) : null;
+  const svcs = bookingServices(b);
   body.innerHTML = `
-    <div class="detail-row"><span class="lbl">服務項目</span><span class="val">${b.service ? b.service.name : '—'}</span></div>
-    <div class="detail-row"><span class="lbl">服務人員</span><span class="val">${b.staff ? b.staff.name : '—'}</span></div>
-    <div class="detail-row"><span class="lbl">日期時間</span><span class="val">${b.date} ${b.time}</span></div>
-    <div class="detail-row"><span class="lbl">預約人</span><span class="val">${b.customer.name}</span></div>
-    <div class="detail-row"><span class="lbl">手機號碼</span><span class="val">${b.customer.phone}</span></div>
-    ${b.customer.lineId ? `<div class="detail-row"><span class="lbl">LINE ID</span><span class="val">${b.customer.lineId}</span></div>` : ''}
-    ${b.customer.birthday ? `<div class="detail-row"><span class="lbl">生日</span><span class="val">${b.customer.birthday}${calcAge(b.customer.birthday)!==null ? '（'+calcAge(b.customer.birthday)+' 歲）' : ''}</span></div>` : ''}
-    ${b.customer.email ? `<div class="detail-row"><span class="lbl">Email</span><span class="val">${b.customer.email}</span></div>` : ''}
-    <div class="detail-row"><span class="lbl">備註</span><span class="val">${b.customer.note || '—'}</span></div>
-    <div class="detail-row"><span class="lbl">費用</span><span class="val">$${b.service ? b.service.price : 0}</span></div>
-    <div class="detail-row"><span class="lbl">預約編號</span><span class="val mono">${b.code}</span></div>
-    <div class="detail-row"><span class="lbl">狀態</span><span class="val"><span class="status-pill ${statusClass(b.status)}">${statusLabel(b.status)}</span></span></div>
+    <div class="bkt-code">${b.code} <span class="status-pill ${statusClass(b.status)}" style="margin-left:6px;">${statusLabel(b.status)}</span></div>
+    <div class="bkt-header">
+      <div class="bkt-avatar">${(b.customer.name||'？').slice(0,1)}</div>
+      <div class="bkt-who">
+        <h4>${b.customer.name}</h4>
+        <div class="ln">${b.customer.phone}</div>
+        ${b.customer.email ? `<div class="ln">${b.customer.email}</div>` : ''}
+        ${b.customer.lineId ? `<div class="ln">LINE：${b.customer.lineId}</div>` : ''}
+        <div class="ln">來過 <b>${visitCount(b)}</b> 次${b.customer.birthday ? ` ・ 生日 ${b.customer.birthday}${age!==null?'（'+age+' 歲）':''}` : ''}</div>
+      </div>
+    </div>
+    <div class="bkt-service-card">
+      ${svcs.length ? svcs.map(s=>`
+        <div class="bkt-svc-row">
+          <span class="nm">${s.name}${s.duration ? ' ・ ' + s.duration + ' 分鐘' : ''}</span>
+          <span>$${s.price||0}</span>
+        </div>`).join('') : `<div class="bkt-svc-row"><span class="nm">（服務已刪除）</span></div>`}
+      <div class="bkt-svc-row"><span class="tm">${b.date}（${b.time}）・ ${b.staff ? b.staff.name : '—'}</span></div>
+      ${b.customer.note ? `<div class="bkt-svc-row" style="margin-top:6px;"><span class="tm">備註：${b.customer.note}</span></div>` : ''}
+      <div class="bkt-total"><span class="lbl">總計</span><span class="amt">$${bookingTotal(b)}</span></div>
+    </div>
+    <button class="btn btn-outline" style="width:100%; margin-bottom:14px;" onclick="openEditItems('${b.id}')">✎ 編輯項目</button>
+    <div id="rescheduleBox"></div>
   `;
   const actions = document.createElement('div');
   actions.className = 'sheet-actions';
   if(b.status==='upcoming'){
     actions.innerHTML = `
-      <button class="btn btn-ghost" onclick="updateBookingStatus('${b.id}','cancelled')">取消預約</button>
-      <button class="btn btn-primary" onclick="updateBookingStatus('${b.id}','done')">標記完成</button>`;
+      <button class="btn btn-success" onclick="updateBookingStatus('${b.id}','done')">標記完成</button>
+      <button class="btn btn-noshow" onclick="updateBookingStatus('${b.id}','noshow')">標記未到</button>`;
+    const row2 = document.createElement('div');
+    row2.className = 'sheet-actions';
+    row2.innerHTML = `
+      <button class="btn btn-outline" onclick="toggleRescheduleBox('${b.id}')">改期</button>
+      <button class="btn btn-ghost" onclick="updateBookingStatus('${b.id}','cancelled')">取消</button>`;
+    body.appendChild(actions);
+    body.appendChild(row2);
   } else {
     actions.innerHTML = `<button class="btn btn-outline" style="width:100%;" onclick="updateBookingStatus('${b.id}','upcoming')">恢復為即將到來</button>`;
+    body.appendChild(actions);
   }
-  body.appendChild(actions);
+
+  const linkRow = document.createElement('div');
+  linkRow.className = 'bkt-link-row';
+  linkRow.innerHTML = `<a onclick="viewCustomerFromBooking('${b.id}')">查看客戶完整歷史 →</a>`;
+  body.appendChild(linkRow);
+
+  const dangerRow = document.createElement('div');
+  dangerRow.className = 'bkt-danger-row';
+  dangerRow.innerHTML = `<a onclick="deleteBookingRecord('${b.id}')">刪除這筆紀錄</a>`;
+  body.appendChild(dangerRow);
+
   document.getElementById('bookingSheetBackdrop').classList.add('show');
 }
 function closeBookingSheet(){ document.getElementById('bookingSheetBackdrop').classList.remove('show'); }
+
+/* ============================================================
+   編輯項目：幫某筆預約增減服務（複選），清單同步 SERVICES 集合，
+   商家在「服務項目」頁新增/修改/刪除的內容都會即時反映在這裡
+   ============================================================ */
+let editItemsBookingId = null;
+let editItemsSelected = [];
+function openEditItems(id){
+  const b = loadBookings().find(x=>x.id===id);
+  if(!b) return;
+  editItemsBookingId = id;
+  editItemsSelected = bookingServices(b).map(s=>s.id).filter(Boolean);
+  document.getElementById('editItemsWho').textContent = `${b.customer.name} ・ ${b.date}（${b.time}）`;
+  renderEditItemsList();
+  document.getElementById('editItemsSheetBackdrop').classList.add('show');
+}
+function renderEditItemsList(){
+  const wrap = document.getElementById('editItemsList');
+  if(SERVICES.length===0){
+    wrap.innerHTML = `<div class="field-hint">尚未設定任何服務項目，請先到「服務」頁新增。</div>`;
+    return;
+  }
+  wrap.innerHTML = SERVICES.map(s=>{
+    const checked = editItemsSelected.includes(s.id);
+    return `
+    <div class="item-check-row ${checked?'checked':''}" onclick="toggleEditItem('${s.id}')">
+      <input type="checkbox" ${checked?'checked':''} onclick="event.stopPropagation(); toggleEditItem('${s.id}')">
+      <div class="icr-body">
+        <div class="nm">${s.icon||''} ${s.name}</div>
+        <div class="mt">${s.duration||0} 分鐘</div>
+      </div>
+      <div class="icr-price">$${s.price||0}</div>
+    </div>`;
+  }).join('');
+}
+function toggleEditItem(serviceId){
+  if(editItemsSelected.includes(serviceId)){
+    editItemsSelected = editItemsSelected.filter(x=>x!==serviceId);
+  } else {
+    editItemsSelected.push(serviceId);
+  }
+  renderEditItemsList();
+}
+function closeEditItems(){
+  document.getElementById('editItemsSheetBackdrop').classList.remove('show');
+  editItemsBookingId = null;
+}
+async function saveEditItems(){
+  if(!editItemsBookingId) return;
+  if(editItemsSelected.length===0){ showToast('請至少選擇一項服務'); return; }
+  const chosen = SERVICES.filter(s=>editItemsSelected.includes(s.id));
+  try{
+    await db.collection('bookings').doc(editItemsBookingId).update({
+      services: chosen,
+      service: chosen[0] // 保留單一 service 欄位以相容舊版顯示邏輯
+    });
+    closeEditItems();
+    closeBookingSheet();
+    showToast('項目已更新');
+  }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
+}
 async function updateBookingStatus(id, status){
   try{
     await db.collection('bookings').doc(id).update({ status });
     closeBookingSheet();
     showToast('狀態已更新');
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
+function toggleRescheduleBox(id){
+  const b = loadBookings().find(x=>x.id===id);
+  if(!b) return;
+  const box = document.getElementById('rescheduleBox');
+  if(box.innerHTML){ box.innerHTML=''; return; }
+  box.innerHTML = `
+    <div class="bkt-service-card" style="margin-top:14px;">
+      <div class="field"><label for="rsDate">新日期</label><input type="date" id="rsDate" value="${b.date}" onchange="renderRescheduleTimeOptions('${b.id}')"></div>
+      <div class="field" style="margin-bottom:0;"><label for="rsTime">新時間</label><select id="rsTime"></select></div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn btn-primary" style="width:100%;" onclick="confirmReschedule('${b.id}')">確認改期</button>
+    </div>
+  `;
+  renderRescheduleTimeOptions(id);
+}
+function renderRescheduleTimeOptions(id){
+  const b = loadBookings().find(x=>x.id===id);
+  if(!b) return;
+  const dateKey = document.getElementById('rsDate').value;
+  const timeSel = document.getElementById('rsTime');
+  const now = new Date();
+  const isToday = dateKey === (now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0'));
+  let opts = '';
+  for(let h=BUSINESS.openHour; h<BUSINESS.closeHour; h++){
+    for(let mm=0; mm<60; mm+=BUSINESS.slotMin){
+      const label = String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+      const [y,m,d] = dateKey.split('-').map(Number);
+      const slotDate = new Date(y,m-1,d,h,mm);
+      const isPast = isToday && slotDate < now;
+      const isSelf = (dateKey===b.date && label===b.time);
+      const taken = !isSelf && isSlotTaken(dateKey, label);
+      const disabled = isPast || taken;
+      opts += `<option value="${label}" ${disabled?'disabled':''} ${isSelf?'selected':''}>${label}${taken?'（已被預約）':isPast?'（已過時間）':''}</option>`;
+    }
+  }
+  timeSel.innerHTML = opts;
+}
+async function confirmReschedule(id){
+  const date = document.getElementById('rsDate').value;
+  const time = document.getElementById('rsTime').value;
+  const b = loadBookings().find(x=>x.id===id);
+  if(!b) return;
+  if(!date || !time){ showToast('請選擇新的日期與時間'); return; }
+  if(!(date===b.date && time===b.time) && isSlotTaken(date, time)){ showToast('這個時段已經有其他預約'); return; }
+  try{
+    await db.collection('bookings').doc(id).update({ date, time });
+    closeBookingSheet();
+    showToast('已改期');
+  }catch(err){ showToast('改期失敗，請檢查網路連線後再試'); }
+}
+function viewCustomerFromBooking(id){
+  const b = loadBookings().find(x=>x.id===id);
+  if(!b) return;
+  closeBookingSheet();
+  const cust = b.customerId ? loadCustomers().find(c=>c.id===b.customerId) : loadCustomers().find(c=>c.phone===b.customer.phone);
+  if(cust){
+    goScreen('customers');
+    setTimeout(()=>openCustomerForm(cust.id), 50);
+  } else {
+    goScreen('bookings');
+    document.getElementById('bookingSearch').value = b.customer.phone;
+    renderBookingsList();
+  }
+}
+async function deleteBookingRecord(id){
+  if(!confirm('確定要刪除這筆預約紀錄嗎？此動作無法復原。')) return;
+  try{
+    await db.collection('bookings').doc(id).delete();
+    closeBookingSheet();
+    showToast('紀錄已刪除');
+  }catch(err){ showToast('刪除失敗，請檢查網路連線後再試'); }
 }
 
 /* ============================================================
