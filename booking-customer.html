@@ -297,6 +297,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .status-upcoming{ background:#EAF2EC; color:var(--ledger-dark); }
 .status-done{ background:#EFEAE0; color:var(--ink-soft); }
 .status-cancelled{ background:#F7E5E1; color:var(--stamp-dark); }
+.status-pending{ background:#FBF3E1; color:#8A6A1E; }
 
 .ticket-actions{ display:flex; gap:10px; margin-top:16px; }
 .ticket-actions .btn{ flex:1; padding:12px 8px; font-size:13.5px; }
@@ -508,6 +509,15 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
         <input type="date" id="custBirthday">
       </div>
       <div class="field">
+        <label for="custGender">性別（選填）</label>
+        <select id="custGender">
+          <option value="">不透露</option>
+          <option value="女">女</option>
+          <option value="男">男</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+      <div class="field">
         <label for="custEmail">Email（選填）</label>
         <input type="email" id="custEmail" placeholder="you@example.com">
       </div>
@@ -693,7 +703,7 @@ function startPublicListeners(){
     }, err=>console.error('products listener', err))
   );
   unsubscribers.push(
-    db.collection('bookings').where('status','==','upcoming').onSnapshot(snap=>{
+    db.collection('bookings').where('status','in',['upcoming','pending']).onSnapshot(snap=>{
       UPCOMING_BOOKINGS = snap.docs.map(d=>({ id:d.id, ...d.data() }));
       if(document.getElementById('screen-datetime') && document.getElementById('screen-datetime').classList.contains('active')){
         renderTimeGrid();
@@ -1098,6 +1108,7 @@ function renderInfoSummary(){
     document.getElementById('custPhone').value = me.phone || '';
     document.getElementById('custLineId').value = me.lineId || '';
     document.getElementById('custBirthday').value = me.birthday || '';
+    document.getElementById('custGender').value = me.gender || '';
     document.getElementById('custEmail').value = me.email || '';
     infoPrefilled = true;
   }
@@ -1111,6 +1122,7 @@ async function submitBooking(){
   const phone = document.getElementById('custPhone').value.trim();
   const lineId = document.getElementById('custLineId').value.trim();
   const birthday = document.getElementById('custBirthday').value;
+  const gender = document.getElementById('custGender').value;
   const email = document.getElementById('custEmail').value.trim();
   const note = document.getElementById('custNote').value.trim();
   if(!name){ showToast('請輸入姓名'); return; }
@@ -1119,7 +1131,7 @@ async function submitBooking(){
   const uid = currentCustomerId();
   if(!uid){ showToast('請先登入會員帳號'); lockCustApp(); return; }
 
-  // 防止在填寫聯絡資訊期間，此時段已被其他顧客搶先預約
+  // 防止在填寫聯絡資訊期間，此時段已被其他顧客搶先預約（含待商家確認中的預約）
   if(isSlotTaken(state.date, state.time)){
     showToast('這個時段剛被其他顧客預約了，請重新選擇時間');
     navStack = ['home','service','staff'];
@@ -1135,8 +1147,8 @@ async function submitBooking(){
     staff: state.staff,
     date: state.date,
     time: state.time,
-    customer: { name, phone, lineId, birthday, email, note, lineNotify: state.lineNotify },
-    status: 'upcoming',
+    customer: { name, phone, lineId, birthday, gender, email, note, lineNotify: state.lineNotify },
+    status: 'pending',
     createdAt: new Date().toISOString()
   };
   try{
@@ -1155,10 +1167,10 @@ async function submitBooking(){
    CONFIRMATION TICKET
    ============================================================ */
 function statusLabel(s){
-  return { upcoming:'即將到來', done:'已完成', cancelled:'已取消' }[s] || s;
+  return { pending:'待商家確認', upcoming:'即將到來', done:'已完成', cancelled:'已取消', noshow:'未到' }[s] || s;
 }
 function statusClass(s){
-  return { upcoming:'status-upcoming', done:'status-done', cancelled:'status-cancelled' }[s] || '';
+  return { pending:'status-pending', upcoming:'status-upcoming', done:'status-done', cancelled:'status-cancelled', noshow:'status-cancelled' }[s] || '';
 }
 function renderConfirmTicket(b){
   document.getElementById('confirmTicket').innerHTML = ticketHtml(b, true);
@@ -1176,12 +1188,13 @@ function ticketHtml(b, big){
   for(let i=0;i<10;i++){ perfCircles += '<div class="circle"></div>'; }
   const svcs = bookingServices(b);
   const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '（服務已刪除）';
+  const isPending = b.status === 'pending';
   return `
     <div class="ticket-head">
-      <div class="tk-eyebrow">${big? 'BOOKING CONFIRMED' : 'E-TICKET'}</div>
+      <div class="tk-eyebrow">${big? (isPending ? 'AWAITING CONFIRMATION' : 'BOOKING CONFIRMED') : 'E-TICKET'}</div>
       <h2>${svcLabel}</h2>
       <div class="tk-sub">${BUSINESS.name}</div>
-      ${big? '<div class="stamp-seal">已<br>確認</div>' : ''}
+      ${big? `<div class="stamp-seal">${isPending ? '待<br>確認' : '已<br>確認'}</div>` : ''}
     </div>
     <div class="ticket-perf">
       <div class="circle l"></div>
@@ -1223,7 +1236,7 @@ function renderMyBookings(){
       <div style="padding:0 20px 18px;">
         <div class="ticket-actions">
           <button class="btn btn-outline" onclick="downloadIcs(${JSON.stringify(b).replace(/"/g,'&quot;')})">加入行事曆</button>
-          ${b.status==='upcoming' ? `<button class="btn btn-ghost" onclick="cancelBooking('${b.id}')">取消預約</button>` : ''}
+          ${(b.status==='upcoming'||b.status==='pending') ? `<button class="btn btn-ghost" onclick="cancelBooking('${b.id}')">取消預約</button>` : ''}
         </div>
       </div>
     </div>

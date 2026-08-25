@@ -177,6 +177,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .status-done{ background:#EFEAE0; color:var(--ink-soft); }
 .status-cancelled{ background:#F7E5E1; color:var(--stamp-dark); }
 .status-noshow{ background:#F7E5E1; color:var(--stamp-dark); }
+.status-pending{ background:#FBF3E1; color:#8A6A1E; }
 
 .empty-state{ text-align:center; padding:60px 20px; color:var(--ink-soft); }
 .empty-state .ic{ font-size:38px; margin-bottom:10px; }
@@ -228,6 +229,30 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .bkt-danger-row a{ font-size:12.5px; color:var(--stamp-dark); text-decoration:underline; cursor:pointer; }
 .btn-noshow{ background:transparent; border:1.5px solid var(--stamp); color:var(--stamp-dark); }
 .btn-success{ background:var(--ledger); color:var(--white); }
+.bkt-total-row{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+.btn-adjust{
+  background:transparent; border:1.5px solid var(--line); color:var(--ink-soft);
+  font-size:11.5px; padding:6px 12px; border-radius:99px; cursor:pointer; font-weight:700;
+}
+.btn-edit-compact{
+  display:inline-flex; align-items:center; gap:6px; background:transparent; border:1.5px solid var(--line);
+  color:var(--ink); font-size:12.5px; font-weight:700; padding:7px 14px; border-radius:99px;
+  cursor:pointer; margin-bottom:12px;
+}
+.action-pill-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+.pill-btn{
+  border-radius:99px; padding:9px 16px; font-size:12.5px; font-weight:700; cursor:pointer;
+  border:1.5px solid var(--line); background:var(--white); color:var(--ink); flex:1 1 auto; text-align:center; min-width:0;
+}
+.pill-btn.pill-success{ background:var(--ledger); color:var(--white); border-color:var(--ledger); }
+.pill-btn.pill-danger-outline{ background:transparent; border-color:var(--stamp); color:var(--stamp-dark); }
+.pill-btn.pill-outline{ background:transparent; }
+.bkt-restore-link{ text-align:center; margin-bottom:14px; }
+.bkt-restore-link a{ font-size:12.5px; color:var(--ledger-dark); text-decoration:underline; cursor:pointer; }
+.staff-inline-select{
+  font-family:inherit; font-size:12px; border:1px solid var(--line); border-radius:6px;
+  padding:2px 6px; background:var(--white); color:var(--ink);
+}
 .item-check-row{
   display:flex; align-items:center; gap:10px; padding:11px 14px; border:1.5px solid var(--line);
   border-radius:10px; margin-bottom:8px; cursor:pointer; background:var(--white);
@@ -416,6 +441,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
         <button class="btn btn-outline" style="width:100%; margin-bottom:14px;" onclick="openManualBookingForm()">＋ 手動新增預約</button>
         <div class="filter-row" id="statusFilterRow">
           <div class="filter-chip active" data-status="all" onclick="setStatusFilter('all')">全部</div>
+          <div class="filter-chip" data-status="pending" onclick="setStatusFilter('pending')">待確認</div>
           <div class="filter-chip" data-status="upcoming" onclick="setStatusFilter('upcoming')">即將到來</div>
           <div class="filter-chip" data-status="done" onclick="setStatusFilter('done')">已完成</div>
           <div class="filter-chip" data-status="noshow" onclick="setStatusFilter('noshow')">未到</div>
@@ -622,6 +648,14 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
       <div class="field"><label for="custFormPhone">手機號碼</label><input type="tel" id="custFormPhone" placeholder="0912-345-678"></div>
       <div class="field"><label for="custFormLineId">LINE ID（選填）</label><input type="text" id="custFormLineId"></div>
       <div class="field"><label for="custFormBirthday">生日（選填，西元年月日）</label><input type="date" id="custFormBirthday"></div>
+      <div class="field"><label for="custFormGender">性別（選填）</label>
+        <select id="custFormGender">
+          <option value="">不透露</option>
+          <option value="女">女</option>
+          <option value="男">男</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
       <div class="field"><label for="custFormEmail">Email（選填）</label><input type="email" id="custFormEmail" placeholder="you@example.com"></div>
       <div class="field-hint" id="custFormEmailHint" style="margin-top:-10px; margin-bottom:16px;"></div>
       <div class="field"><label for="custFormNote">備註（選填）</label><textarea id="custFormNote"></textarea></div>
@@ -656,6 +690,14 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
         <div class="field"><label for="mbNewPhone">手機號碼</label><input type="tel" id="mbNewPhone" placeholder="0912-345-678"></div>
         <div class="field"><label for="mbNewLineId">LINE ID（選填）</label><input type="text" id="mbNewLineId"></div>
         <div class="field"><label for="mbNewBirthday">生日（選填）</label><input type="date" id="mbNewBirthday"></div>
+        <div class="field"><label for="mbNewGender">性別（選填）</label>
+          <select id="mbNewGender">
+            <option value="">不透露</option>
+            <option value="女">女</option>
+            <option value="男">男</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
         <div class="field"><label for="mbNewEmail">Email（選填）</label><input type="email" id="mbNewEmail"></div>
       </div>
 
@@ -996,8 +1038,8 @@ function goScreen(id, opts={}){
 function fmtDateKey(d){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
-function statusLabel(s){ return { upcoming:'即將到來', done:'已完成', cancelled:'已取消', noshow:'未到' }[s] || s; }
-function statusClass(s){ return { upcoming:'status-upcoming', done:'status-done', cancelled:'status-cancelled', noshow:'status-noshow' }[s] || ''; }
+function statusLabel(s){ return { pending:'待確認', upcoming:'即將到來', done:'已完成', cancelled:'已取消', noshow:'未到' }[s] || s; }
+function statusClass(s){ return { pending:'status-pending', upcoming:'status-upcoming', done:'status-done', cancelled:'status-cancelled', noshow:'status-noshow' }[s] || ''; }
 /* 一筆預約可能只有單一 service（舊資料／顧客頁建立），
    也可能有多個 services（商家後台「編輯項目」後），統一用這兩個
    輔助函式取得完整清單與總金額 */
@@ -1008,6 +1050,9 @@ function bookingServices(b){
 }
 function bookingTotal(b){
   return bookingServices(b).reduce((sum,s)=>sum+(s.price||0),0);
+}
+function bookingActualTotal(b){
+  return (b.actualAmount!==undefined && b.actualAmount!==null) ? b.actualAmount : bookingTotal(b);
 }
 
 function renderDashboard(){
@@ -1025,7 +1070,7 @@ function renderDashboard(){
     const bd = new Date(y,m-1,d);
     return bd>=today && bd<weekEnd && b.status!=='cancelled';
   }).length;
-  const revenue = all.filter(b=>b.status==='done').reduce((sum,b)=>sum+bookingTotal(b),0);
+  const revenue = all.filter(b=>b.status==='done').reduce((sum,b)=>sum+bookingActualTotal(b),0);
 
   document.getElementById('statToday').textContent = todayCount;
   document.getElementById('statWeek').textContent = weekCount;
@@ -1064,7 +1109,7 @@ function bookingCardHtml(b){
       <div class="bk-meta">
         <span>📅 <b>${b.date} ${b.time}</b></span>
         <span>👤 <b>${b.staff ? b.staff.name : '—'}</b></span>
-        <span>$<b>${bookingTotal(b)}</b></span>
+        <span>$<b>${bookingActualTotal(b)}</b></span>
       </div>
     </div>`;
 }
@@ -1149,6 +1194,7 @@ function openCustomerForm(id){
     document.getElementById('custFormPhone').value = c.phone || '';
     document.getElementById('custFormLineId').value = c.lineId || '';
     document.getElementById('custFormBirthday').value = c.birthday || '';
+    document.getElementById('custFormGender').value = c.gender || '';
     document.getElementById('custFormEmail').value = c.email || '';
     document.getElementById('custFormNote').value = c.note || '';
     hint.textContent = c.hasAccount ? '此顧客已註冊會員帳號，Email 為登入信箱，修改請務必告知顧客。' : '此顧客尚未註冊會員帳號（後台手動新增的紀錄）。';
@@ -1158,6 +1204,7 @@ function openCustomerForm(id){
     document.getElementById('custFormPhone').value = '';
     document.getElementById('custFormLineId').value = '';
     document.getElementById('custFormBirthday').value = '';
+    document.getElementById('custFormGender').value = '';
     document.getElementById('custFormEmail').value = '';
     document.getElementById('custFormNote').value = '';
     hint.textContent = '手動新增的顧客尚無登入密碼，僅作為後台紀錄使用。';
@@ -1175,6 +1222,7 @@ async function saveCustomer(){
     name, phone,
     lineId: document.getElementById('custFormLineId').value.trim(),
     birthday: document.getElementById('custFormBirthday').value,
+    gender: document.getElementById('custFormGender').value,
     email: normEmailM(document.getElementById('custFormEmail').value),
     note: document.getElementById('custFormNote').value.trim()
   };
@@ -1204,7 +1252,7 @@ function normEmailM(e){ return (e||'').trim().toLowerCase(); }
    手動新增預約（同一時段僅能有一位顧客，規則與顧客頁一致）
    ============================================================ */
 function isSlotTaken(dateKey, label){
-  return loadBookings().some(b=>b.status==='upcoming' && b.date===dateKey && b.time===label);
+  return loadBookings().some(b=>(b.status==='upcoming'||b.status==='pending') && b.date===dateKey && b.time===label);
 }
 let manualCustMode = 'existing';
 function setManualCustMode(mode){
@@ -1234,6 +1282,7 @@ function openManualBookingForm(prefillCustomerId){
   document.getElementById('mbNewPhone').value = '';
   document.getElementById('mbNewLineId').value = '';
   document.getElementById('mbNewBirthday').value = '';
+  document.getElementById('mbNewGender').value = '';
   document.getElementById('mbNewEmail').value = '';
   document.getElementById('mbNote').value = '';
 
@@ -1270,19 +1319,20 @@ function renderManualTimeOptions(){
   timeSel.innerHTML = opts;
 }
 async function saveManualBooking(){
-  let custId, name, phone, lineId, birthday, email;
+  let custId, name, phone, lineId, birthday, gender, email;
 
   if(manualCustMode === 'existing'){
     custId = document.getElementById('mbCustomerSelect').value;
     if(!custId){ showToast('請選擇顧客，或改用「新顧客資料」'); return; }
     const c = loadCustomers().find(x=>x.id===custId);
     if(!c){ showToast('找不到這位顧客，請重新選擇'); return; }
-    name = c.name; phone = c.phone; lineId = c.lineId||''; birthday = c.birthday||''; email = c.email||'';
+    name = c.name; phone = c.phone; lineId = c.lineId||''; birthday = c.birthday||''; gender = c.gender||''; email = c.email||'';
   } else {
     name = document.getElementById('mbNewName').value.trim();
     phone = document.getElementById('mbNewPhone').value.trim();
     lineId = document.getElementById('mbNewLineId').value.trim();
     birthday = document.getElementById('mbNewBirthday').value;
+    gender = document.getElementById('mbNewGender').value;
     email = normEmailM(document.getElementById('mbNewEmail').value);
     if(!name){ showToast('請輸入顧客姓名'); return; }
     if(!phone){ showToast('請輸入手機號碼'); return; }
@@ -1304,7 +1354,7 @@ async function saveManualBooking(){
     if(manualCustMode !== 'existing'){
       // 建立新的後台顧客紀錄（無登入帳號）
       const newCustRef = await db.collection('customers').add({
-        name, phone, lineId, birthday, email, note:'', hasAccount:false, createdAt:new Date().toISOString()
+        name, phone, lineId, birthday, gender, email, note:'', hasAccount:false, createdAt:new Date().toISOString()
       });
       custId = newCustRef.id;
     }
@@ -1316,7 +1366,7 @@ async function saveManualBooking(){
       code,
       customerId: custId,
       service, staff, date, time,
-      customer: { name, phone, lineId, birthday, email, note, lineNotify:false },
+      customer: { name, phone, lineId, birthday, gender, email, note, lineNotify:false },
       status: 'upcoming',
       createdAt: new Date().toISOString()
     });
@@ -1340,6 +1390,7 @@ function openBookingSheet(id){
   const body = document.getElementById('bookingDetailBody');
   const age = b.customer.birthday ? calcAge(b.customer.birthday) : null;
   const svcs = bookingServices(b);
+  const birthdayDisp = b.customer.birthday ? b.customer.birthday.replace(/-/g,'/') : '';
   body.innerHTML = `
     <div class="bkt-code">${b.code} <span class="status-pill ${statusClass(b.status)}" style="margin-left:6px;">${statusLabel(b.status)}</span></div>
     <div class="bkt-header">
@@ -1349,7 +1400,8 @@ function openBookingSheet(id){
         <div class="ln">${b.customer.phone}</div>
         ${b.customer.email ? `<div class="ln">${b.customer.email}</div>` : ''}
         ${b.customer.lineId ? `<div class="ln">LINE：${b.customer.lineId}</div>` : ''}
-        <div class="ln">來過 <b>${visitCount(b)}</b> 次${b.customer.birthday ? ` ・ 生日 ${b.customer.birthday}${age!==null?'（'+age+' 歲）':''}` : ''}</div>
+        <div class="ln">來過 <b>${visitCount(b)}</b> 次</div>
+        ${(birthdayDisp || b.customer.gender) ? `<div class="ln">${birthdayDisp ? '生日 '+birthdayDisp+(age!==null?'（'+age+' 歲）':'') : ''}${birthdayDisp && b.customer.gender ? ' ・ ' : ''}${b.customer.gender ? '性別 '+b.customer.gender : ''}</div>` : ''}
       </div>
     </div>
     <div class="bkt-service-card">
@@ -1358,34 +1410,46 @@ function openBookingSheet(id){
           <span class="nm">${s.name}${s.duration ? ' ・ ' + s.duration + ' 分鐘' : ''}</span>
           <span>$${s.price||0}</span>
         </div>`).join('') : `<div class="bkt-svc-row"><span class="nm">（服務已刪除）</span></div>`}
-      <div class="bkt-svc-row"><span class="tm">${b.date}（${b.time}）・ ${b.staff ? b.staff.name : '—'}</span></div>
+      <div class="bkt-svc-row"><span class="tm">${b.date}（${b.time}）・ <span id="staffNameDisplay" onclick="startStaffReassign('${b.id}')" style="text-decoration:underline; cursor:pointer;">${b.staff ? b.staff.name : '不指定'}</span></span></div>
       ${b.customer.note ? `<div class="bkt-svc-row" style="margin-top:6px;"><span class="tm">備註：${b.customer.note}</span></div>` : ''}
-      <div class="bkt-total"><span class="lbl">總計</span><span class="amt">$${bookingTotal(b)}</span></div>
+      <div class="bkt-total">
+        <span class="lbl">總計</span>
+        <div class="bkt-total-row">
+          <span class="amt">$${bookingActualTotal(b)}</span>
+          <button class="btn-adjust" onclick="adjustActualAmount('${b.id}')">✎ 調整實收</button>
+        </div>
+      </div>
     </div>
-    <button class="btn btn-outline" style="width:100%; margin-bottom:14px;" onclick="openEditItems('${b.id}')">✎ 編輯項目</button>
+    <button class="btn-edit-compact" onclick="openEditItems('${b.id}')">✎ 編輯項目</button>
     <div id="rescheduleBox"></div>
   `;
-  const actions = document.createElement('div');
-  actions.className = 'sheet-actions';
-  if(b.status==='upcoming'){
-    actions.innerHTML = `
-      <button class="btn btn-success" onclick="updateBookingStatus('${b.id}','done')">標記完成</button>
-      <button class="btn btn-noshow" onclick="updateBookingStatus('${b.id}','noshow')">標記未到</button>`;
-    const row2 = document.createElement('div');
-    row2.className = 'sheet-actions';
-    row2.innerHTML = `
-      <button class="btn btn-outline" onclick="toggleRescheduleBox('${b.id}')">改期</button>
-      <button class="btn btn-ghost" onclick="updateBookingStatus('${b.id}','cancelled')">取消</button>`;
-    body.appendChild(actions);
-    body.appendChild(row2);
+
+  if(b.status==='pending'){
+    const row = document.createElement('div');
+    row.className = 'action-pill-row';
+    row.innerHTML = `
+      <button class="pill-btn pill-success" onclick="updateBookingStatus('${b.id}','upcoming')">確認預約</button>
+      <button class="pill-btn pill-danger-outline" onclick="updateBookingStatus('${b.id}','cancelled')">拒絕</button>`;
+    body.appendChild(row);
+  } else if(b.status==='upcoming'){
+    const row = document.createElement('div');
+    row.className = 'action-pill-row';
+    row.innerHTML = `
+      <button class="pill-btn pill-success" onclick="updateBookingStatus('${b.id}','done')">標記完成</button>
+      <button class="pill-btn pill-danger-outline" onclick="updateBookingStatus('${b.id}','noshow')">標記未到</button>
+      <button class="pill-btn pill-outline" onclick="toggleRescheduleBox('${b.id}')">改期</button>
+      <button class="pill-btn pill-outline" onclick="updateBookingStatus('${b.id}','cancelled')">取消</button>`;
+    body.appendChild(row);
   } else {
     const hint = document.createElement('div');
     hint.className = 'field-hint';
     hint.style.marginBottom = '10px';
     hint.textContent = `本筆已${statusLabel(b.status)}，無其他可操作項目`;
     body.appendChild(hint);
-    actions.innerHTML = `<button class="btn btn-outline" style="width:100%;" onclick="updateBookingStatus('${b.id}','upcoming')">恢復為即將到來</button>`;
-    body.appendChild(actions);
+    const restoreRow = document.createElement('div');
+    restoreRow.className = 'bkt-restore-link';
+    restoreRow.innerHTML = `<a onclick="updateBookingStatus('${b.id}','upcoming')">恢復為即將到來</a>`;
+    body.appendChild(restoreRow);
   }
 
   const linkRow = document.createElement('div');
@@ -1399,6 +1463,38 @@ function openBookingSheet(id){
   body.appendChild(dangerRow);
 
   document.getElementById('bookingSheetBackdrop').classList.add('show');
+}
+function startStaffReassign(id){
+  const b = loadBookings().find(x=>x.id===id);
+  if(!b) return;
+  const el = document.getElementById('staffNameDisplay');
+  if(!el) return;
+  const opts = STAFF_LIST.map(s=>`<option value="${s.id}" ${b.staff && b.staff.id===s.id ? 'selected':''}>${s.name}</option>`).join('');
+  el.outerHTML = `<select id="staffNameDisplay" class="staff-inline-select" onchange="confirmStaffReassign('${id}', this.value)" onclick="event.stopPropagation()">${opts}</select>`;
+  document.getElementById('staffNameDisplay').focus();
+}
+async function confirmStaffReassign(id, staffId){
+  const staff = STAFF_LIST.find(s=>s.id===staffId);
+  if(!staff) return;
+  try{
+    await db.collection('bookings').doc(id).update({ staff });
+    showToast('已更新服務人員');
+    openBookingSheet(id);
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
+async function adjustActualAmount(id){
+  const b = loadBookings().find(x=>x.id===id);
+  if(!b) return;
+  const current = bookingActualTotal(b);
+  const input = prompt('請輸入實際收款金額：', current);
+  if(input===null) return;
+  const val = Number(input);
+  if(isNaN(val) || val<0){ showToast('請輸入有效的金額'); return; }
+  try{
+    await db.collection('bookings').doc(id).update({ actualAmount: val });
+    showToast('實收金額已更新');
+    openBookingSheet(id);
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
 function closeBookingSheet(){ document.getElementById('bookingSheetBackdrop').classList.remove('show'); }
 
