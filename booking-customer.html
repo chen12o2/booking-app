@@ -1148,7 +1148,7 @@ async function submitBooking(){
     date: state.date,
     time: state.time,
     customer: { name, phone, lineId, birthday, gender, email, note, lineNotify: state.lineNotify },
-    status: 'pending',
+    status: (BUSINESS.requireConfirm === false) ? 'upcoming' : 'pending',
     createdAt: new Date().toISOString()
   };
   try{
