@@ -1379,6 +1379,11 @@ function openBookingSheet(id){
     body.appendChild(actions);
     body.appendChild(row2);
   } else {
+    const hint = document.createElement('div');
+    hint.className = 'field-hint';
+    hint.style.marginBottom = '10px';
+    hint.textContent = `本筆已${statusLabel(b.status)}，無其他可操作項目`;
+    body.appendChild(hint);
     actions.innerHTML = `<button class="btn btn-outline" style="width:100%;" onclick="updateBookingStatus('${b.id}','upcoming')">恢復為即將到來</button>`;
     body.appendChild(actions);
   }
