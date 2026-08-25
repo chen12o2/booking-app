@@ -234,6 +234,19 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .item-check-row .icr-body .nm{ font-weight:700; }
 .item-check-row .icr-body .mt{ font-size:11.5px; color:var(--ink-soft); }
 .item-check-row .icr-price{ font-family:'Space Mono',monospace; font-size:13px; font-weight:700; color:var(--stamp-dark); }
+.dropdown-select{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  border:1.5px solid var(--line); border-radius:10px; padding:12px 13px; background:var(--white);
+  cursor:pointer; font-size:14.5px; color:var(--ink);
+}
+.dropdown-select.open{ border-color:var(--ledger); }
+.dropdown-select #editItemsSummary{ flex:1; }
+.dropdown-caret{ color:var(--ink-soft); font-size:12px; transition:transform .15s ease; flex-shrink:0; }
+.dropdown-caret.open{ transform:rotate(180deg); }
+.dropdown-panel{
+  border:1.5px solid var(--line); border-top:none; border-radius:0 0 10px 10px;
+  padding:10px; background:var(--paper-2); margin-top:-11px; margin-bottom:16px;
+}
 .sheet-close{ position:absolute; top:16px; right:18px; width:30px; height:30px; border-radius:50%; background:var(--paper-2); display:flex; align-items:center; justify-content:center; cursor:pointer; }
 
 /* ---- CRUD cards (services / staff) ---- */
@@ -516,8 +529,16 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
       <div class="sheet-handle"></div>
       <h3>編輯項目</h3>
       <div class="field-hint" id="editItemsWho" style="margin-bottom:14px;"></div>
-      <div class="field-hint" style="margin-bottom:8px; font-weight:700; color:var(--ink);">服務（可複選）</div>
-      <div id="editItemsList"></div>
+      <div class="field">
+        <label>服務（可複選）</label>
+        <div class="dropdown-select" id="editItemsDropdown" onclick="toggleEditItemsDropdown()">
+          <span id="editItemsSummary">請選擇服務</span>
+          <span class="dropdown-caret" id="editItemsCaret">▾</span>
+        </div>
+        <div id="editItemsListWrap" class="dropdown-panel" style="display:none;">
+          <div id="editItemsList"></div>
+        </div>
+      </div>
       <div class="sheet-actions">
         <button class="btn btn-primary" style="width:100%;" onclick="saveEditItems()">儲存</button>
       </div>
@@ -1369,19 +1390,36 @@ function openBookingSheet(id){
 function closeBookingSheet(){ document.getElementById('bookingSheetBackdrop').classList.remove('show'); }
 
 /* ============================================================
-   編輯項目：幫某筆預約增減服務（複選），清單同步 SERVICES 集合，
-   商家在「服務項目」頁新增/修改/刪除的內容都會即時反映在這裡
+   編輯項目：幫某筆預約增減服務（複選，下拉式選單樣式），
+   清單同步 SERVICES 集合，商家在「服務項目」頁新增/修改/刪除
+   的內容都會即時反映在這裡
    ============================================================ */
 let editItemsBookingId = null;
 let editItemsSelected = [];
+let editItemsOpen = false;
 function openEditItems(id){
   const b = loadBookings().find(x=>x.id===id);
   if(!b) return;
   editItemsBookingId = id;
   editItemsSelected = bookingServices(b).map(s=>s.id).filter(Boolean);
+  editItemsOpen = false;
   document.getElementById('editItemsWho').textContent = `${b.customer.name} ・ ${b.date}（${b.time}）`;
   renderEditItemsList();
+  renderEditItemsSummary();
+  document.getElementById('editItemsListWrap').style.display = 'none';
+  document.getElementById('editItemsDropdown').classList.remove('open');
+  document.getElementById('editItemsCaret').classList.remove('open');
   document.getElementById('editItemsSheetBackdrop').classList.add('show');
+}
+function toggleEditItemsDropdown(){
+  editItemsOpen = !editItemsOpen;
+  document.getElementById('editItemsListWrap').style.display = editItemsOpen ? 'block' : 'none';
+  document.getElementById('editItemsDropdown').classList.toggle('open', editItemsOpen);
+  document.getElementById('editItemsCaret').classList.toggle('open', editItemsOpen);
+}
+function renderEditItemsSummary(){
+  const chosen = SERVICES.filter(s=>editItemsSelected.includes(s.id));
+  document.getElementById('editItemsSummary').textContent = chosen.length ? chosen.map(s=>s.name).join('、') : '請選擇服務';
 }
 function renderEditItemsList(){
   const wrap = document.getElementById('editItemsList');
@@ -1409,10 +1447,12 @@ function toggleEditItem(serviceId){
     editItemsSelected.push(serviceId);
   }
   renderEditItemsList();
+  renderEditItemsSummary();
 }
 function closeEditItems(){
   document.getElementById('editItemsSheetBackdrop').classList.remove('show');
   editItemsBookingId = null;
+  editItemsOpen = false;
 }
 async function saveEditItems(){
   if(!editItemsBookingId) return;
