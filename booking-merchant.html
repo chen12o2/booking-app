@@ -225,27 +225,31 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .btn-noshow{ background:transparent; border:1.5px solid var(--stamp); color:var(--stamp-dark); }
 .btn-success{ background:var(--ledger); color:var(--white); }
 .item-check-row{
-  display:flex; align-items:center; gap:12px; padding:12px 14px; border:1.5px solid var(--line);
+  display:flex; align-items:center; gap:10px; padding:11px 14px; border:1.5px solid var(--line);
   border-radius:10px; margin-bottom:8px; cursor:pointer; background:var(--white);
 }
-.item-check-row.checked{ border-color:var(--ledger); background:#F4F8F5; }
-.item-check-row input{ width:18px; height:18px; flex-shrink:0; accent-color:var(--ledger); }
-.item-check-row .icr-body{ flex:1; font-size:13.5px; }
-.item-check-row .icr-body .nm{ font-weight:700; }
-.item-check-row .icr-body .mt{ font-size:11.5px; color:var(--ink-soft); }
-.item-check-row .icr-price{ font-family:'Space Mono',monospace; font-size:13px; font-weight:700; color:var(--stamp-dark); }
+.item-check-row.checked{ border-color:var(--gold); background:#FBF3E1; }
+.item-check-row input[type="checkbox"]{
+  width:18px !important; height:18px !important; min-width:18px; flex-shrink:0;
+  accent-color:var(--gold); border:none !important; border-radius:4px !important;
+  padding:0 !important; margin:0; appearance:auto; -webkit-appearance:checkbox;
+}
+.item-check-row .icr-line{ flex:1; font-size:13.5px; min-width:0; }
+.item-check-row .icr-line .nm{ font-weight:700; }
+.item-check-row .icr-line .mt{ color:var(--ink-soft); }
+.item-check-row .icr-price{ font-family:'Space Mono',monospace; font-size:13px; font-weight:700; color:var(--stamp-dark); flex-shrink:0; }
 .dropdown-select{
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   border:1.5px solid var(--line); border-radius:10px; padding:12px 13px; background:var(--white);
   cursor:pointer; font-size:14.5px; color:var(--ink);
 }
-.dropdown-select.open{ border-color:var(--ledger); }
+.dropdown-select.open{ border-color:var(--ledger); border-radius:10px 10px 0 0; }
 .dropdown-select #editItemsSummary{ flex:1; }
 .dropdown-caret{ color:var(--ink-soft); font-size:12px; transition:transform .15s ease; flex-shrink:0; }
 .dropdown-caret.open{ transform:rotate(180deg); }
 .dropdown-panel{
-  border:1.5px solid var(--line); border-top:none; border-radius:0 0 10px 10px;
-  padding:10px; background:var(--paper-2); margin-top:-11px; margin-bottom:16px;
+  border:1.5px solid var(--ledger); border-top:none; border-radius:0 0 10px 10px;
+  padding:10px; background:var(--paper-2); margin-bottom:16px;
 }
 .sheet-close{ position:absolute; top:16px; right:18px; width:30px; height:30px; border-radius:50%; background:var(--paper-2); display:flex; align-items:center; justify-content:center; cursor:pointer; }
 
@@ -1432,10 +1436,7 @@ function renderEditItemsList(){
     return `
     <div class="item-check-row ${checked?'checked':''}" onclick="toggleEditItem('${s.id}')">
       <input type="checkbox" ${checked?'checked':''} onclick="event.stopPropagation(); toggleEditItem('${s.id}')">
-      <div class="icr-body">
-        <div class="nm">${s.icon||''} ${s.name}</div>
-        <div class="mt">${s.duration||0} 分鐘</div>
-      </div>
+      <div class="icr-line"><span class="nm">${s.icon||''} ${s.name}</span><span class="mt"> ・ ${s.duration||0} 分</span></div>
       <div class="icr-price">$${s.price||0}</div>
     </div>`;
   }).join('');
