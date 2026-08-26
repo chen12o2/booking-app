@@ -1521,7 +1521,7 @@ function openBookingSheet(id){
         ${b.customer.email ? `<div class="ln">${b.customer.email}</div>` : ''}
         ${b.customer.lineId ? `<div class="ln">LINE：${b.customer.lineId}</div>` : ''}
         <div class="ln">來過 <b>${visitCount(b)}</b> 次</div>
-        ${(birthdayDisp || b.customer.gender) ? `<div class="ln">${birthdayDisp ? '生日 '+birthdayDisp+(age!==null?'（'+age+' 歲）':'') : ''}${birthdayDisp && b.customer.gender ? ' ・ ' : ''}${b.customer.gender ? '性別 '+b.customer.gender : ''}</div>` : ''}
+        <div class="ln">生日 ${birthdayDisp ? birthdayDisp+(age!==null?'（'+age+' 歲）':'') : '未填寫'} ・ 性別 ${b.customer.gender || '未填寫'}</div>
       </div>
     </div>
     <div class="bkt-service-card">
