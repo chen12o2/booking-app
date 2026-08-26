@@ -455,6 +455,9 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
   background:var(--paper-2); border-radius:10px; padding:10px 14px; font-size:11.5px; color:var(--ink-soft);
   margin-bottom:16px;
 }
+.poster-gen-head{ padding:20px 20px 0; flex-shrink:0; }
+.poster-gen-scroll{ flex:1; overflow-y:auto; padding:0 20px; min-height:0; }
+.poster-gen-foot{ padding:16px 20px calc(20px + env(safe-area-inset-bottom)); flex-shrink:0; border-top:1px solid var(--paper-2); }
 .slot-poster{
   background:linear-gradient(180deg,#F0E9D8,#E9E0C8); border-radius:16px; padding:20px 14px; text-align:center;
 }
@@ -471,6 +474,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .slot-grid .day .dnum{ font-weight:700; font-size:11px; margin-bottom:2px; }
 .slot-grid .day .tm{ font-family:'Space Mono',monospace; font-size:8.5px; color:var(--ink-soft); line-height:1.5; }
 .slot-grid .day.full .tm{ text-decoration:line-through; opacity:.5; }
+.slot-grid .day.closed .tm{ color:var(--stamp-dark); font-weight:700; }
 .slot-poster .cta{
   display:inline-block; background:var(--stamp); color:var(--white); font-size:12px; font-weight:700;
   padding:10px 18px; border-radius:99px; margin:14px 0 6px;
@@ -932,21 +936,27 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 
   <!-- ============ POSTER GENERATOR SHEET ============ -->
   <div class="sheet-backdrop" id="posterGenBackdrop" onclick="if(event.target===this)closePosterGen()">
-    <div class="sheet" style="position:relative; max-height:92vh;">
-      <div class="sheet-close" onclick="closePosterGen()">✕</div>
-      <div class="sheet-handle"></div>
-      <h3>產生可約月曆圖</h3>
-      <div class="toggle-pair" style="margin-bottom:14px;">
-        <button class="toggle-opt" id="posterMonthCur" onclick="setPosterMonth(0)">本月</button>
-        <button class="toggle-opt" id="posterMonthNext" onclick="setPosterMonth(1)">下個月</button>
+    <div class="sheet poster-gen-sheet" style="position:relative; max-height:92vh; overflow:hidden; padding:0; display:flex; flex-direction:column;">
+      <div class="poster-gen-head">
+        <div class="sheet-close" onclick="closePosterGen()">✕</div>
+        <div class="sheet-handle"></div>
+        <h3 style="margin-bottom:12px;">產生可約月曆圖</h3>
+        <div class="toggle-pair" style="margin-bottom:14px;">
+          <button class="toggle-opt" id="posterMonthCur" onclick="setPosterMonth(0)">本月</button>
+          <button class="toggle-opt" id="posterMonthNext" onclick="setPosterMonth(1)">下個月</button>
+        </div>
+        <div class="poster-info-note" style="margin-bottom:0;">ⓘ 場次由系統依你的營業時間自動建議，已約走的自動劃掉。</div>
       </div>
-      <div class="poster-info-note">ⓘ 場次由系統依你的營業時間自動建議，已約走的自動劃掉。</div>
-      <div id="posterPreviewWrap"></div>
-      <div class="field-hint" style="text-align:center; margin:12px 0 16px;">手機：按「下載圖片」後選「儲存影像」即存入相簿，或長按上方預覽圖儲存。</div>
-      <button class="btn btn-outline" style="width:100%; margin-bottom:14px;" onclick="explainAdjustSlots()">▤ 調整場次（選用）</button>
-      <div class="sheet-actions">
-        <button class="btn btn-outline" onclick="copyBookingLinkForPoster()">🔗 複製預約連結</button>
-        <button class="btn btn-primary" onclick="downloadSlotPoster()">⬇ 下載圖片</button>
+      <div class="poster-gen-scroll">
+        <div id="posterPreviewWrap"></div>
+      </div>
+      <div class="poster-gen-foot">
+        <div class="field-hint" style="text-align:center; margin-bottom:12px;">手機：按「下載圖片」後選「儲存影像」即存入相簿，或長按上方預覽圖儲存。</div>
+        <button class="btn btn-outline" style="width:100%; margin-bottom:14px;" onclick="explainAdjustSlots()">▤ 調整場次（選用）</button>
+        <div class="sheet-actions" style="margin:0;">
+          <button class="btn btn-outline" onclick="copyBookingLinkForPoster()">🔗 複製預約連結</button>
+          <button class="btn btn-primary" onclick="downloadSlotPoster()">⬇ 下載圖片</button>
+        </div>
       </div>
     </div>
   </div>
@@ -2785,11 +2795,7 @@ function downloadAvailPoster(){
   ctx.textAlign = 'center'; ctx.font = '400 12px "Space Mono", monospace'; ctx.fillStyle = '#6B6356';
   ctx.fillText(BUSINESS.customerUrl||'', 300, legendY+40);
 
-  const a = document.createElement('a');
-  a.href = canvas.toDataURL('image/png');
-  a.download = (BUSINESS.name||'booking') + '-可預約日曆圖.png';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  showToast('日曆圖已下載');
+  downloadCanvasImage(canvas, (BUSINESS.name||'booking') + '-可預約日曆圖.png');
 }
 
 /* ---- 產生可約月曆圖：列出每天實際可約時段的海報 ---- */
@@ -2879,7 +2885,7 @@ function renderSlotPosterPreview(){
     const dateKey = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const info = availableSlotsForDate(dateKey);
     if(info.closed){
-      cells += `<div class="day full"><div class="dnum">${d}</div><div class="tm">${info.label||''}</div></div>`;
+      cells += `<div class="day closed"><div class="dnum">${d}</div><div class="tm">${info.label||''}</div></div>`;
     } else if(info.full){
       cells += `<div class="day full"><div class="dnum">${d}</div><div class="tm">${info.label||'已約滿'}</div></div>`;
     } else {
@@ -2947,7 +2953,7 @@ function downloadSlotPoster(){
     ctx.font = '700 12px "Space Mono", monospace'; ctx.fillStyle = '#26221B';
     ctx.fillText(String(d), cx, cyTop);
     if(info.closed){
-      ctx.font = '400 9px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(107,99,86,0.55)';
+      ctx.font = '700 9px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#8F6420';
       ctx.fillText(info.label||'', cx, cyTop+16);
     } else if(info.full){
       ctx.font = '400 9px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(107,99,86,0.55)';
@@ -2968,11 +2974,29 @@ function downloadSlotPoster(){
   ctx.font = '400 10.5px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B6356';
   ctx.fillText('時段皆可微調，歡迎私訊　劃掉＝已約滿', W/2, ctaY+34);
 
-  const a = document.createElement('a');
-  a.href = canvas.toDataURL('image/png');
-  a.download = (BUSINESS.name||'booking') + '-可約月曆圖.png';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  showToast('圖片已下載');
+  downloadCanvasImage(canvas, (BUSINESS.name||'booking') + '-可約月曆圖.png');
+}
+/* 手機瀏覽器（尤其 iOS Safari）常常不支援 <a download> 搭配 data: URL 觸發下載，
+   改成開新分頁顯示圖片，讓使用者長按「儲存至照片」；桌面瀏覽器則走正常下載 */
+function downloadCanvasImage(canvas, filename){
+  const dataUrl = canvas.toDataURL('image/png');
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+  if(isIOS){
+    const win = window.open('', '_blank');
+    if(win){
+      win.document.write(`<html><head><title>${filename}</title></head><body style="margin:0; background:#111; display:flex; align-items:center; justify-content:center;"><img src="${dataUrl}" style="max-width:100%; height:auto;"></body></html>`);
+      win.document.close();
+      showToast('已開啟圖片，長按即可儲存至照片');
+    } else {
+      showToast('請允許彈出視窗，或改用長按上方預覽圖儲存');
+    }
+  } else {
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    showToast('圖片已下載');
+  }
 }
 function roundRect(ctx,x,y,w,h,r){
   ctx.beginPath();
@@ -4008,11 +4032,7 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight){
 function downloadPoster(){
   const canvas = document.getElementById('posterCanvas');
   if(!canvas){ showToast('請先開啟「設定→商店門面」再下載海報'); return; }
-  const a = document.createElement('a');
-  a.href = canvas.toDataURL('image/png');
-  a.download = (BUSINESS.name||'booking') + '-海報.png';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  showToast('海報已下載');
+  downloadCanvasImage(canvas, (BUSINESS.name||'booking') + '-海報.png');
 }
 
 /* ============================================================
