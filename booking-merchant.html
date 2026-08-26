@@ -634,6 +634,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
 <div id="app">
@@ -2280,9 +2281,63 @@ async function saveEditItems(){
     showToast('項目已更新');
   }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
 }
+/* EmailJS：商家在後台按下「確認預約」時，寄出顧客確認信
+   （同一組帳號、同一個範本，跟顧客頁那邊「不需商家確認」情境共用邏輯） */
+const EMAILJS_SERVICE_ID = 'service_ih2s9bw';
+const EMAILJS_TEMPLATE_CUSTOMER_CONFIRM = 'template_bde0nwr';
+const EMAILJS_PUBLIC_KEY = 'sQQe0YG54IEPn6Wa2';
+if(window.emailjs){ emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY }); }
+function buildGoogleCalLink(booking){
+  const svcs = bookingServices(booking);
+  const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '';
+  const totalDur = svcs.reduce((sum,s)=>sum+(s.duration||30),0) || 30;
+  const [y,m,d] = booking.date.split('-').map(Number);
+  const [hh,mm] = booking.time.split(':').map(Number);
+  const start = new Date(y,m-1,d,hh,mm);
+  const end = new Date(start.getTime() + totalDur*60000);
+  const fmt = dt => dt.getFullYear()+String(dt.getMonth()+1).padStart(2,'0')+String(dt.getDate()).padStart(2,'0')+'T'+String(dt.getHours()).padStart(2,'0')+String(dt.getMinutes()).padStart(2,'0')+'00';
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: svcLabel + ' - ' + BUSINESS.name,
+    dates: fmt(start) + '/' + fmt(end),
+    details: '預約編號：' + booking.code,
+    location: BUSINESS.address || ''
+  });
+  return 'https://calendar.google.com/calendar/render?' + params.toString();
+}
+function sendCustomerConfirmEmail(booking){
+  if(!window.emailjs) return;
+  const toEmail = (booking.customer.email||'').trim();
+  if(!toEmail) return;
+  const svcs = bookingServices(booking);
+  const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '';
+  const totalDur = svcs.reduce((sum,s)=>sum+(s.duration||0),0);
+  const [y,m,d] = booking.date.split('-').map(Number);
+  const wd = ['日','一','二','三','四','五','六'][new Date(y,m-1,d).getDay()];
+  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_CUSTOMER_CONFIRM, {
+    to_email: toEmail,
+    business_name: BUSINESS.name || '',
+    booking_code: booking.code || '',
+    booking_date: booking.date || '',
+    booking_weekday: wd,
+    booking_time: booking.time || '',
+    service_name: svcLabel,
+    service_duration: totalDur,
+    service_price: '$' + bookingTotal(booking),
+    total_amount: '$' + bookingTotal(booking),
+    business_notice: BUSINESS.notice || '（無）',
+    google_cal_link: buildGoogleCalLink(booking),
+    cancel_link: BUSINESS.customerUrl || '',
+    booking_url: BUSINESS.customerUrl || ''
+  }).catch(err=>console.error('EmailJS 寄送失敗（顧客確認信）', err));
+}
 async function updateBookingStatus(id, status){
   try{
+    const before = loadBookings().find(x=>x.id===id);
     await db.collection('bookings').doc(id).update({ status });
+    if(before && before.status==='pending' && status==='upcoming'){
+      sendCustomerConfirmEmail({ ...before, status });
+    }
     closeBookingSheet();
     showToast('狀態已更新');
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }

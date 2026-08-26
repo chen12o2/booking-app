@@ -629,22 +629,74 @@ const db = firebase.firestore();
 
 /* EmailJS：顧客送出新預約時，寄一封通知信到商家信箱
    （只負責「通知商家有新預約」，不是給顧客的確認信） */
+/* EmailJS：兩種通知信
+   1) 商家新預約通知信 → template_9qjk4mk，顧客送出預約當下寄給商家
+   2) 顧客預約確認信 → template_bde0nwr，只有在這筆預約「正式成立」
+      （不需商家確認：送出當下／需商家確認：商家按下確認的那一刻）才寄給顧客 */
 const EMAILJS_SERVICE_ID = 'service_ih2s9bw';
-const EMAILJS_TEMPLATE_ID = 'template_bde0nwr';
+const EMAILJS_TEMPLATE_MERCHANT_NOTIFY = 'template_9qjk4mk';
+const EMAILJS_TEMPLATE_CUSTOMER_CONFIRM = 'template_bde0nwr';
 const EMAILJS_PUBLIC_KEY = 'sQQe0YG54IEPn6Wa2';
 if(window.emailjs){ emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY }); }
 function sendMerchantNotifyEmail(booking){
   if(!window.emailjs) return;
   const svcs = bookingServices(booking);
   const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '';
-  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_MERCHANT_NOTIFY, {
     customer_name: booking.customer.name || '',
     customer_phone: booking.customer.phone || '',
     service_name: svcLabel,
     booking_date: booking.date || '',
     booking_time: booking.time || '',
     customer_note: booking.customer.note || '（無）'
-  }).catch(err=>console.error('EmailJS 寄送失敗', err));
+  }).catch(err=>console.error('EmailJS 寄送失敗（商家通知信）', err));
+}
+/* 建立一個 Google 行事曆「新增活動」連結（純前端可算，不需要後端） */
+function buildGoogleCalLink(booking){
+  const svcs = bookingServices(booking);
+  const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '';
+  const totalDur = svcs.reduce((sum,s)=>sum+(s.duration||30),0) || 30;
+  const [y,m,d] = booking.date.split('-').map(Number);
+  const [hh,mm] = booking.time.split(':').map(Number);
+  const start = new Date(y,m-1,d,hh,mm);
+  const end = new Date(start.getTime() + totalDur*60000);
+  const fmt = dt => dt.getFullYear()+String(dt.getMonth()+1).padStart(2,'0')+String(dt.getDate()).padStart(2,'0')+'T'+String(dt.getHours()).padStart(2,'0')+String(dt.getMinutes()).padStart(2,'0')+'00';
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: svcLabel + ' - ' + BUSINESS.name,
+    dates: fmt(start) + '/' + fmt(end),
+    details: '預約編號：' + booking.code,
+    location: BUSINESS.address || ''
+  });
+  return 'https://calendar.google.com/calendar/render?' + params.toString();
+}
+/* 寄「顧客預約確認信」：只在這筆預約「正式成立」的那一刻呼叫這個函式，
+   不要在還是待確認狀態時就寄，避免顧客誤以為已經確定 */
+function sendCustomerConfirmEmail(booking){
+  if(!window.emailjs) return;
+  const toEmail = (booking.customer.email||'').trim();
+  if(!toEmail) return; // 顧客沒填 Email，無法寄送
+  const svcs = bookingServices(booking);
+  const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '';
+  const totalDur = svcs.reduce((sum,s)=>sum+(s.duration||0),0);
+  const [y,m,d] = booking.date.split('-').map(Number);
+  const wd = ['日','一','二','三','四','五','六'][new Date(y,m-1,d).getDay()];
+  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_CUSTOMER_CONFIRM, {
+    to_email: toEmail,
+    business_name: BUSINESS.name || '',
+    booking_code: booking.code || '',
+    booking_date: booking.date || '',
+    booking_weekday: wd,
+    booking_time: booking.time || '',
+    service_name: svcLabel,
+    service_duration: totalDur,
+    service_price: '$' + bookingTotal(booking),
+    total_amount: '$' + bookingTotal(booking),
+    business_notice: BUSINESS.notice || '（無）',
+    google_cal_link: buildGoogleCalLink(booking),
+    cancel_link: BUSINESS.customerUrl || '',
+    booking_url: BUSINESS.customerUrl || ''
+  }).catch(err=>console.error('EmailJS 寄送失敗（顧客確認信）', err));
 }
 
 /* ============================================================
@@ -1342,6 +1394,7 @@ async function submitBooking(){
     const ref = await db.collection('bookings').add(booking);
     lastBooking = { id: ref.id, ...booking };
     sendMerchantNotifyEmail(lastBooking);
+    if(lastBooking.status === 'upcoming'){ sendCustomerConfirmEmail(lastBooking); }
     renderConfirmTicket(lastBooking);
     navStack = ['home'];
     goScreen('confirm');
