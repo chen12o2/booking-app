@@ -1122,7 +1122,11 @@ function pickDate(key){
    也相容沒有 type 欄位的舊資料，視為單次） */
 function breakAppliesToDate(b, dateKey, weekday){
   if(!b.type || b.type==='single') return b.date===dateKey;
-  if(b.type==='weekly') return (b.weekdays||[]).includes(weekday);
+  if(b.type==='weekly'){
+    if(!(b.weekdays||[]).includes(weekday)) return false;
+    if(b.endDate && dateKey>b.endDate) return false;
+    return true;
+  }
   if(b.type==='monthly') return (b.dates||[]).includes(dateKey);
   return false;
 }

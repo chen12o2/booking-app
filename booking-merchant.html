@@ -551,9 +551,10 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .field{ margin-bottom:16px; }
 .field label{ display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; }
 .field input, .field textarea, .field select{
-  width:100%; border:1.5px solid var(--line); border-radius:10px; padding:12px 13px;
+  width:100%; min-width:0; box-sizing:border-box; border:1.5px solid var(--line); border-radius:10px; padding:12px 13px;
   font-family:'Noto Sans TC', sans-serif; font-size:14.5px; background:var(--white); color:var(--ink);
 }
+.field input[type="date"], .field input[type="time"]{ width:100%; min-width:0; display:block; }
 .field textarea{ resize:vertical; min-height:60px; }
 .field input:focus, .field textarea:focus, .field select:focus{ outline:2px solid var(--ledger); outline-offset:1px; }
 .field-row{ display:flex; gap:12px; }
@@ -960,10 +961,26 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
       </div>
       <div id="breakTabWeeklyBody" style="display:none;">
         <div class="field">
-          <label>星期</label>
+          <label>重複週幾</label>
           <div class="wd-pick-row" id="breakWeekdayPick">
-            ${['日','一','二','三','四','五','六'].map((wd,i)=>`<button class="wd-pick" data-wd="${i}" onclick="toggleBreakWeekday(${i})">${wd}</button>`).join('')}
+            ${['一','二','三','四','五','六','日'].map((wd,i)=>{ const dow=(i+1)%7; return `<button class="wd-pick" data-wd="${dow}" onclick="toggleBreakWeekday(${dow})">${wd}</button>`; }).join('')}
           </div>
+          <div class="chip-pick-row">
+            <button class="chip-pick" onclick="pickBreakWeekdayPreset('weekday')">平日</button>
+            <button class="chip-pick" onclick="pickBreakWeekdayPreset('weekend')">週末</button>
+            <button class="chip-pick" onclick="pickBreakWeekdayPreset('everyday')">每天</button>
+          </div>
+          <div class="field-hint" id="breakWeekdayError" style="color:var(--stamp-dark); display:none;">請至少選一個週幾</div>
+        </div>
+        <div class="field">
+          <label>結束日期（必填）</label>
+          <div class="chip-pick-row" style="margin-bottom:10px;">
+            <button class="chip-pick" onclick="pickBreakEndPreset(1)">1 個月</button>
+            <button class="chip-pick" onclick="pickBreakEndPreset(3)">3 個月</button>
+            <button class="chip-pick" onclick="pickBreakEndPreset(6)">6 個月</button>
+          </div>
+          <input type="date" id="breakEndDateInput" onchange="refreshBreakPreview()">
+          <div class="field-hint">重複時段會建立到這個結束日為止（最長 6 個月，不提供「永久」）。</div>
         </div>
       </div>
       <div id="breakTabMonthlyBody" style="display:none;">
@@ -2541,7 +2558,11 @@ function addMinutes(timeStr, mins){
    也相容沒有 type 欄位的舊資料，視為單次） */
 function breakAppliesToDate(b, dateKey, weekday){
   if(!b.type || b.type==='single') return b.date===dateKey;
-  if(b.type==='weekly') return (b.weekdays||[]).includes(weekday);
+  if(b.type==='weekly'){
+    if(!(b.weekdays||[]).includes(weekday)) return false;
+    if(b.endDate && dateKey>b.endDate) return false;
+    return true;
+  }
   if(b.type==='monthly') return (b.dates||[]).includes(dateKey);
   return false;
 }
@@ -3318,7 +3339,7 @@ const WD_LABELS = ['日','一','二','三','四','五','六'];
 function summarizeBreak(b){
   const timePart = b.allDay ? '全天' : (b.ranges||[]).map(r=>r.start+'–'+r.end).join('、');
   if(b.type==='weekly'){
-    return `每週 ${(b.weekdays||[]).map(w=>'週'+WD_LABELS[w]).join('、')}・${timePart}`;
+    return `每週 ${(b.weekdays||[]).map(w=>'週'+WD_LABELS[w]).join('、')}${b.endDate ? '（至 '+b.endDate.replace(/-/g,'/')+'）' : ''}・${timePart}`;
   }
   if(b.type==='monthly'){
     return `${(b.dates||[]).length} 天（${(b.dates||[]).slice(0,3).join('、')}${(b.dates||[]).length>3?'…':''}）・${timePart}`;
@@ -3331,7 +3352,7 @@ function renderBreaksList(){
   const todayKey = new Date().toISOString().slice(0,10);
   const all = BUSINESS.breaks || [];
   const upcoming = all.filter(b=>{
-    if(b.type==='weekly') return true;
+    if(b.type==='weekly') return !b.endDate || b.endDate>=todayKey;
     if(b.type==='monthly') return (b.dates||[]).some(d=>d>=todayKey);
     return (b.date||'') >= todayKey;
   });
@@ -3371,6 +3392,9 @@ function addBreakEntry(){
   document.getElementById('breakDateInput').value = new Date().toISOString().slice(0,10);
   document.getElementById('breakAllDayCheck').checked = false;
   document.getElementById('breakLabelInput').value = '';
+  document.getElementById('breakWeekdayError').style.display = 'none';
+  const defEnd = new Date(); defEnd.setMonth(defEnd.getMonth()+3);
+  document.getElementById('breakEndDateInput').value = defEnd.toISOString().slice(0,10);
   document.querySelectorAll('.wd-pick').forEach(el=>el.classList.remove('active'));
   setBreakTab('single');
   document.getElementById('breakRangesList').innerHTML = '';
@@ -3395,6 +3419,22 @@ function toggleBreakWeekday(wd){
   const idx = breakSelectedWeekdays.indexOf(wd);
   if(idx>-1){ breakSelectedWeekdays.splice(idx,1); } else { breakSelectedWeekdays.push(wd); }
   document.querySelector('.wd-pick[data-wd="'+wd+'"]').classList.toggle('active');
+  document.getElementById('breakWeekdayError').style.display = breakSelectedWeekdays.length===0 ? 'block' : 'none';
+  refreshBreakPreview();
+}
+function pickBreakWeekdayPreset(kind){
+  const map = { weekday:[1,2,3,4,5], weekend:[0,6], everyday:[0,1,2,3,4,5,6] };
+  breakSelectedWeekdays = [...map[kind]];
+  document.querySelectorAll('.wd-pick').forEach(el=>{
+    el.classList.toggle('active', breakSelectedWeekdays.includes(Number(el.dataset.wd)));
+  });
+  document.getElementById('breakWeekdayError').style.display = 'none';
+  refreshBreakPreview();
+}
+function pickBreakEndPreset(months){
+  const d = new Date();
+  d.setMonth(d.getMonth()+months);
+  document.getElementById('breakEndDateInput').value = d.toISOString().slice(0,10);
   refreshBreakPreview();
 }
 function breakMonthShift(dir){
@@ -3460,7 +3500,12 @@ function refreshBreakPreview(){
     const d = document.getElementById('breakDateInput').value;
     head = `單次 ${d ? d.replace(/-/g,'/') : '（尚未選日期）'}`;
   } else if(breakTab==='weekly'){
-    head = breakSelectedWeekdays.length ? `每週 ${breakSelectedWeekdays.sort().map(w=>'週'+WD_LABELS[w]).join('、')}` : '每週（尚未選星期）';
+    if(breakSelectedWeekdays.length===0){
+      el.textContent = '請選擇重複的週幾';
+      return;
+    }
+    const endDate = document.getElementById('breakEndDateInput').value;
+    head = `每週 ${[...breakSelectedWeekdays].sort().map(w=>'週'+WD_LABELS[w]).join('、')}（至 ${endDate ? endDate.replace(/-/g,'/') : '—'}）`;
   } else {
     head = breakSelectedDates.length ? `已選 ${breakSelectedDates.length} 天` : '整月挑日子（尚未選日期）';
   }
@@ -3477,8 +3522,14 @@ async function createBreakEntry(){
     if(!date){ showToast('請選擇日期'); return; }
     entry = { type:'single', date, allDay, ranges, label };
   } else if(breakTab==='weekly'){
-    if(breakSelectedWeekdays.length===0){ showToast('請至少選一個星期'); return; }
-    entry = { type:'weekly', weekdays:[...breakSelectedWeekdays], allDay, ranges, label };
+    if(breakSelectedWeekdays.length===0){
+      document.getElementById('breakWeekdayError').style.display = 'block';
+      showToast('請至少選一個週幾');
+      return;
+    }
+    const endDate = document.getElementById('breakEndDateInput').value;
+    if(!endDate){ showToast('請選擇結束日期'); return; }
+    entry = { type:'weekly', weekdays:[...breakSelectedWeekdays], endDate, allDay, ranges, label };
   } else {
     if(breakSelectedDates.length===0){ showToast('請至少選一天'); return; }
     entry = { type:'monthly', dates:[...breakSelectedDates], allDay, ranges, label };
