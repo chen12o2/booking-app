@@ -402,6 +402,22 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 
 /* ---- share page: QR + availability poster ---- */
 #qrCodeWrap img{ width:200px; height:200px; border-radius:12px; }
+.share-heading{ font-size:16px; font-weight:700; margin:20px 0 10px; }
+.share-link-card .link-box{
+  border:1.5px solid var(--line); border-radius:12px; padding:14px 16px; background:var(--paper-2);
+  display:flex; align-items:center; gap:10px; margin-bottom:14px;
+}
+.share-link-card .link-box input{ font-size:14px; }
+.btn-link-copy{
+  background:transparent; border:none; color:var(--gold); font-weight:700; font-size:13px;
+  cursor:pointer; flex-shrink:0; padding:4px;
+}
+.share-btn-row{ display:flex; gap:10px; }
+.btn-share-outline, .btn-share-fill{
+  flex:1; padding:13px 10px; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer; text-align:center;
+}
+.btn-share-outline{ background:var(--white); border:1.5px solid var(--line); color:var(--ink); }
+.btn-share-fill{ background:var(--gold); border:1.5px solid var(--gold); color:var(--ink); }
 .avail-poster{
   border-radius:14px; overflow:hidden; border:1.5px solid var(--line);
 }
@@ -611,15 +627,15 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
           <div class="field-hint">掃描或分享連結，讓顧客直接進入預約頁</div>
         </div>
 
-        <div class="about-card" style="margin-top:16px;">
-          <div class="section-title" style="margin-bottom:10px;"><span class="lead"><span class="num">🔗</span>分享你的預約頁</span></div>
+        <div class="share-heading">分享你的預約頁</div>
+        <div class="about-card share-link-card">
           <div class="link-box">
             <input type="text" id="calLinkInput" readonly placeholder="請至「設定→商店門面」貼上顧客頁網址">
-            <button class="btn btn-ghost btn-sm" onclick="copyCustomerLink()">複製</button>
+            <button class="btn-link-copy" onclick="copyCustomerLink()">複製</button>
           </div>
-          <div class="sheet-actions" style="margin-top:10px;">
-            <button class="btn btn-outline" onclick="previewCustomerLink()">預覽</button>
-            <button class="btn btn-primary" onclick="goScreen('settings'); setTimeout(()=>openSettingsSheet('shopfront'),60);">下載傳統海報</button>
+          <div class="share-btn-row">
+            <button class="btn-share-outline" onclick="previewCustomerLink()">預覽</button>
+            <button class="btn-share-fill" onclick="downloadAvailPoster()">產生可約月曆圖</button>
           </div>
         </div>
 
