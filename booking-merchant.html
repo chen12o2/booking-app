@@ -803,7 +803,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
   <!-- ============ PAYMENT RECONCILE MODAL ============ -->
   <div class="modal-backdrop" id="payReconcileBackdrop" onclick="if(event.target===this)closePayReconcile()">
     <div class="modal-card">
-      <h3>對賬</h3>
+      <h3>收款</h3>
       <p class="field-hint" style="margin-bottom:14px;">記錄這筆款項實際是怎麼收到的，方便日後核對。</p>
       <div class="toggle-pair" style="margin-bottom:14px;">
         <button class="toggle-opt" id="payMethodCash" onclick="setPayMethod('cash')">現金</button>
@@ -818,7 +818,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
       </div>
       <div class="sheet-actions" style="margin-top:6px;">
         <button class="btn btn-outline" onclick="closePayReconcile()">取消</button>
-        <button class="btn btn-primary" onclick="confirmPayReconcile()">儲存對賬</button>
+        <button class="btn btn-primary" onclick="confirmPayReconcile()">儲存收款</button>
       </div>
     </div>
   </div>
@@ -1702,10 +1702,10 @@ function openBookingSheet(id){
         </div>
       </div>
       <div class="bkt-reconcile-row">
-        <span class="lbl">對賬</span>
+        <span class="lbl">收款</span>
         <div class="bkt-total-row">
           <span class="amt" style="font-size:13px;">${paymentMethodSummary(b)}</span>
-          <button class="btn-adjust" onclick="openPayReconcile('${b.id}')">✎ ${b.payment ? '修改對賬' : '記錄對賬'}</button>
+          <button class="btn-adjust" onclick="openPayReconcile('${b.id}')">✎ ${b.payment ? '修改收款' : '記錄收款'}</button>
         </div>
       </div>
     </div>
@@ -1801,7 +1801,7 @@ async function confirmAdjustAmount(){
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
 
-/* ---- 對賬：記錄這筆款項實際的收款方式 ---- */
+/* ---- 收款：記錄這筆款項實際的收款方式 ---- */
 function paymentMethodSummary(b){
   if(!b.payment || !b.payment.method) return '尚未記錄';
   const labels = { cash:'現金', transfer:'轉帳', linepay:'LinePay', other:'其他' };
@@ -1857,7 +1857,7 @@ async function confirmPayReconcile(){
   }
   try{
     await db.collection('bookings').doc(payReconcileBookingId).update({ payment });
-    showToast('對賬已儲存');
+    showToast('收款已儲存');
     const id = payReconcileBookingId;
     closePayReconcile();
     openBookingSheet(id);
