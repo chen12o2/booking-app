@@ -275,6 +275,13 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .cust-danger-zone{ border:1.5px solid var(--stamp); background:#FBF0EC; border-radius:12px; padding:16px; margin-top:22px; }
 .cust-danger-zone h4{ margin:0 0 4px; font-size:14px; color:var(--stamp-dark); }
 .cust-danger-zone p{ margin:0 0 12px; font-size:12px; color:var(--ink-soft); }
+#custDetailNote{
+  width:100%; max-width:100%; min-width:0; box-sizing:border-box; display:block;
+  border:1.5px solid var(--line); border-radius:10px; padding:12px 13px;
+  font-family:'Noto Sans TC', sans-serif; font-size:14.5px; background:var(--white); color:var(--ink);
+  resize:vertical;
+}
+#custDetailNote:focus{ outline:2px solid var(--ledger); outline-offset:1px; }
 .btn-noshow{ background:transparent; border:1.5px solid var(--stamp); color:var(--stamp-dark); }
 .btn-success{ background:var(--ledger); color:var(--white); }
 .bkt-total-row{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
@@ -337,7 +344,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 }
 .crud-ic{
   width:40px; height:40px; border-radius:10px; background:var(--paper-2); flex-shrink:0;
-  display:flex; align-items:center; justify-content:center; font-size:19px;
+  display:flex; align-items:center; justify-content:center; font-size:19px; overflow:hidden;
 }
 .crud-body{ flex:1; min-width:0; }
 .crud-body h4{ margin:0 0 3px; font-size:14.5px; font-weight:700; }
@@ -559,7 +566,10 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
   width:100%; min-width:0; box-sizing:border-box; border:1.5px solid var(--line); border-radius:10px; padding:12px 13px;
   font-family:'Noto Sans TC', sans-serif; font-size:14.5px; background:var(--white); color:var(--ink);
 }
-.field input[type="date"], .field input[type="time"]{ width:100%; min-width:0; display:block; }
+.field input[type="date"], .field input[type="time"]{
+  width:100%; max-width:100%; min-width:0; display:block; box-sizing:border-box;
+  appearance:none; -webkit-appearance:none;
+}
 .field textarea{ resize:vertical; min-height:60px; }
 .field input:focus, .field textarea:focus, .field select:focus{ outline:2px solid var(--ledger); outline-offset:1px; }
 .field-row{ display:flex; gap:12px; }
@@ -1071,7 +1081,15 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
       <div class="sheet-handle"></div>
       <h3 id="productFormTitle">新增商品</h3>
       <input type="hidden" id="prdFormId">
-      <div class="field"><label for="prdFormIcon">圖示（emoji）</label><input type="text" id="prdFormIcon" maxlength="4" placeholder="🛍️"></div>
+      <div class="about-card logo-upload-card">
+        <div class="logo-preview" id="prdImagePreview" style="border-radius:10px;">🛍️</div>
+        <div class="logo-upload-actions">
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('prdImageFileInput').click()">上傳商品圖片</button>
+          <button class="btn btn-ghost btn-sm" id="prdRemoveImageBtn" style="display:none;" onclick="removeProductImage()">移除圖片</button>
+        </div>
+        <input type="file" id="prdImageFileInput" accept="image/*" style="display:none;" onchange="handleProductImageUpload(event)">
+      </div>
+      <div class="field"><label for="prdFormIcon">圖示（emoji，沒有上傳圖片時顯示用）</label><input type="text" id="prdFormIcon" maxlength="4" placeholder="🛍️"></div>
       <div class="field"><label for="prdFormName">商品名稱</label><input type="text" id="prdFormName" placeholder="例如：居家保養組"></div>
       <div class="field"><label for="prdFormDesc">商品說明</label><textarea id="prdFormDesc" placeholder="簡短描述這項商品"></textarea></div>
       <div class="field-row">
@@ -1110,7 +1128,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
       <input type="hidden" id="custFormId">
       <div class="field"><label for="custFormName">姓名</label><input type="text" id="custFormName" placeholder="顧客姓名"></div>
       <div class="field"><label for="custFormPhone">手機號碼</label><input type="tel" id="custFormPhone" placeholder="0912-345-678"></div>
-      <div class="field"><label for="custFormLineId">LINE ID（選填）</label><input type="text" id="custFormLineId"></div>
+      <div class="field"><label for="custFormLineId">LINE ID</label><input type="text" id="custFormLineId"></div>
       <div class="field"><label for="custFormBirthday">生日（選填，西元年月日）</label><input type="date" id="custFormBirthday"></div>
       <div class="field"><label for="custFormGender">性別（選填）</label>
         <select id="custFormGender">
@@ -1782,11 +1800,12 @@ async function saveCustomer(){
   const id = document.getElementById('custFormId').value;
   const name = document.getElementById('custFormName').value.trim();
   const phone = document.getElementById('custFormPhone').value.trim();
+  const lineId = document.getElementById('custFormLineId').value.trim();
   if(!name){ showToast('請輸入姓名'); return; }
   if(!phone){ showToast('請輸入手機號碼'); return; }
+  if(!lineId){ showToast('請輸入 LINE ID'); return; }
   const data = {
-    name, phone,
-    lineId: document.getElementById('custFormLineId').value.trim(),
+    name, phone, lineId,
     birthday: document.getElementById('custFormBirthday').value,
     gender: document.getElementById('custFormGender').value,
     email: normEmailM(document.getElementById('custFormEmail').value)
@@ -2416,7 +2435,7 @@ function renderProductsList(){
   }
   wrap.innerHTML = PRODUCTS.map(p=>`
     <div class="crud-card">
-      <div class="crud-ic">${p.icon}</div>
+      <div class="crud-ic">${p.image ? `<img src="${p.image}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">` : p.icon}</div>
       <div class="crud-body">
         <h4>${p.name}</h4>
         <p>${p.desc||''}</p>
@@ -2440,6 +2459,7 @@ function openProductForm(id){
     document.getElementById('prdFormDesc').value = p.desc||'';
     document.getElementById('prdFormPrice').value = p.price;
     document.getElementById('prdFormStock').value = (p.stock===null||p.stock===undefined) ? '' : p.stock;
+    renderProductImagePreview(p.image);
   } else {
     document.getElementById('prdFormId').value = '';
     document.getElementById('prdFormIcon').value = '🛍️';
@@ -2447,8 +2467,46 @@ function openProductForm(id){
     document.getElementById('prdFormDesc').value = '';
     document.getElementById('prdFormPrice').value = 0;
     document.getElementById('prdFormStock').value = '';
+    renderProductImagePreview(null);
   }
   document.getElementById('productSheetBackdrop').classList.add('show');
+}
+function renderProductImagePreview(image){
+  const preview = document.getElementById('prdImagePreview');
+  const removeBtn = document.getElementById('prdRemoveImageBtn');
+  preview.innerHTML = image ? `<img src="${image}" alt="商品圖片" style="width:100%; height:100%; object-fit:cover;">` : '🛍️';
+  removeBtn.style.display = image ? 'block' : 'none';
+  preview.dataset.image = image || '';
+}
+function handleProductImageUpload(e){
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ showToast('請選擇圖片檔案'); return; }
+  if(file.size > 8 * 1024 * 1024){ showToast('圖片檔案過大，請選擇 8MB 以下的圖片'); return; }
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const img = new Image();
+    img.onload = function(){
+      const maxSide = 480;
+      let w = img.width, h = img.height;
+      if(w > h && w > maxSide){ h = Math.round(h * maxSide / w); w = maxSide; }
+      else if(h >= w && h > maxSide){ w = Math.round(w * maxSide / h); h = maxSide; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      renderProductImagePreview(dataUrl);
+    };
+    img.onerror = function(){ showToast('圖片讀取失敗，請換一張試試'); };
+    img.src = ev.target.result;
+  };
+  reader.onerror = function(){ showToast('讀取檔案失敗'); };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+function removeProductImage(){
+  renderProductImagePreview(null);
 }
 function closeProductForm(){ document.getElementById('productSheetBackdrop').classList.remove('show'); }
 async function saveProduct(){
@@ -2456,12 +2514,14 @@ async function saveProduct(){
   const name = document.getElementById('prdFormName').value.trim();
   if(!name){ showToast('請輸入商品名稱'); return; }
   const stockRaw = document.getElementById('prdFormStock').value;
+  const image = document.getElementById('prdImagePreview').dataset.image || '';
   const prd = {
     icon: document.getElementById('prdFormIcon').value.trim() || '🛍️',
     name,
     desc: document.getElementById('prdFormDesc').value.trim(),
     price: Number(document.getElementById('prdFormPrice').value) || 0,
     stock: stockRaw==='' ? null : Number(stockRaw),
+    image: image || null,
     order: id ? (PRODUCTS.find(p=>p.id===id)?.order ?? PRODUCTS.length) : PRODUCTS.length
   };
   try{
