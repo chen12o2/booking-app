@@ -245,6 +245,8 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .bkt-svc-row .nm{ font-weight:700; }
 .bkt-svc-row .tm{ font-size:11.5px; color:var(--ink-soft); }
 .bkt-total{ display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--line); margin-top:10px; padding-top:10px; }
+.bkt-reconcile-row{ display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--line); margin-top:10px; padding-top:10px; }
+.bkt-reconcile-row .lbl{ font-size:13px; font-weight:700; }
 .bkt-total .lbl{ font-size:13px; font-weight:700; }
 .bkt-total .amt{ font-family:'Space Mono',monospace; font-weight:700; color:var(--stamp-dark); font-size:16px; }
 .bkt-link-row{ text-align:center; margin-top:14px; }
@@ -794,6 +796,29 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
       <div class="sheet-actions" style="margin-top:18px;">
         <button class="btn btn-outline" onclick="closeAdjustAmount()">取消</button>
         <button class="btn btn-primary" onclick="confirmAdjustAmount()">儲存實收</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PAYMENT RECONCILE MODAL ============ -->
+  <div class="modal-backdrop" id="payReconcileBackdrop" onclick="if(event.target===this)closePayReconcile()">
+    <div class="modal-card">
+      <h3>對賬</h3>
+      <p class="field-hint" style="margin-bottom:14px;">記錄這筆款項實際是怎麼收到的，方便日後核對。</p>
+      <div class="toggle-pair" style="margin-bottom:14px;">
+        <button class="toggle-opt" id="payMethodCash" onclick="setPayMethod('cash')">現金</button>
+        <button class="toggle-opt" id="payMethodTransfer" onclick="setPayMethod('transfer')">轉帳</button>
+        <button class="toggle-opt" id="payMethodLinepay" onclick="setPayMethod('linepay')">LinePay</button>
+        <button class="toggle-opt" id="payMethodOther" onclick="setPayMethod('other')">其他</button>
+      </div>
+      <div id="payMethodExtraFields"></div>
+      <div class="field">
+        <label for="payNoteInput">備註（選填）</label>
+        <textarea id="payNoteInput" rows="2" placeholder="例如：分兩次付、含小費…"></textarea>
+      </div>
+      <div class="sheet-actions" style="margin-top:6px;">
+        <button class="btn btn-outline" onclick="closePayReconcile()">取消</button>
+        <button class="btn btn-primary" onclick="confirmPayReconcile()">儲存對賬</button>
       </div>
     </div>
   </div>
@@ -1676,6 +1701,13 @@ function openBookingSheet(id){
           <button class="btn-adjust" onclick="adjustActualAmount('${b.id}')">✎ 調整實收</button>
         </div>
       </div>
+      <div class="bkt-reconcile-row">
+        <span class="lbl">對賬</span>
+        <div class="bkt-total-row">
+          <span class="amt" style="font-size:13px;">${paymentMethodSummary(b)}</span>
+          <button class="btn-adjust" onclick="openPayReconcile('${b.id}')">✎ ${b.payment ? '修改對賬' : '記錄對賬'}</button>
+        </div>
+      </div>
     </div>
     <button class="btn-edit-compact" onclick="openEditItems('${b.id}')">✎ 編輯項目</button>
     <div id="rescheduleBox"></div>
@@ -1768,6 +1800,70 @@ async function confirmAdjustAmount(){
     openBookingSheet(id);
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
+
+/* ---- 對賬：記錄這筆款項實際的收款方式 ---- */
+function paymentMethodSummary(b){
+  if(!b.payment || !b.payment.method) return '尚未記錄';
+  const labels = { cash:'現金', transfer:'轉帳', linepay:'LinePay', other:'其他' };
+  let s = labels[b.payment.method] || b.payment.method;
+  if(b.payment.method==='transfer' && (b.payment.bank || b.payment.last5)){
+    s += '（' + [b.payment.bank, b.payment.last5?'後五碼 '+b.payment.last5:''].filter(Boolean).join('・') + '）';
+  }
+  return s;
+}
+let payReconcileBookingId = null;
+function openPayReconcile(id){
+  const b = loadBookings().find(x=>x.id===id);
+  if(!b) return;
+  payReconcileBookingId = id;
+  const p = b.payment || {};
+  setPayMethod(p.method || 'cash');
+  document.getElementById('payNoteInput').value = p.note || '';
+  document.getElementById('payReconcileBackdrop').classList.add('show');
+}
+function closePayReconcile(){
+  document.getElementById('payReconcileBackdrop').classList.remove('show');
+  payReconcileBookingId = null;
+}
+function setPayMethod(method){
+  ['cash','transfer','linepay','other'].forEach(m=>{
+    document.getElementById('payMethod'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active', m===method);
+  });
+  document.getElementById('payMethodExtraFields').dataset.method = method;
+  const extra = document.getElementById('payMethodExtraFields');
+  const b = payReconcileBookingId ? loadBookings().find(x=>x.id===payReconcileBookingId) : null;
+  const p = (b && b.payment) || {};
+  if(method==='transfer'){
+    extra.innerHTML = `
+      <div class="field-row">
+        <div class="field"><label for="payBankInput">銀行</label><input type="text" id="payBankInput" placeholder="例如：008 華南銀行" value="${p.bank||''}"></div>
+        <div class="field"><label for="payLast5Input">帳號後五碼</label><input type="text" id="payLast5Input" maxlength="5" placeholder="12345" value="${p.last5||''}"></div>
+      </div>`;
+  } else {
+    extra.innerHTML = '';
+  }
+}
+async function confirmPayReconcile(){
+  if(!payReconcileBookingId) return;
+  const method = document.getElementById('payMethodExtraFields').dataset.method || 'cash';
+  const payment = {
+    method,
+    note: document.getElementById('payNoteInput').value.trim(),
+    recordedAt: new Date().toISOString()
+  };
+  if(method==='transfer'){
+    payment.bank = (document.getElementById('payBankInput')?.value||'').trim();
+    payment.last5 = (document.getElementById('payLast5Input')?.value||'').trim();
+  }
+  try{
+    await db.collection('bookings').doc(payReconcileBookingId).update({ payment });
+    showToast('對賬已儲存');
+    const id = payReconcileBookingId;
+    closePayReconcile();
+    openBookingSheet(id);
+  }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
+}
+
 function closeBookingSheet(){ document.getElementById('bookingSheetBackdrop').classList.remove('show'); }
 
 /* ============================================================
