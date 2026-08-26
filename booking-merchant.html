@@ -525,7 +525,12 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .check-row{ display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:400; color:var(--ink); cursor:pointer; }
 .check-row input{ width:18px; height:18px; accent-color:var(--ledger); }
 .break-range-row{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-.break-range-row input[type="time"]{ flex:1; min-width:0; }
+.break-range-row input[type="time"]{
+  flex:1; min-width:0; width:100%; box-sizing:border-box; border:1.5px solid var(--line); border-radius:10px;
+  padding:12px 13px; font-family:'Noto Sans TC', sans-serif; font-size:14.5px; background:var(--white); color:var(--ink);
+  appearance:none; -webkit-appearance:none;
+}
+.break-range-row input[type="time"]:focus{ outline:2px solid var(--ledger); outline-offset:1px; }
 .break-range-row .sep{ color:var(--ink-soft); }
 .break-range-row .rm{ color:var(--stamp-dark); font-size:16px; cursor:pointer; flex-shrink:0; padding:4px; }
 .chip-pick-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
@@ -963,7 +968,13 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
         <div class="field">
           <label>重複週幾</label>
           <div class="wd-pick-row" id="breakWeekdayPick">
-            ${['一','二','三','四','五','六','日'].map((wd,i)=>{ const dow=(i+1)%7; return `<button class="wd-pick" data-wd="${dow}" onclick="toggleBreakWeekday(${dow})">${wd}</button>`; }).join('')}
+            <button class="wd-pick" data-wd="1" onclick="toggleBreakWeekday(1)">一</button>
+            <button class="wd-pick" data-wd="2" onclick="toggleBreakWeekday(2)">二</button>
+            <button class="wd-pick" data-wd="3" onclick="toggleBreakWeekday(3)">三</button>
+            <button class="wd-pick" data-wd="4" onclick="toggleBreakWeekday(4)">四</button>
+            <button class="wd-pick" data-wd="5" onclick="toggleBreakWeekday(5)">五</button>
+            <button class="wd-pick" data-wd="6" onclick="toggleBreakWeekday(6)">六</button>
+            <button class="wd-pick" data-wd="0" onclick="toggleBreakWeekday(0)">日</button>
           </div>
           <div class="chip-pick-row">
             <button class="chip-pick" onclick="pickBreakWeekdayPreset('weekday')">平日</button>
