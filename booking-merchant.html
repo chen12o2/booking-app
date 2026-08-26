@@ -362,6 +362,19 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 }
 .toggle-row-inline .tt{ font-size:13px; font-weight:700; margin-bottom:3px; }
 .toggle-row-inline .ds{ font-size:11.5px; color:var(--ink-soft); line-height:1.5; }
+.toggle-pair{ display:flex; gap:8px; margin-bottom:8px; }
+.toggle-opt{
+  flex:1; padding:10px 8px; border-radius:10px; border:1.5px solid var(--line); background:var(--white);
+  color:var(--ink-soft); font-size:13px; font-weight:700; cursor:pointer; text-align:center;
+}
+.toggle-opt.active{ background:var(--stamp); border-color:var(--stamp); color:var(--white); }
+.break-row{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:var(--white); border:1.5px solid var(--line); border-radius:10px; padding:11px 14px; margin-bottom:8px;
+}
+.break-row .info{ font-size:13px; }
+.break-row .info .lbl{ color:var(--ink-soft); font-size:11.5px; margin-top:2px; }
+.break-row .del{ color:var(--stamp-dark); font-size:12px; cursor:pointer; text-decoration:underline; flex-shrink:0; }
 .wk-row{
   display:flex; align-items:center; gap:8px; background:var(--white); border:1.5px solid var(--line);
   border-radius:10px; padding:10px 12px; margin-bottom:8px;
@@ -2131,7 +2144,19 @@ function openSettingsSheet(kind){
       <div id="weekHoursList"></div>
       <button class="btn btn-primary" style="width:100%; margin:12px 0 20px;" onclick="saveWeekHours()">儲存營業時間</button>
 
+      <div class="section-title" style="margin-bottom:10px;"><span class="lead">休息時段</span><button class="add-btn" onclick="addBreakEntry()">＋ 新增休息時段</button></div>
+      <div class="field-hint" style="margin-bottom:10px;">臨時休假、午休等不接客的時段。固定每週店休請用上方「營業時間」。僅顯示今天起的休息時段。</div>
+      <div id="breaksList" style="margin-bottom:20px;"></div>
+
       <div class="section-title" style="margin-bottom:10px;"><span class="lead">時間規則</span></div>
+      <div class="field">
+        <label>可約時段產生方式</label>
+        <div class="toggle-pair">
+          <button class="toggle-opt" id="slotModeAuto" onclick="setSlotMode('auto')">依營業時間</button>
+          <button class="toggle-opt" id="slotModeCustom" onclick="setSlotMode('custom')">指定時段</button>
+        </div>
+        <div class="field-hint">依你的營業時間與服務時長，自動排出可約時段（目前僅支援此模式，「指定時段」尚未開放細部設定）。</div>
+      </div>
       <div class="field"><label for="setSlotMin">時段間隔（分鐘）</label>
         <select id="setSlotMin">
           <option value="15">15 分鐘</option>
@@ -2146,16 +2171,36 @@ function openSettingsSheet(kind){
       </div>
       <div class="field"><label for="setBufferMin">預約間緩衝（分鐘）</label>
         <input type="number" id="setBufferMin" min="0" step="5">
-        <div class="field-hint">每筆預約後留多少時間收尾、準備下一位客人。</div>
+        <div class="field-hint">每筆預約後留多少時間收尾、準備下一位客人，這段時間不會再開放給其他人預約。</div>
       </div>
       <div class="field"><label for="setHoursFull">營業時間文字（顯示用）</label><input type="text" id="setHoursFull" placeholder="週一至週日 09:00–18:00"></div>
+
+      <div class="section-title" style="margin-bottom:10px; margin-top:22px;"><span class="lead">開放方式</span></div>
+      <div class="toggle-pair" style="margin-bottom:12px;">
+        <button class="toggle-opt" id="openModeMonthly" onclick="setOpenMode('monthly')">每月整月開放</button>
+        <button class="toggle-opt" id="openModeRolling" onclick="setOpenMode('rolling')">滾動式</button>
+      </div>
+      <div id="monthlyOpenFields">
+        <div class="field-row">
+          <div class="field"><label for="setMonthlyDay">每月幾號</label><input type="number" id="setMonthlyDay" min="1" max="28" oninput="updateMonthlyOpenHint()"></div>
+          <div class="field"><label for="setMonthlyTime">幾點開放下個月</label><input type="time" id="setMonthlyTime" oninput="updateMonthlyOpenHint()"></div>
+        </div>
+        <div class="field-hint" id="monthlyOpenHint" style="margin-bottom:10px;"></div>
+      </div>
+      <div class="field-hint" id="rollingHint" style="margin-bottom:10px; display:none;">顧客隨時都能往後預約，不限制在特定月份內。</div>
+
       <button class="btn btn-primary" style="width:100%;" onclick="saveHours()">儲存預約規則</button>
     `;
     renderWeekHours();
+    renderBreaksList();
     document.getElementById('setSlotMin').value = String(BUSINESS.slotMin);
     document.getElementById('setLeadHours').value = BUSINESS.leadHours ?? 0;
     document.getElementById('setBufferMin').value = BUSINESS.bufferMin ?? 0;
     document.getElementById('setHoursFull').value = BUSINESS.hoursFull;
+    document.getElementById('setMonthlyDay').value = BUSINESS.monthlyOpenDay ?? 25;
+    document.getElementById('setMonthlyTime').value = BUSINESS.monthlyOpenTime ?? '12:00';
+    setSlotMode(BUSINESS.slotMode === 'custom' ? 'custom' : 'auto', true);
+    setOpenMode(BUSINESS.openMode === 'rolling' ? 'rolling' : 'monthly', true);
   } else if(kind==='policy'){
     body.innerHTML = `
       <div class="field">
@@ -2282,6 +2327,76 @@ async function saveWeekHours(){
     showToast('營業時間已儲存');
   }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
 }
+
+/* ---- 休息時段（臨時休假／午休等特定日期不接客） ---- */
+function renderBreaksList(){
+  const wrap = document.getElementById('breaksList');
+  if(!wrap) return;
+  const todayKey = new Date().toISOString().slice(0,10);
+  const breaks = (BUSINESS.breaks || []).filter(b=>b.date>=todayKey).sort((a,b)=>a.date.localeCompare(b.date));
+  if(breaks.length===0){
+    wrap.innerHTML = `<div class="field-hint">目前沒有設定休息時段。固定每週店休請用上方「營業時間」。</div>`;
+    return;
+  }
+  wrap.innerHTML = breaks.map((b,idx)=>{
+    const realIdx = (BUSINESS.breaks||[]).indexOf(b);
+    return `
+    <div class="break-row">
+      <div class="info">${b.date}<div class="lbl">${b.label || '休息'}</div></div>
+      <span class="del" onclick="deleteBreakEntry(${realIdx})">刪除</span>
+    </div>`;
+  }).join('');
+}
+async function addBreakEntry(){
+  const date = prompt('請輸入休息日期（格式：YYYY-MM-DD）：');
+  if(!date) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){ showToast('日期格式不正確，請用 YYYY-MM-DD'); return; }
+  const label = prompt('備註（選填，例如：進修、私事）：') || '';
+  const breaks = [...(BUSINESS.breaks || []), { date, label }];
+  try{
+    await db.collection('meta').doc('business').set({ breaks }, { merge:true });
+    showToast('已新增休息時段');
+    renderBreaksList();
+  }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
+}
+async function deleteBreakEntry(idx){
+  const breaks = (BUSINESS.breaks || []).filter((_,i)=>i!==idx);
+  try{
+    await db.collection('meta').doc('business').set({ breaks }, { merge:true });
+    showToast('已刪除');
+    renderBreaksList();
+  }catch(err){ showToast('刪除失敗，請檢查網路連線後再試'); }
+}
+
+/* ---- 可約時段產生方式 / 開放方式 ---- */
+function setSlotMode(mode, silent){
+  document.getElementById('slotModeAuto').classList.toggle('active', mode==='auto');
+  document.getElementById('slotModeCustom').classList.toggle('active', mode==='custom');
+  document.getElementById('slotModeAuto').dataset.val = mode;
+  if(!silent && mode==='custom'){ showToast('「指定時段」尚未開放細部設定，目前仍會沿用「依營業時間」自動產生時段'); }
+}
+function setOpenMode(mode, silent){
+  document.getElementById('openModeMonthly').classList.toggle('active', mode==='monthly');
+  document.getElementById('openModeRolling').classList.toggle('active', mode==='rolling');
+  document.getElementById('openModeMonthly').dataset.val = mode;
+  document.getElementById('monthlyOpenFields').style.display = mode==='monthly' ? 'block' : 'none';
+  document.getElementById('rollingHint').style.display = mode==='rolling' ? 'block' : 'none';
+  if(mode==='monthly') updateMonthlyOpenHint();
+}
+function updateMonthlyOpenHint(){
+  const day = Number(document.getElementById('setMonthlyDay').value) || 25;
+  const time = document.getElementById('setMonthlyTime').value || '12:00';
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const lastDayThisMonth = new Date(y, m+1, 0).getDate();
+  const thisMonthEnd = new Date(y, m, lastDayThisMonth);
+  const openThreshold = new Date(y, m, Math.min(day, lastDayThisMonth), ...time.split(':').map(Number));
+  const nextMonthLabel = (m+2>12) ? (y+1)+'年 1月' : y+'年 '+(m+2)+'月';
+  const WD = ['日','一','二','三','四','五','六'];
+  const hintDate = openThreshold.getMonth()+1 + '/' + openThreshold.getDate() + '（週'+WD[openThreshold.getDay()]+'）';
+  document.getElementById('monthlyOpenHint').textContent =
+    `顧客現在可訂到 ${m+1}/${lastDayThisMonth}；${nextMonthLabel}將於 ${hintDate} ${time} 開放。`;
+}
 async function saveShopfront(){
   const data = {
     name: document.getElementById('setName').value.trim() || DEFAULT_BUSINESS.name,
@@ -2306,7 +2421,11 @@ async function saveHours(){
     slotMin: Number(document.getElementById('setSlotMin').value),
     leadHours: Number(document.getElementById('setLeadHours').value) || 0,
     bufferMin: Number(document.getElementById('setBufferMin').value) || 0,
-    hoursFull: document.getElementById('setHoursFull').value.trim()
+    hoursFull: document.getElementById('setHoursFull').value.trim(),
+    slotMode: document.getElementById('slotModeAuto').dataset.val || 'auto',
+    openMode: document.getElementById('openModeMonthly').dataset.val || 'monthly',
+    monthlyOpenDay: Number(document.getElementById('setMonthlyDay').value) || 25,
+    monthlyOpenTime: document.getElementById('setMonthlyTime').value || '12:00'
   };
   try{
     await db.collection('meta').doc('business').set(data, { merge:true });
