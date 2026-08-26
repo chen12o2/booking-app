@@ -368,6 +368,8 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
   color:var(--ink-soft); font-size:13px; font-weight:700; cursor:pointer; text-align:center;
 }
 .toggle-opt.active{ background:var(--stamp); border-color:var(--stamp); color:var(--white); }
+.live-save-badge{ font-size:10.5px; color:var(--ledger-dark); background:#EAF2EC; padding:3px 9px; border-radius:99px; }
+.need-save-badge{ font-size:10.5px; color:var(--ink-soft); background:var(--paper-2); padding:3px 9px; border-radius:99px; }
 .break-row{
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   background:var(--white); border:1.5px solid var(--line); border-radius:10px; padding:11px 14px; margin-bottom:8px;
@@ -588,11 +590,16 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
         <div id="staffList"></div>
       </section>
 
+      <!-- ============ SHOPFRONT (full page) ============ -->
+      <section class="screen" id="screen-shopfront">
+        <div id="shopfrontBody"></div>
+      </section>
+
       <!-- ============ SETTINGS ============ -->
       <section class="screen" id="screen-settings">
         <div class="section-title"><span class="lead"><span class="num">⚙</span>設定</span></div>
         <div class="settings-list">
-          <div class="settings-row" onclick="openSettingsSheet('shopfront')">
+          <div class="settings-row" onclick="goScreen('shopfront')">
             <div class="settings-ic">🏪</div>
             <div class="settings-body"><h4>商店門面</h4><p>Logo・店名・地址・社群・預約網址</p></div>
             <div class="settings-chevron">›</div>
@@ -954,6 +961,7 @@ function rerenderActiveScreen(){
   if(id==='customers') renderCustomersList();
   if(id==='services'){ renderServicesList(); renderProductsList(); }
   if(id==='staff') renderStaffListView();
+  if(id==='shopfront') renderShopfrontScreen();
   
 }
 
@@ -1122,12 +1130,12 @@ function goScreen(id, opts={}){
   document.querySelectorAll('#mainApp .screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const navEl = document.querySelector('.nav-item[data-nav="'+(id==='staff'?'settings':id)+'"]');
+  const navEl = document.querySelector('.nav-item[data-nav="'+((id==='staff'||id==='shopfront')?'settings':id)+'"]');
   if(navEl) navEl.classList.add('active');
 
-  const titles = { dashboard:'總覽', calendar:'日曆', bookings:'預約管理', customers:'顧客資料', services:'服務項目', staff:'服務人員', settings:'設定' };
+  const titles = { dashboard:'總覽', calendar:'日曆', bookings:'預約管理', customers:'顧客資料', services:'服務項目', staff:'服務人員', shopfront:'商店門面', settings:'設定' };
   document.getElementById('topbarTitle').textContent = titles[id] || '商家後台';
-  document.getElementById('backBtnWrap').innerHTML = (id==='staff') ? '<div class="back-btn" onclick="goScreen(\'settings\')">←</div>' : '';
+  document.getElementById('backBtnWrap').innerHTML = (id==='staff'||id==='shopfront') ? '<div class="back-btn" onclick="goScreen(\'settings\')">←</div>' : '';
 
   if(!opts.noPush){ navStack.push(id); }
   window.scrollTo(0,0);
@@ -1138,6 +1146,7 @@ function goScreen(id, opts={}){
   if(id==='customers') renderCustomersList();
   if(id==='services') { renderServicesList(); renderProductsList(); }
   if(id==='staff') renderStaffListView();
+  if(id==='shopfront') renderShopfrontScreen();
   
 }
 
@@ -2064,80 +2073,82 @@ function previewCustomerLink(){
   if(!url){ showToast('尚未設定顧客頁網址，請至「設定→商店門面」貼上'); return; }
   window.open(url, '_blank');
 }
-const SETTINGS_SHEET_TITLES = { shopfront:'商店門面', hours:'時段與可約', policy:'接單政策', deposit:'定金', notify:'通知', account:'帳號與關於' };
+function renderShopfrontScreen(){
+  const body = document.getElementById('shopfrontBody');
+  body.innerHTML = `
+    <div class="field-hint" style="margin-bottom:14px;">顧客在預約頁看到的一切。</div>
+    <div class="about-card logo-upload-card">
+      <div class="logo-preview" id="logoPreview">🏷️</div>
+      <div class="logo-upload-actions">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('logoFileInput').click()">上傳 Logo</button>
+        <button class="btn btn-ghost btn-sm" id="removeLogoBtn" style="display:none;" onclick="removeLogo()">移除 Logo</button>
+        <div class="field-hint">JPEG / PNG / WebP・建議正方形</div>
+      </div>
+      <input type="file" id="logoFileInput" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
+    </div>
+    <div class="field"><label for="setName">店名</label><input type="text" id="setName"></div>
+    <div class="field">
+      <label for="setTagline">簡介</label>
+      <textarea id="setTagline" rows="5" placeholder="約 1-2 句介紹店家（選填，可換行）"></textarea>
+    </div>
+    <div class="field-row">
+      <div class="field"><label for="setCity">縣市</label><select id="setCity" onchange="onCityChange()"></select></div>
+      <div class="field"><label for="setDistrict">區域</label><select id="setDistrict"></select></div>
+    </div>
+    <div class="field">
+      <label for="setAddr">詳細地址</label>
+      <input type="text" id="setAddr" placeholder="街道門牌">
+    </div>
+    <div class="toggle-row-inline">
+      <div>
+        <div class="tt">隱藏詳細地址</div>
+        <div class="ds">開啟＝預約成立後才向預約者顯示詳細地址（預約頁只露縣市＋區域）；關閉＝完整地址公開顯示在預約頁。</div>
+      </div>
+      <div class="switch" id="hideAddrSwitch" onclick="toggleHideAddr()"><div class="knob"></div></div>
+    </div>
+    <div class="field"><label for="setPhone">電話</label><input type="text" id="setPhone" placeholder="客人看到的公開聯絡電話（選填）"></div>
+    <div class="field"><label for="setIg">Instagram</label><input type="text" id="setIg" placeholder="@帳號 或完整網址（選填）"></div>
+    <div class="field"><label for="setLine">LINE</label><input type="text" id="setLine" placeholder="https://lin.ee/... （選填）"></div>
+    <div class="field">
+      <label for="setNotice">預約須知</label>
+      <textarea id="setNotice" rows="5" placeholder="自動附在確認信與預約頁，例如：停車資訊、請提前 10 分鐘到、取消政策（選填）"></textarea>
+    </div>
+    <div class="field"><label for="setPrefix">預約編號前綴</label><input type="text" id="setPrefix" maxlength="6"></div>
+    <div class="field">
+      <label for="calLinkInput2">預約網址（顧客頁連結）</label>
+      <div class="link-box">
+        <input type="text" id="calLinkInput2" placeholder="請貼上 booking-customer.html 部署後的網址">
+        <button class="btn btn-ghost btn-sm" onclick="copyCustomerLink('calLinkInput2')">複製</button>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="width:100%; margin-bottom:16px;" onclick="saveShopfront()">儲存</button>
+    <div class="share-card">
+      <div class="section-title" style="justify-content:center;"><span class="lead"><span class="num">\u{1F5BC}</span>預約看板海報</span></div>
+      <canvas id="posterCanvas" width="600" height="800"></canvas>
+      <button class="btn btn-ghost" style="width:100%; margin-bottom:8px;" onclick="downloadPoster()">下載海報圖片</button>
+      <div class="field-hint">海報含店名、營業時間與聯絡方式，適合印出張貼或分享至社群。</div>
+    </div>
+  `;
+  renderCityOptions();
+  document.getElementById('setName').value = BUSINESS.name;
+  document.getElementById('setTagline').value = BUSINESS.tagline;
+  document.getElementById('setAddr').value = BUSINESS.address;
+  document.getElementById('setPhone').value = BUSINESS.phone;
+  document.getElementById('setIg').value = BUSINESS.instagram || '';
+  document.getElementById('setLine').value = BUSINESS.lineUrl || '';
+  document.getElementById('setNotice').value = BUSINESS.notice || '';
+  document.getElementById('setPrefix').value = BUSINESS.bookingPrefix;
+  document.getElementById('calLinkInput2').value = BUSINESS.customerUrl || '';
+  document.getElementById('hideAddrSwitch').classList.toggle('on', BUSINESS.hideAddress === true);
+  renderLogo();
+  drawPoster();
+}
+const SETTINGS_SHEET_TITLES = { hours:'時段與可約', policy:'接單政策', deposit:'定金', notify:'通知', account:'帳號與關於' };
 function openSettingsSheet(kind){
   document.getElementById('settingsSheetTitle').textContent = SETTINGS_SHEET_TITLES[kind] || '設定';
   const body = document.getElementById('settingsSheetBody');
 
-  if(kind==='shopfront'){
-    body.innerHTML = `
-      <div class="field-hint" style="margin-bottom:14px;">顧客在預約頁看到的一切。</div>
-      <div class="about-card logo-upload-card">
-        <div class="logo-preview" id="logoPreview">🏷️</div>
-        <div class="logo-upload-actions">
-          <button class="btn btn-outline btn-sm" onclick="document.getElementById('logoFileInput').click()">上傳 Logo</button>
-          <button class="btn btn-ghost btn-sm" id="removeLogoBtn" style="display:none;" onclick="removeLogo()">移除 Logo</button>
-          <div class="field-hint">JPEG / PNG / WebP・建議正方形</div>
-        </div>
-        <input type="file" id="logoFileInput" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
-      </div>
-      <div class="field"><label for="setName">店名</label><input type="text" id="setName"></div>
-      <div class="field">
-        <label for="setTagline">簡介</label>
-        <textarea id="setTagline" rows="5" placeholder="約 1-2 句介紹店家（選填，可換行）"></textarea>
-      </div>
-      <div class="field-row">
-        <div class="field"><label for="setCity">縣市</label><select id="setCity" onchange="onCityChange()"></select></div>
-        <div class="field"><label for="setDistrict">區域</label><select id="setDistrict"></select></div>
-      </div>
-      <div class="field">
-        <label for="setAddr">詳細地址</label>
-        <input type="text" id="setAddr" placeholder="街道門牌">
-      </div>
-      <div class="toggle-row-inline">
-        <div>
-          <div class="tt">隱藏詳細地址</div>
-          <div class="ds">開啟＝預約成立後才向預約者顯示詳細地址（預約頁只露縣市＋區域）；關閉＝完整地址公開顯示在預約頁。</div>
-        </div>
-        <div class="switch" id="hideAddrSwitch" onclick="toggleHideAddr()"><div class="knob"></div></div>
-      </div>
-      <div class="field"><label for="setPhone">電話</label><input type="text" id="setPhone" placeholder="客人看到的公開聯絡電話（選填）"></div>
-      <div class="field"><label for="setIg">Instagram</label><input type="text" id="setIg" placeholder="@帳號 或完整網址（選填）"></div>
-      <div class="field"><label for="setLine">LINE</label><input type="text" id="setLine" placeholder="https://lin.ee/... （選填）"></div>
-      <div class="field">
-        <label for="setNotice">預約須知</label>
-        <textarea id="setNotice" rows="5" placeholder="自動附在確認信與預約頁，例如：停車資訊、請提前 10 分鐘到、取消政策（選填）"></textarea>
-      </div>
-      <div class="field"><label for="setPrefix">預約編號前綴</label><input type="text" id="setPrefix" maxlength="6"></div>
-      <div class="field">
-        <label for="calLinkInput2">預約網址（顧客頁連結）</label>
-        <div class="link-box">
-          <input type="text" id="calLinkInput2" placeholder="請貼上 booking-customer.html 部署後的網址">
-          <button class="btn btn-ghost btn-sm" onclick="copyCustomerLink('calLinkInput2')">複製</button>
-        </div>
-      </div>
-      <button class="btn btn-primary" style="width:100%; margin-bottom:16px;" onclick="saveShopfront()">儲存</button>
-      <div class="share-card">
-        <div class="section-title" style="justify-content:center;"><span class="lead"><span class="num">\u{1F5BC}</span>預約看板海報</span></div>
-        <canvas id="posterCanvas" width="600" height="800"></canvas>
-        <button class="btn btn-ghost" style="width:100%; margin-bottom:8px;" onclick="downloadPoster()">下載海報圖片</button>
-        <div class="field-hint">海報含店名、營業時間與聯絡方式，適合印出張貼或分享至社群。</div>
-      </div>
-    `;
-    renderCityOptions();
-    document.getElementById('setName').value = BUSINESS.name;
-    document.getElementById('setTagline').value = BUSINESS.tagline;
-    document.getElementById('setAddr').value = BUSINESS.address;
-    document.getElementById('setPhone').value = BUSINESS.phone;
-    document.getElementById('setIg').value = BUSINESS.instagram || '';
-    document.getElementById('setLine').value = BUSINESS.lineUrl || '';
-    document.getElementById('setNotice').value = BUSINESS.notice || '';
-    document.getElementById('setPrefix').value = BUSINESS.bookingPrefix;
-    document.getElementById('calLinkInput2').value = BUSINESS.customerUrl || '';
-    document.getElementById('hideAddrSwitch').classList.toggle('on', BUSINESS.hideAddress === true);
-    renderLogo();
-    drawPoster();
-  } else if(kind==='hours'){
+  if(kind==='hours'){
     body.innerHTML = `
       <div class="field-hint" style="margin-bottom:14px;">你的營業時間、休息安排，以及顧客可以怎麼約。</div>
       <div class="section-title" style="margin-bottom:10px;"><span class="lead">營業時間</span></div>
@@ -2203,16 +2214,75 @@ function openSettingsSheet(kind){
     setOpenMode(BUSINESS.openMode === 'rolling' ? 'rolling' : 'monthly', true);
   } else if(kind==='policy'){
     body.innerHTML = `
-      <div class="field">
-        <label style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-          <span>新預約需要商家確認</span>
-          <div class="switch" id="requireConfirmSwitch" onclick="toggleRequireConfirm()"><div class="knob"></div></div>
-        </label>
-        <div class="field-hint">開啟後，顧客送出的新預約會先進入「待確認」狀態，需要你在「日曆」頁手動按下「確認預約」才會正式成立；關閉則顧客送出後直接成立為「即將到來」。</div>
+      <div class="field-hint" style="margin-bottom:14px;">預約要不要你確認、顧客要填什麼、多晚之前能取消。</div>
+
+      <div class="section-title" style="margin-bottom:2px;"><span class="lead">預約政策</span><span class="live-save-badge">● 即時儲存</span></div>
+      <div class="field-hint" style="margin-bottom:10px;">開關一下即生效、自動儲存，不用按按鈕。</div>
+
+      <div class="toggle-row-inline">
+        <div>
+          <div class="tt">需我確認後才成立預約</div>
+          <div class="ds">開啟後，顧客送出預約會先進入待確認，需你在後台按「確認」才正式成立。排班較滿或想先過濾客人的店家建議開啟；想維持「顧客秒訂、免回覆」的店家保持關閉（預設）。</div>
+        </div>
+        <div class="switch" id="requireConfirmSwitch" onclick="toggleRequireConfirm()"><div class="knob"></div></div>
       </div>
-      <div class="field-hint" style="margin-top:16px;">預約表單欄位、取消期限等進階規則尚未開放自訂，目前為固定邏輯（顧客需填寫姓名與手機號碼；取消不限期限）。</div>
+
+      <div class="toggle-row-inline">
+        <div>
+          <div class="tt">允許一次預約多個服務</div>
+          <div class="ds">開啟後，顧客可在同一筆預約勾選多個主服務，系統自動加總時長與金額。單一主項服務（如諮商）建議關閉；可組合的服務（如剪髮＋染髮）建議開啟。</div>
+        </div>
+        <div class="switch" id="allowMultiServiceSwitch" onclick="toggleAllowMultiService()"><div class="knob"></div></div>
+      </div>
+
+      <div class="section-title" style="margin-bottom:8px; margin-top:20px;"><span class="lead">預約表單欄位</span></div>
+      <div class="field-hint" style="margin-bottom:14px;">決定顧客在公開預約頁要不要填這些欄位。「不用填」＝不顯示也不蒐集。（Email 為聯絡與寄信管道，一律必填，不在此調整。）</div>
+
+      <div class="field" style="margin-bottom:16px;">
+        <label>手機</label>
+        <div class="toggle-pair">
+          <button class="toggle-opt" id="fldPhoneReq" onclick="setFieldMode('Phone','required')">必填</button>
+          <button class="toggle-opt" id="fldPhoneOpt" onclick="setFieldMode('Phone','optional')">選填</button>
+          <button class="toggle-opt" id="fldPhoneOff" onclick="setFieldMode('Phone','off')">不用填</button>
+        </div>
+        <div class="field-hint">顧客的聯絡電話。選填時顯示在預約頁但可不填；不用填時則不顯示、也不會蒐集。</div>
+      </div>
+      <div class="field" style="margin-bottom:16px;">
+        <label>生日</label>
+        <div class="toggle-pair">
+          <button class="toggle-opt" id="fldBirthdayReq" onclick="setFieldMode('Birthday','required')">必填</button>
+          <button class="toggle-opt" id="fldBirthdayOpt" onclick="setFieldMode('Birthday','optional')">選填</button>
+          <button class="toggle-opt" id="fldBirthdayOff" onclick="setFieldMode('Birthday','off')">不用填</button>
+        </div>
+        <div class="field-hint">完整出生年月日。供你進行預約管理與服務安排之判斷；蒐集與否由你決定。</div>
+      </div>
+      <div class="field" style="margin-bottom:6px;">
+        <label>性別</label>
+        <div class="toggle-pair">
+          <button class="toggle-opt" id="fldGenderReq" onclick="setFieldMode('Gender','required')">必填</button>
+          <button class="toggle-opt" id="fldGenderOpt" onclick="setFieldMode('Gender','optional')">選填</button>
+          <button class="toggle-opt" id="fldGenderOff" onclick="setFieldMode('Gender','off')">不用填</button>
+        </div>
+        <div class="field-hint">固定選項（男／女／其他）。供你進行預約管理與服務安排之判斷；蒐集與否由你決定。</div>
+      </div>
+
+      <div class="about-card" style="margin-top:20px;">
+        <div class="section-title" style="margin-bottom:2px;"><span class="lead">取消政策</span><span class="need-save-badge">需按儲存</span></div>
+        <div class="field-hint" style="margin-bottom:12px;">客人多晚之前還能自行取消預約。</div>
+        <div class="field" style="margin-bottom:10px;">
+          <label for="setCancelDeadline">客人最晚可取消時間（小時前）</label>
+          <input type="number" id="setCancelDeadline" min="0" step="1">
+          <div class="field-hint">顧客最晚在預約前幾小時可以取消？少於這個時間就鎖定。</div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;" onclick="saveCancelPolicy()">儲存取消政策</button>
+      </div>
     `;
     document.getElementById('requireConfirmSwitch').classList.toggle('on', BUSINESS.requireConfirm !== false);
+    document.getElementById('allowMultiServiceSwitch').classList.toggle('on', BUSINESS.allowMultiService === true);
+    setFieldMode('Phone', BUSINESS.fieldPhone || 'required', true);
+    setFieldMode('Birthday', BUSINESS.fieldBirthday || 'optional', true);
+    setFieldMode('Gender', BUSINESS.fieldGender || 'optional', true);
+    document.getElementById('setCancelDeadline').value = BUSINESS.cancelDeadlineHours ?? 0;
   } else if(kind==='deposit'){
     body.innerHTML = `<div class="field-hint">定金功能尚未開放。之後可以在這裡設定訂金比例、收款方式，以及顧客逾期未付款時的自動處理規則。</div>`;
   } else if(kind==='notify'){
@@ -2440,6 +2510,34 @@ async function toggleRequireConfirm(){
     await db.collection('meta').doc('business').set({ requireConfirm: next }, { merge:true });
     showToast(next ? '已開啟確認制' : '已關閉確認制，新預約將直接成立');
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
+async function toggleAllowMultiService(){
+  const current = BUSINESS.allowMultiService === true;
+  const next = !current;
+  document.getElementById('allowMultiServiceSwitch').classList.toggle('on', next);
+  try{
+    await db.collection('meta').doc('business').set({ allowMultiService: next }, { merge:true });
+    showToast(next ? '已允許一次預約多個服務' : '已關閉，顧客一次只能選一項服務');
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
+async function setFieldMode(field, mode, silent){
+  ['required','optional','off'].forEach(m=>{
+    const el = document.getElementById('fld'+field+(m==='required'?'Req':m==='optional'?'Opt':'Off'));
+    if(el) el.classList.toggle('active', m===mode);
+  });
+  if(silent) return;
+  const key = 'field'+field;
+  try{
+    await db.collection('meta').doc('business').set({ [key]: mode }, { merge:true });
+    showToast('已更新');
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
+async function saveCancelPolicy(){
+  const hours = Number(document.getElementById('setCancelDeadline').value) || 0;
+  try{
+    await db.collection('meta').doc('business').set({ cancelDeadlineHours: hours }, { merge:true });
+    showToast('取消政策已儲存');
+  }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
 }
 async function saveCustomerLink(){
   const url = document.getElementById('calLinkInput2').value.trim();

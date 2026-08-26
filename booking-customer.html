@@ -497,20 +497,20 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
         <label for="custName">姓名</label>
         <input type="text" id="custName" placeholder="請輸入您的姓名">
       </div>
-      <div class="field">
-        <label for="custPhone">手機號碼</label>
+      <div class="field" id="custPhoneField">
+        <label for="custPhone" id="custPhoneLabel">手機號碼</label>
         <input type="tel" id="custPhone" placeholder="0912-345-678">
       </div>
       <div class="field">
         <label for="custLineId">LINE ID（選填）</label>
         <input type="text" id="custLineId" placeholder="您的 LINE ID">
       </div>
-      <div class="field">
-        <label for="custBirthday">生日（選填，西元年月日）</label>
+      <div class="field" id="custBirthdayField">
+        <label for="custBirthday" id="custBirthdayLabel">生日（選填，西元年月日）</label>
         <input type="date" id="custBirthday">
       </div>
-      <div class="field">
-        <label for="custGender">性別（選填）</label>
+      <div class="field" id="custGenderField">
+        <label for="custGender" id="custGenderLabel">性別（選填）</label>
         <select id="custGender">
           <option value="">不透露</option>
           <option value="女">女</option>
@@ -1014,10 +1014,23 @@ function quickPickService(id){
 /* ============================================================
    STEP 1: SERVICE
    ============================================================ */
+function selectedServices(){
+  if(BUSINESS.allowMultiService){ return state.services || []; }
+  return state.service ? [state.service] : [];
+}
+function selectedServicesTotal(){
+  return selectedServices().reduce((sum,s)=>sum+(s.price||0),0);
+}
+function selectedServicesDuration(){
+  return selectedServices().reduce((sum,s)=>sum+(s.duration||0),0);
+}
 function renderServiceList(){
   const wrap = document.getElementById('serviceList');
-  wrap.innerHTML = SERVICES.map(s=>`
-    <div class="svc-card ${state.service&&state.service.id===s.id?'selected':''}" onclick="pickService('${s.id}')">
+  const multi = BUSINESS.allowMultiService === true;
+  wrap.innerHTML = SERVICES.map(s=>{
+    const isSel = multi ? (state.services||[]).some(x=>x.id===s.id) : (state.service&&state.service.id===s.id);
+    return `
+    <div class="svc-card ${isSel?'selected':''}" onclick="pickService('${s.id}')">
       <div class="svc-ic">${s.icon}</div>
       <div class="svc-body">
         <h3>${s.name}</h3>
@@ -1026,11 +1039,18 @@ function renderServiceList(){
       </div>
       <div class="svc-price">$${s.price}</div>
     </div>
-  `).join('');
-  document.getElementById('svcNextBtn').disabled = !state.service;
+  `;}).join('');
+  document.getElementById('svcNextBtn').disabled = selectedServices().length===0;
 }
 function pickService(id){
-  state.service = SERVICES.find(s=>s.id===id);
+  const s = SERVICES.find(x=>x.id===id);
+  if(BUSINESS.allowMultiService){
+    state.services = state.services || [];
+    const idx = state.services.findIndex(x=>x.id===id);
+    if(idx>-1){ state.services.splice(idx,1); } else { state.services.push(s); }
+  } else {
+    state.service = s;
+  }
   renderServiceList();
 }
 
@@ -1132,7 +1152,7 @@ function renderTimeGrid(){
   const [fh,fm] = hours.from.split(':').map(Number);
   const [th,tm] = hours.to.split(':').map(Number);
   const startMin = fh*60+fm, endMin = th*60+tm;
-  const svcDuration = state.service ? state.service.duration : SLOT_MIN();
+  const svcDuration = selectedServicesDuration() || SLOT_MIN();
   let html = '';
   for(let cur=startMin; cur<endMin; cur+=SLOT_MIN()){
     const h = Math.floor(cur/60), mm = cur%60;
@@ -1156,13 +1176,16 @@ function pickTime(label){
    STEP 4: INFO
    ============================================================ */
 function renderInfoSummary(){
+  const svcs = selectedServices();
+  const svcLabel = svcs.map(s=>s.name).join('、');
   document.getElementById('infoSummary').innerHTML = `
-    <div class="row"><span class="lbl">服務項目</span><span class="val">${state.service.name}</span></div>
+    <div class="row"><span class="lbl">服務項目</span><span class="val">${svcLabel}</span></div>
     <div class="row"><span class="lbl">服務人員</span><span class="val">${state.staff.name}</span></div>
     <div class="row"><span class="lbl">日期時間</span><span class="val">${state.date} ${state.time}</span></div>
-    <div class="row"><span class="lbl">預估費用</span><span class="val">$${state.service.price}</span></div>
+    <div class="row"><span class="lbl">預估費用</span><span class="val">$${selectedServicesTotal()}</span></div>
   `;
   document.getElementById('lineSwitch').classList.toggle('on', state.lineNotify);
+  applyFieldPolicy();
 
   // 從帳號資料預填聯絡資訊，仍可依此次預約需求修改
   const me = currentCustomer();
@@ -1175,6 +1198,22 @@ function renderInfoSummary(){
     document.getElementById('custEmail').value = me.email || '';
     infoPrefilled = true;
   }
+}
+/* 依商家「接單政策 → 預約表單欄位」設定，顯示/隱藏必填/選填欄位 */
+function applyFieldPolicy(){
+  const rules = [
+    { key:'fieldPhone', mode: BUSINESS.fieldPhone || 'required', fieldId:'custPhoneField', labelId:'custPhoneLabel', base:'手機號碼' },
+    { key:'fieldBirthday', mode: BUSINESS.fieldBirthday || 'optional', fieldId:'custBirthdayField', labelId:'custBirthdayLabel', base:'生日（西元年月日）' },
+    { key:'fieldGender', mode: BUSINESS.fieldGender || 'optional', fieldId:'custGenderField', labelId:'custGenderLabel', base:'性別' }
+  ];
+  rules.forEach(r=>{
+    const fieldEl = document.getElementById(r.fieldId);
+    const labelEl = document.getElementById(r.labelId);
+    if(!fieldEl) return;
+    if(r.mode==='off'){ fieldEl.style.display = 'none'; return; }
+    fieldEl.style.display = 'block';
+    if(labelEl) labelEl.textContent = r.base + (r.mode==='required' ? '' : '（選填）');
+  });
 }
 function toggleLine(e){
   state.lineNotify = !state.lineNotify;
@@ -1189,10 +1228,18 @@ async function submitBooking(){
   const email = document.getElementById('custEmail').value.trim();
   const note = document.getElementById('custNote').value.trim();
   if(!name){ showToast('請輸入姓名'); return; }
-  if(!phone){ showToast('請輸入手機號碼'); return; }
+  const phoneMode = BUSINESS.fieldPhone || 'required';
+  if(phoneMode==='required' && !phone){ showToast('請輸入手機號碼'); return; }
+  const birthdayMode = BUSINESS.fieldBirthday || 'optional';
+  if(birthdayMode==='required' && !birthday){ showToast('請填寫生日'); return; }
+  const genderMode = BUSINESS.fieldGender || 'optional';
+  if(genderMode==='required' && !gender){ showToast('請選擇性別'); return; }
 
   const uid = currentCustomerId();
   if(!uid){ showToast('請先登入會員帳號'); lockCustApp(); return; }
+
+  const svcs = selectedServices();
+  if(svcs.length===0){ showToast('請選擇服務項目'); return; }
 
   // 防止在填寫聯絡資訊期間，此時段已被其他顧客搶先預約（含待商家確認中的預約）
   if(isSlotTaken(state.date, state.time)){
@@ -1206,11 +1253,12 @@ async function submitBooking(){
   const booking = {
     code,
     customerId: uid,
-    service: state.service,
+    service: svcs[0],
+    services: svcs,
     staff: state.staff,
     date: state.date,
     time: state.time,
-    customer: { name, phone, lineId, birthday, gender, email, note, lineNotify: state.lineNotify },
+    customer: { name, phone: phoneMode==='off'?'':phone, lineId, birthday: birthdayMode==='off'?'':birthday, gender: genderMode==='off'?'':gender, email, note, lineNotify: state.lineNotify },
     status: (BUSINESS.requireConfirm === false) ? 'upcoming' : 'pending',
     createdAt: new Date().toISOString()
   };
@@ -1308,6 +1356,17 @@ function renderMyBookings(){
 async function cancelBooking(id){
   const b = MY_BOOKINGS.find(x=>x.id===id);
   if(!b) return;
+  const deadlineHours = Number(BUSINESS.cancelDeadlineHours) || 0;
+  if(deadlineHours > 0){
+    const [y,m,d] = b.date.split('-').map(Number);
+    const [hh,mm] = b.time.split(':').map(Number);
+    const apptTime = new Date(y,m-1,d,hh,mm);
+    const deadline = new Date(apptTime.getTime() - deadlineHours*3600000);
+    if(new Date() > deadline){
+      showToast(`已超過可取消時間（須於預約前 ${deadlineHours} 小時取消），請直接聯絡店家`);
+      return;
+    }
+  }
   try{
     await db.collection('bookings').doc(id).update({ status:'cancelled' });
     showToast('已取消該筆預約');
