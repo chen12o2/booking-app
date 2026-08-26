@@ -263,6 +263,16 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .mini-summary .lbl{ color:var(--ink-soft); }
 .mini-summary .val{ font-weight:700; }
 
+.deposit-box{
+  background:var(--white); border:1.5px solid var(--gold); border-radius:12px;
+  padding:14px 16px; margin-bottom:20px; font-size:12.5px;
+}
+.deposit-box .tt{ font-weight:700; margin-bottom:8px; }
+.deposit-box .policy{ color:var(--ink-soft); line-height:1.7; white-space:pre-line; margin-bottom:10px; }
+.deposit-box .pay{ background:var(--paper-2); border-radius:8px; padding:10px 12px; line-height:1.7; margin-bottom:10px; }
+.deposit-box .agree-row{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--ink); cursor:pointer; }
+.deposit-box .agree-row input{ width:16px; height:16px; accent-color:var(--ledger); flex-shrink:0; }
+
 /* ---- ticket (confirmation + my bookings) ---- */
 .ticket{
   background:var(--white); border-radius:var(--radius); overflow:hidden;
@@ -497,6 +507,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
       <div class="section-title"><span class="num">5</span>填寫聯絡資訊</div>
 
       <div class="mini-summary" id="infoSummary"></div>
+      <div id="depositNotice"></div>
 
       <div class="field">
         <label for="custName">姓名</label>
@@ -1180,6 +1191,23 @@ function pickTime(label){
 /* ============================================================
    STEP 4: INFO
    ============================================================ */
+function renderDepositNotice(svcs){
+  const wrap = document.getElementById('depositNotice');
+  if(!wrap) return;
+  const needsDeposit = svcs.some(s=>s.depositRequired);
+  if(!needsDeposit || !BUSINESS.depositPolicyText){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `
+    <div class="deposit-box">
+      <div class="tt">💰 這項服務需要收訂金</div>
+      <div class="policy">${BUSINESS.depositPolicyText}</div>
+      ${BUSINESS.depositPaymentInfo ? `<div class="pay"><b>收款方式</b><br>${BUSINESS.depositPaymentInfo.replace(/\n/g,'<br>')}</div>` : ''}
+      <label class="agree-row">
+        <input type="checkbox" id="depositAgreeCheck">
+        <span>我已了解並同意上述取消／退款政策</span>
+      </label>
+    </div>
+  `;
+}
 function renderInfoSummary(){
   const svcs = selectedServices();
   const svcLabel = svcs.map(s=>s.name).join('、');
@@ -1190,6 +1218,7 @@ function renderInfoSummary(){
     <div class="row"><span class="lbl">預估費用</span><span class="val">$${selectedServicesTotal()}</span></div>
   `;
   document.getElementById('lineSwitch').classList.toggle('on', state.lineNotify);
+  renderDepositNotice(svcs);
   applyFieldPolicy();
 
   // 從帳號資料預填聯絡資訊，仍可依此次預約需求修改
@@ -1245,6 +1274,10 @@ async function submitBooking(){
 
   const svcs = selectedServices();
   if(svcs.length===0){ showToast('請選擇服務項目'); return; }
+  if(svcs.some(s=>s.depositRequired) && BUSINESS.depositPolicyText){
+    const agree = document.getElementById('depositAgreeCheck');
+    if(!agree || !agree.checked){ showToast('請先閱讀並勾選同意取消／退款政策'); return; }
+  }
 
   // 防止在填寫聯絡資訊期間，此時段已被其他顧客搶先預約（含待商家確認中的預約）
   if(isSlotTaken(state.date, state.time)){

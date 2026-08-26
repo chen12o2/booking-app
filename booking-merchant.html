@@ -812,6 +812,13 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
         <div class="field"><label for="svcFormDuration">時長（分鐘）</label><input type="number" id="svcFormDuration" min="5" step="5"></div>
         <div class="field"><label for="svcFormPrice">價格（NT$）</label><input type="number" id="svcFormPrice" min="0" step="10"></div>
       </div>
+      <div class="toggle-row-inline">
+        <div>
+          <div class="tt">需收定金</div>
+          <div class="ds">開啟後，顧客預約這項服務時會看到定金說明與收款資訊（需先在「設定→定金」建立規則）。</div>
+        </div>
+        <div class="switch" id="svcDepositSwitch" onclick="this.classList.toggle('on')"><div class="knob"></div></div>
+      </div>
       <div class="sheet-actions">
         <button class="btn btn-ghost" id="svcDeleteBtn" style="display:none;" onclick="deleteService()">刪除</button>
         <button class="btn btn-primary" onclick="saveService()">儲存</button>
@@ -1955,6 +1962,7 @@ function openServiceForm(id){
     document.getElementById('svcFormDesc').value = s.desc||'';
     document.getElementById('svcFormDuration').value = s.duration;
     document.getElementById('svcFormPrice').value = s.price;
+    document.getElementById('svcDepositSwitch').classList.toggle('on', s.depositRequired === true);
   } else {
     document.getElementById('svcFormId').value = '';
     document.getElementById('svcFormIcon').value = '🔹';
@@ -1962,6 +1970,7 @@ function openServiceForm(id){
     document.getElementById('svcFormDesc').value = '';
     document.getElementById('svcFormDuration').value = 30;
     document.getElementById('svcFormPrice').value = 0;
+    document.getElementById('svcDepositSwitch').classList.remove('on');
   }
   document.getElementById('serviceSheetBackdrop').classList.add('show');
 }
@@ -1976,6 +1985,7 @@ async function saveService(){
     desc: document.getElementById('svcFormDesc').value.trim(),
     duration: Number(document.getElementById('svcFormDuration').value) || 30,
     price: Number(document.getElementById('svcFormPrice').value) || 0,
+    depositRequired: document.getElementById('svcDepositSwitch').classList.contains('on'),
     order: id ? (SERVICES.find(s=>s.id===id)?.order ?? SERVICES.length) : SERVICES.length
   };
   try{
@@ -2533,9 +2543,84 @@ function openSettingsSheet(kind){
     setFieldMode('Gender', BUSINESS.fieldGender || 'optional', true);
     document.getElementById('setCancelDeadline').value = BUSINESS.cancelDeadlineHours ?? 0;
   } else if(kind==='deposit'){
-    body.innerHTML = `<div class="field-hint">定金功能尚未開放。之後可以在這裡設定訂金比例、收款方式，以及顧客逾期未付款時的自動處理規則。</div>`;
+    body.innerHTML = `
+      <div class="field-hint" style="margin-bottom:14px;">整店的取消退款政策與收款方式；對個別服務開啟收定金後才會對顧客生效。</div>
+      <div class="section-title" style="margin-bottom:2px;"><span class="lead">定金規則</span><span class="need-save-badge">需按儲存</span></div>
+      <div class="bkt-link-row" style="text-align:left; margin-bottom:14px;"><a onclick="showDepositExplainer()">定金怎麼運作？</a></div>
+
+      <div class="field">
+        <label style="display:flex; align-items:center; justify-content:space-between;">
+          <span>取消／退款政策</span>
+          <button class="btn-adjust" onclick="fillDepositPreset()">一鍵帶入合規推薦預設</button>
+        </label>
+        <textarea id="setDepositPolicyText" rows="6" placeholder="說明顧客取消／改期時的退款方式。可先一鍵帶入合規推薦預設，再依你的店況調整。"></textarea>
+        <div class="field-hint">這段文字會在顧客下單前完整顯示，並請顧客勾選同意。退款一律由你人工依政策處理，系統不經手金流、不自動退款或扣款。</div>
+      </div>
+      <div class="field">
+        <label for="setDepositFreeCancelHours">免費取消時數（小時前）</label>
+        <input type="number" id="setDepositFreeCancelHours" min="0" step="1">
+        <div class="field-hint">這個時數之內顧客取消 → 系統會提示你「依退款政策退款」（不自動退）。建議 ≤ 預約規則的「最短取消時數」，避免顧客落在「免費窗內、卻已過取消鎖定」的死區。</div>
+      </div>
+      <div class="field">
+        <label for="setDepositPaymentInfo">收款方式</label>
+        <textarea id="setDepositPaymentInfo" rows="4" placeholder="例如：&#10;銀行：008 華南銀行&#10;戶名：王小明&#10;帳號：123-456-789012"></textarea>
+        <div class="field-hint">目前僅支援銀行轉帳。請填寫銀行／戶名／帳號，顧客付完定金後回報轉出帳號末 5 碼供你對帳。</div>
+      </div>
+      <div class="field">
+        <label for="setDepositHoldHours">未付保留時數（小時）</label>
+        <input type="number" id="setDepositHoldHours" min="0" step="1">
+        <div class="field-hint">顧客下單後，時段為他保留多久等付定金。逾時依下方「逾期未付處理」處置。</div>
+      </div>
+      <div class="field">
+        <label>逾期未付處理</label>
+        <div class="toggle-pair">
+          <button class="toggle-opt" id="depositOverdueAuto" onclick="setDepositOverdueMode('auto_release')">自動取消釋放時段</button>
+          <button class="toggle-opt" id="depositOverdueNotify" onclick="setDepositOverdueMode('notify_only')">只通知我、由我決定</button>
+        </div>
+        <div class="field-hint">自動取消釋放時段：逾時自動把時段讓出去，但可能誤殺「顧客已付卻沒回報、你也沒按已收」的單。只通知我：永不誤殺，但時段會佔著等你處理。</div>
+      </div>
+      <div class="field">
+        <label>多主服務計算方式</label>
+        <div class="toggle-pair">
+          <button class="toggle-opt" id="depositCalcSum" onclick="setDepositCalcMode('sum')">加總</button>
+          <button class="toggle-opt" id="depositCalcMax" onclick="setDepositCalcMode('max')">取最高</button>
+        </div>
+        <div class="field-hint">一筆預約含多個需定金服務時，定金總額採「加總」（預設）或「取最高」計算。</div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;" onclick="saveDepositPolicy()">儲存定金規則</button>
+      <div class="field-hint" style="margin-top:16px; padding:12px 14px; background:var(--paper-2); border-radius:10px;">目前定金功能只到「設定政策＋在服務項目上標記需收定金」這一步。實際收款仍需顧客自行轉帳、你人工對帳；系統沒有串接金流，不會自動請款或退款。</div>
+    `;
+    document.getElementById('setDepositPolicyText').value = BUSINESS.depositPolicyText || '';
+    document.getElementById('setDepositFreeCancelHours').value = BUSINESS.depositFreeCancelHours ?? 24;
+    document.getElementById('setDepositPaymentInfo').value = BUSINESS.depositPaymentInfo || '';
+    document.getElementById('setDepositHoldHours').value = BUSINESS.depositHoldHours ?? 24;
+    setDepositOverdueMode(BUSINESS.depositOverdueMode === 'auto_release' ? 'auto_release' : 'notify_only', true);
+    setDepositCalcMode(BUSINESS.depositMultiServiceCalc === 'max' ? 'max' : 'sum', true);
   } else if(kind==='notify'){
-    body.innerHTML = `<div class="field-hint">顧客在預約時可以選擇是否「透過 LINE 接收提醒」，目前僅會記錄顧客的意願，尚未串接 LINE 官方帳號的實際推播功能，之後可以在這裡設定串接。</div>`;
+    body.innerHTML = `
+      <div class="field-hint" style="margin-bottom:14px;">新預約與顧客取消的即時通知管道；每日摘要仍走 email。</div>
+      <div class="section-title" style="margin-bottom:2px;"><span class="lead">LINE 通知</span><span class="need-save-badge">變更需確認</span></div>
+      <div class="about-card" style="margin-bottom:20px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+          <span style="font-weight:700; font-size:14px;">🔔 LINE 即時通知</span>
+          <span class="status-pill status-cancelled">未連結</span>
+        </div>
+        <div class="field-hint" style="margin-bottom:12px;">連結後，新預約與顧客取消都會即時推送到你的 LINE。</div>
+        <button class="btn btn-outline" style="width:100%;" onclick="explainLineNotConnected()">連結 LINE</button>
+        <div class="field-hint" style="margin-top:10px;">這需要串接 LINE Messaging API，並由後端伺服器保管你的 LINE 識別碼、負責實際推送——這個 App 目前是純前端＋Firebase 資料庫，沒有這樣的後端，所以還無法真的連上。</div>
+      </div>
+
+      <div class="section-title" style="margin-bottom:2px;"><span class="lead">行事曆</span><span class="need-save-badge">變更需確認</span></div>
+      <div class="about-card">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+          <span style="font-weight:700; font-size:14px;">📅 Google 日曆同步</span>
+          <span class="status-pill status-cancelled">未連結</span>
+        </div>
+        <div class="field-hint" style="margin-bottom:12px;">連結後，顧客的預約會自動出現在你的 Google 日曆——待確認與已確認都會建立行程，改期、取消也會自動更新，不用手動一筆一筆加。</div>
+        <button class="btn btn-outline" style="width:100%;" onclick="explainCalendarNotConnected()">連結 Google 日曆</button>
+        <div class="field-hint" style="margin-top:10px;">這需要 Google OAuth 授權流程與後端伺服器保管授權金鑰、呼叫 Google Calendar API——目前這個 App 沒有後端，所以還無法真的連上；之後若要做，需要另外架設伺服器端服務。</div>
+      </div>
+    `;
   } else if(kind==='account'){
     body.innerHTML = `
       <div class="field-hint" id="accountEmailHint" style="margin-bottom:16px;"></div>
@@ -2788,6 +2873,49 @@ async function saveCancelPolicy(){
     showToast('取消政策已儲存');
   }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
 }
+
+/* ---- 定金 ---- */
+function setDepositOverdueMode(mode, silent){
+  document.getElementById('depositOverdueAuto').classList.toggle('active', mode==='auto_release');
+  document.getElementById('depositOverdueNotify').classList.toggle('active', mode==='notify_only');
+  document.getElementById('depositOverdueAuto').dataset.val = mode;
+}
+function setDepositCalcMode(mode, silent){
+  document.getElementById('depositCalcSum').classList.toggle('active', mode==='sum');
+  document.getElementById('depositCalcMax').classList.toggle('active', mode==='max');
+  document.getElementById('depositCalcSum').dataset.val = mode;
+}
+function fillDepositPreset(){
+  document.getElementById('setDepositPolicyText').value =
+    '顧客可於預約前自行取消或改期。取消／改期時間若在「免費取消時數」之外，定金恕不退還；若在時數之內，將依實際情況酌情退還，退款一律以人工方式處理，約 3-7 個工作天內轉帳退回原付款帳戶。若店家因故無法出席，將全額退還定金並另行協調賠償方式。';
+  showToast('已帶入推薦預設文字，可再自行調整');
+}
+function showDepositExplainer(){
+  alert('定金設定完成後，可以到「服務」頁個別服務的編輯畫面裡開啟「需收定金」，只有開啟的服務才會在顧客預約時顯示定金與收款資訊。系統不經手金流：顧客自行轉帳後在預約備註回報，由你人工核對、標記已收款。');
+}
+async function saveDepositPolicy(){
+  const data = {
+    depositPolicyText: document.getElementById('setDepositPolicyText').value,
+    depositFreeCancelHours: Number(document.getElementById('setDepositFreeCancelHours').value) || 0,
+    depositPaymentInfo: document.getElementById('setDepositPaymentInfo').value,
+    depositHoldHours: Number(document.getElementById('setDepositHoldHours').value) || 0,
+    depositOverdueMode: document.getElementById('depositOverdueAuto').dataset.val || 'notify_only',
+    depositMultiServiceCalc: document.getElementById('depositCalcSum').dataset.val || 'sum'
+  };
+  try{
+    await db.collection('meta').doc('business').set(data, { merge:true });
+    showToast('定金規則已儲存');
+  }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
+}
+
+/* ---- 通知（LINE / Google 日曆）---- */
+function explainLineNotConnected(){
+  alert('這個功能需要串接 LINE Messaging API，並由一台後端伺服器保管你的 LINE 識別碼、負責實際推送訊息。目前這個 App 是純前端網頁＋Firebase 資料庫，沒有這樣的後端伺服器，所以還沒辦法真的連上 LINE。若要做，需要另外架設一套伺服器端服務。');
+}
+function explainCalendarNotConnected(){
+  alert('這個功能需要 Google OAuth 授權流程，並由一台後端伺服器保管授權金鑰、呼叫 Google Calendar API 寫入行程。目前這個 App 是純前端網頁＋Firebase 資料庫，沒有這樣的後端伺服器，所以還沒辦法真的連上 Google 日曆。若要做，需要另外架設一套伺服器端服務。');
+}
+
 async function saveCustomerLink(){
   const url = document.getElementById('calLinkInput2').value.trim();
   try{
