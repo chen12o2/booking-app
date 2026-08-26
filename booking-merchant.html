@@ -315,6 +315,66 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .settings-body p{ margin:0; font-size:11.5px; color:var(--ink-soft); }
 .settings-chevron{ color:var(--ink-soft); font-size:20px; flex-shrink:0; }
 
+/* ---- calendar timeline ---- */
+.cal-toolbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.cal-month{ font-family:'Noto Serif TC',serif; font-size:18px; font-weight:700; }
+.btn-today{
+  border:1.5px solid var(--line); background:var(--white); color:var(--ink);
+  border-radius:99px; padding:7px 18px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit;
+}
+.cal-month-sep{
+  display:flex; align-items:center; gap:12px; margin:22px 0 12px;
+  font-family:'Noto Serif TC',serif; font-weight:700; font-size:15px; color:var(--ledger-dark);
+}
+.cal-month-sep::after{ content:''; flex:1; height:1px; background:var(--line); }
+.cal-day-sep{
+  display:flex; align-items:baseline; gap:10px; margin:18px 0 10px;
+}
+.cal-day-sep .wd{ font-size:12px; color:var(--ink-soft); }
+.cal-day-sep .dt{ font-size:16px; font-weight:700; }
+.cal-day-sep::after{ content:''; flex:1; height:1px; background:var(--line); margin-left:4px; }
+.cal-card{
+  display:flex; gap:16px; background:var(--paper-2); border:1.5px solid var(--gold);
+  border-radius:14px; padding:14px 16px; margin-bottom:10px; cursor:pointer; align-items:flex-start;
+}
+.cal-card.is-past{ opacity:.72; }
+.cal-time{ flex-shrink:0; width:64px; }
+.cal-time .hm{ font-size:16px; font-weight:700; font-family:'Space Mono',monospace; }
+.cal-time .dur{ font-size:11px; color:var(--ink-soft); margin-top:2px; }
+.cal-body{ flex:1; min-width:0; }
+.cal-body .nm{ font-size:15px; font-weight:700; margin-bottom:2px; }
+.cal-body .sv{ font-size:12.5px; color:var(--ink-soft); margin-bottom:6px; }
+.cal-body .rowline{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.cal-body .rng{ font-size:12px; color:var(--ink-soft); font-family:'Space Mono',monospace; }
+.cal-empty{ text-align:center; padding:50px 20px; color:var(--ink-soft); }
+.cal-fab{
+  position:fixed; bottom:calc(var(--nav-h) + 20px); right:calc(50% - 195px);
+  width:52px; height:52px; border-radius:50%; background:var(--stamp); color:var(--white);
+  border:none; font-size:24px; box-shadow:var(--shadow); cursor:pointer; z-index:40;
+  display:flex; align-items:center; justify-content:center;
+}
+@media (max-width:430px){ .cal-fab{ right:24px; } }
+
+/* ---- shopfront / hours extras ---- */
+.toggle-row-inline{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  background:var(--paper-2); border:1.5px solid var(--line); border-radius:12px; padding:14px; margin-bottom:16px;
+}
+.toggle-row-inline .tt{ font-size:13px; font-weight:700; margin-bottom:3px; }
+.toggle-row-inline .ds{ font-size:11.5px; color:var(--ink-soft); line-height:1.5; }
+.wk-row{
+  display:flex; align-items:center; gap:8px; background:var(--white); border:1.5px solid var(--line);
+  border-radius:10px; padding:10px 12px; margin-bottom:8px;
+}
+.wk-row .wd{ font-weight:700; font-size:13px; width:34px; flex-shrink:0; }
+.wk-row input[type="checkbox"]{ width:17px !important; height:17px !important; flex-shrink:0; accent-color:var(--ledger); padding:0 !important; }
+.wk-row .lb{ font-size:12px; color:var(--ink-soft); flex-shrink:0; }
+.wk-row input[type="time"]{
+  flex:1; min-width:0; border:1.5px solid var(--line); border-radius:8px; padding:6px 8px;
+  font-family:'Space Mono',monospace; font-size:12.5px; background:var(--white); color:var(--ink);
+}
+.wk-row .dash{ color:var(--ink-soft); flex-shrink:0; }
+
 /* ---- form ---- */
 .field{ margin-bottom:16px; }
 .field label{ display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; }
@@ -454,7 +514,8 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
       </section>
 
       <!-- ============ BOOKINGS ============ -->
-      <section class="screen" id="screen-bookings">
+      <!-- ============ CALENDAR ============ -->
+      <section class="screen" id="screen-calendar">
         <div class="about-card" style="margin-bottom:16px;">
           <div class="section-title" style="margin-bottom:10px;"><span class="lead"><span class="num">🔗</span>分享你的預約頁</span></div>
           <div class="link-box">
@@ -466,6 +527,15 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
             <button class="btn btn-primary" onclick="goScreen('settings'); setTimeout(()=>openSettingsSheet('shopfront'),60);">產生可約月曆圖</button>
           </div>
         </div>
+        <div class="cal-toolbar">
+          <div class="cal-month" id="calMonthLabel">—</div>
+          <button class="btn-today" onclick="calGoToday()">今天</button>
+        </div>
+        <div id="calTimeline"></div>
+        <button class="cal-fab" onclick="openManualBookingForm()">＋</button>
+      </section>
+
+      <section class="screen" id="screen-bookings">
         <button class="btn btn-outline" style="width:100%; margin-bottom:14px;" onclick="openManualBookingForm()">＋ 手動新增預約</button>
         <div class="filter-row" id="statusFilterRow">
           <div class="filter-chip active" data-status="all" onclick="setStatusFilter('all')">全部</div>
@@ -501,7 +571,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 
       <!-- ============ STAFF ============ -->
       <section class="screen" id="screen-staff">
-        <div class="section-title"><span class="lead"><span class="num">2</span>服務人員</span><button class="add-btn" onclick="openStaffForm()">＋ 新增人員</button></div>
+        <div class="section-title"><span class="lead">服務人員</span><button class="add-btn" onclick="openStaffForm()">＋ 新增人員</button></div>
         <div id="staffList"></div>
       </section>
 
@@ -561,7 +631,8 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 
     <div class="navbar">
       <button class="nav-item active" data-nav="dashboard" onclick="goScreen('dashboard')"><div class="ic">📊</div>總覽</button>
-      <button class="nav-item" data-nav="bookings" onclick="goScreen('bookings')"><div class="ic">📅</div>日曆</button>
+      <button class="nav-item" data-nav="calendar" onclick="goScreen('calendar')"><div class="ic">📅</div>日曆</button>
+      <button class="nav-item" data-nav="bookings" onclick="goScreen('bookings')"><div class="ic">🎫</div>預約</button>
       <button class="nav-item" data-nav="customers" onclick="goScreen('customers')"><div class="ic">🧑</div>顧客</button>
       <button class="nav-item" data-nav="services" onclick="goScreen('services')"><div class="ic">🔖</div>服務</button>
       <button class="nav-item" data-nav="settings" onclick="goScreen('settings')"><div class="ic">⚙️</div>設定</button>
@@ -865,7 +936,8 @@ function rerenderActiveScreen(){
   if(!active) return;
   const id = active.id.replace('screen-','');
   if(id==='dashboard') renderDashboard();
-  if(id==='bookings'){ renderBookingsList(); renderCalLink(); }
+  if(id==='bookings') renderBookingsList();
+  if(id==='calendar'){ renderCalLink(); renderCalendarTimeline(); }
   if(id==='customers') renderCustomersList();
   if(id==='services'){ renderServicesList(); renderProductsList(); }
   if(id==='staff') renderStaffListView();
@@ -1040,7 +1112,7 @@ function goScreen(id, opts={}){
   const navEl = document.querySelector('.nav-item[data-nav="'+(id==='staff'?'settings':id)+'"]');
   if(navEl) navEl.classList.add('active');
 
-  const titles = { dashboard:'總覽', bookings:'日曆', customers:'顧客資料', services:'服務項目', staff:'服務人員', settings:'設定' };
+  const titles = { dashboard:'總覽', calendar:'日曆', bookings:'預約管理', customers:'顧客資料', services:'服務項目', staff:'服務人員', settings:'設定' };
   document.getElementById('topbarTitle').textContent = titles[id] || '商家後台';
   document.getElementById('backBtnWrap').innerHTML = (id==='staff') ? '<div class="back-btn" onclick="goScreen(\'settings\')">←</div>' : '';
 
@@ -1048,7 +1120,8 @@ function goScreen(id, opts={}){
   window.scrollTo(0,0);
 
   if(id==='dashboard') renderDashboard();
-  if(id==='bookings'){ renderBookingsList(); renderCalLink(); }
+  if(id==='bookings') renderBookingsList();
+  if(id==='calendar'){ renderCalLink(); renderCalendarTimeline(); }
   if(id==='customers') renderCustomersList();
   if(id==='services') { renderServicesList(); renderProductsList(); }
   if(id==='staff') renderStaffListView();
@@ -1403,9 +1476,11 @@ async function saveManualBooking(){
 }
 
 function visitCount(b){
+  // 只計算商家已標記「完成」的預約，才算真的來過
   const key = b.customerId;
-  if(key){ return loadBookings().filter(x=>x.customerId===key).length; }
-  return loadBookings().filter(x=>x.customer && x.customer.phone===b.customer.phone).length;
+  const done = loadBookings().filter(x=>x.status==='done');
+  if(key){ return done.filter(x=>x.customerId===key).length; }
+  return done.filter(x=>x.customer && x.customer.phone===b.customer.phone).length;
 }
 function openBookingSheet(id){
   const b = loadBookings().find(x=>x.id===id);
@@ -1904,6 +1979,73 @@ function renderCalLink(){
   const el = document.getElementById('calLinkInput');
   if(el) el.value = BUSINESS.customerUrl || '';
 }
+
+/* ---- 日曆：依日期分組的行程時間軸 ---- */
+const WD_NAMES = ['週日','週一','週二','週三','週四','週五','週六'];
+function addMinutes(timeStr, mins){
+  const [hh,mm] = timeStr.split(':').map(Number);
+  const total = hh*60 + mm + mins;
+  return String(Math.floor(total/60)%24).padStart(2,'0')+':'+String(total%60).padStart(2,'0');
+}
+function calGoToday(){
+  const el = document.getElementById('calTodayAnchor');
+  if(el){ el.scrollIntoView({behavior:'smooth', block:'start'}); }
+  else { showToast('今天沒有預約'); }
+}
+function renderCalendarTimeline(){
+  const wrap = document.getElementById('calTimeline');
+  if(!wrap) return;
+  const list = loadBookings()
+    .filter(b=>b.status!=='cancelled')
+    .sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+
+  const now = new Date();
+  const todayKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  document.getElementById('calMonthLabel').textContent = now.getFullYear()+' 年 '+(now.getMonth()+1)+' 月';
+
+  if(list.length===0){
+    wrap.innerHTML = `<div class="cal-empty"><div style="font-size:36px; margin-bottom:10px;">📅</div><h3 style="font-family:'Noto Serif TC',serif; margin:0 0 6px;">尚無行程</h3><p style="font-size:13px; margin:0;">顧客預約或你手動新增後，會依日期顯示在這裡。</p></div>`;
+    return;
+  }
+
+  let html = '';
+  let lastMonth = '';
+  let lastDate = '';
+  list.forEach(b=>{
+    const [y,m,d] = b.date.split('-').map(Number);
+    const monthKey = y+'-'+m;
+    if(monthKey !== lastMonth){
+      html += `<div class="cal-month-sep">${y} 年 ${m} 月</div>`;
+      lastMonth = monthKey;
+    }
+    if(b.date !== lastDate){
+      const wd = WD_NAMES[new Date(y, m-1, d).getDay()];
+      const anchor = (b.date===todayKey) ? ' id="calTodayAnchor"' : '';
+      html += `<div class="cal-day-sep"${anchor}><span class="wd">${wd}</span><span class="dt">${m}/${d}</span></div>`;
+      lastDate = b.date;
+    }
+    const svcs = bookingServices(b);
+    const dur = svcs.reduce((sum,s)=>sum+(s.duration||0),0) || 30;
+    const endTime = addMinutes(b.time, dur);
+    const isPast = new Date(y, m-1, d, ...b.time.split(':').map(Number)) < now;
+    html += `
+      <div class="cal-card ${isPast?'is-past':''}" onclick="openBookingSheet('${b.id}')">
+        <div class="cal-time">
+          <div class="hm">${b.time}</div>
+          <div class="dur">${dur} 分</div>
+        </div>
+        <div class="cal-body">
+          <div class="nm">${b.customer.name}</div>
+          <div class="sv">${svcs.length ? svcs.map(s=>s.name).join('、') : '（服務已刪除）'}</div>
+          <div class="rowline">
+            <span class="status-pill ${statusClass(b.status)}">${statusLabel(b.status)}</span>
+            <span class="rng">${b.time}–${endTime}</span>
+          </div>
+        </div>
+      </div>`;
+  });
+  wrap.innerHTML = html;
+}
 function previewCustomerLink(){
   const url = (BUSINESS.customerUrl || '').trim();
   if(!url){ showToast('尚未設定顧客頁網址，請至「設定→商店門面」貼上'); return; }
@@ -1916,18 +2058,43 @@ function openSettingsSheet(kind){
 
   if(kind==='shopfront'){
     body.innerHTML = `
+      <div class="field-hint" style="margin-bottom:14px;">顧客在預約頁看到的一切。</div>
       <div class="about-card logo-upload-card">
         <div class="logo-preview" id="logoPreview">🏷️</div>
         <div class="logo-upload-actions">
           <button class="btn btn-outline btn-sm" onclick="document.getElementById('logoFileInput').click()">上傳 Logo</button>
           <button class="btn btn-ghost btn-sm" id="removeLogoBtn" style="display:none;" onclick="removeLogo()">移除 Logo</button>
+          <div class="field-hint">JPEG / PNG / WebP・建議正方形</div>
         </div>
         <input type="file" id="logoFileInput" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
       </div>
       <div class="field"><label for="setName">店名</label><input type="text" id="setName"></div>
-      <div class="field"><label for="setTagline">副標語</label><input type="text" id="setTagline"></div>
-      <div class="field"><label for="setAddr">地址</label><input type="text" id="setAddr"></div>
-      <div class="field"><label for="setPhone">聯絡電話</label><input type="text" id="setPhone"></div>
+      <div class="field">
+        <label for="setTagline">簡介</label>
+        <textarea id="setTagline" rows="5" placeholder="約 1-2 句介紹店家（選填，可換行）"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="setCity">縣市</label><select id="setCity" onchange="onCityChange()"></select></div>
+        <div class="field"><label for="setDistrict">區域</label><select id="setDistrict"></select></div>
+      </div>
+      <div class="field">
+        <label for="setAddr">詳細地址</label>
+        <input type="text" id="setAddr" placeholder="街道門牌">
+      </div>
+      <div class="toggle-row-inline">
+        <div>
+          <div class="tt">隱藏詳細地址</div>
+          <div class="ds">開啟＝預約成立後才向預約者顯示詳細地址（預約頁只露縣市＋區域）；關閉＝完整地址公開顯示在預約頁。</div>
+        </div>
+        <div class="switch" id="hideAddrSwitch" onclick="toggleHideAddr()"><div class="knob"></div></div>
+      </div>
+      <div class="field"><label for="setPhone">電話</label><input type="text" id="setPhone" placeholder="客人看到的公開聯絡電話（選填）"></div>
+      <div class="field"><label for="setIg">Instagram</label><input type="text" id="setIg" placeholder="@帳號 或完整網址（選填）"></div>
+      <div class="field"><label for="setLine">LINE</label><input type="text" id="setLine" placeholder="https://lin.ee/... （選填）"></div>
+      <div class="field">
+        <label for="setNotice">預約須知</label>
+        <textarea id="setNotice" rows="5" placeholder="自動附在確認信與預約頁，例如：停車資訊、請提前 10 分鐘到、取消政策（選填）"></textarea>
+      </div>
       <div class="field"><label for="setPrefix">預約編號前綴</label><input type="text" id="setPrefix" maxlength="6"></div>
       <div class="field">
         <label for="calLinkInput2">預約網址（顧客頁連結）</label>
@@ -1938,40 +2105,56 @@ function openSettingsSheet(kind){
       </div>
       <button class="btn btn-primary" style="width:100%; margin-bottom:16px;" onclick="saveShopfront()">儲存</button>
       <div class="share-card">
-        <div class="section-title" style="justify-content:center;"><span class="lead"><span class="num">🖼</span>預約看板海報</span></div>
+        <div class="section-title" style="justify-content:center;"><span class="lead"><span class="num">\u{1F5BC}</span>預約看板海報</span></div>
         <canvas id="posterCanvas" width="600" height="800"></canvas>
         <button class="btn btn-ghost" style="width:100%; margin-bottom:8px;" onclick="downloadPoster()">下載海報圖片</button>
         <div class="field-hint">海報含店名、營業時間與聯絡方式，適合印出張貼或分享至社群。</div>
       </div>
     `;
+    renderCityOptions();
     document.getElementById('setName').value = BUSINESS.name;
     document.getElementById('setTagline').value = BUSINESS.tagline;
     document.getElementById('setAddr').value = BUSINESS.address;
     document.getElementById('setPhone').value = BUSINESS.phone;
+    document.getElementById('setIg').value = BUSINESS.instagram || '';
+    document.getElementById('setLine').value = BUSINESS.lineUrl || '';
+    document.getElementById('setNotice').value = BUSINESS.notice || '';
     document.getElementById('setPrefix').value = BUSINESS.bookingPrefix;
     document.getElementById('calLinkInput2').value = BUSINESS.customerUrl || '';
+    document.getElementById('hideAddrSwitch').classList.toggle('on', BUSINESS.hideAddress === true);
     renderLogo();
     drawPoster();
   } else if(kind==='hours'){
     body.innerHTML = `
-      <div class="field-row">
-        <div class="field"><label for="setOpenHour">開始營業（時）</label><input type="number" id="setOpenHour" min="0" max="23"></div>
-        <div class="field"><label for="setCloseHour">結束營業（時）</label><input type="number" id="setCloseHour" min="1" max="24"></div>
-      </div>
+      <div class="field-hint" style="margin-bottom:14px;">你的營業時間、休息安排，以及顧客可以怎麼約。</div>
+      <div class="section-title" style="margin-bottom:10px;"><span class="lead">營業時間</span></div>
+      <div id="weekHoursList"></div>
+      <button class="btn btn-primary" style="width:100%; margin:12px 0 20px;" onclick="saveWeekHours()">儲存營業時間</button>
+
+      <div class="section-title" style="margin-bottom:10px;"><span class="lead">時間規則</span></div>
       <div class="field"><label for="setSlotMin">時段間隔（分鐘）</label>
         <select id="setSlotMin">
           <option value="15">15 分鐘</option>
           <option value="30">30 分鐘</option>
           <option value="60">60 分鐘</option>
         </select>
+        <div class="field-hint">顧客每隔多久可以選一個時段。例如 30＝顧客只能選 10:00、10:30、11:00…</div>
+      </div>
+      <div class="field"><label for="setLeadHours">最早幾小時後可預約</label>
+        <input type="number" id="setLeadHours" min="0" step="1">
+        <div class="field-hint">顧客現在下單，至少要等多久才能來？例如 24＝顧客最早只能約明天的這個時間之後。</div>
+      </div>
+      <div class="field"><label for="setBufferMin">預約間緩衝（分鐘）</label>
+        <input type="number" id="setBufferMin" min="0" step="5">
+        <div class="field-hint">每筆預約後留多少時間收尾、準備下一位客人。</div>
       </div>
       <div class="field"><label for="setHoursFull">營業時間文字（顯示用）</label><input type="text" id="setHoursFull" placeholder="週一至週日 09:00–18:00"></div>
-      <div class="field-hint" style="margin-bottom:16px;">休息時段與更細緻的可約規則尚未開放設定，目前以固定的營業時段＋時段間隔計算可預約時間。</div>
-      <button class="btn btn-primary" style="width:100%;" onclick="saveHours()">儲存</button>
+      <button class="btn btn-primary" style="width:100%;" onclick="saveHours()">儲存預約規則</button>
     `;
-    document.getElementById('setOpenHour').value = BUSINESS.openHour;
-    document.getElementById('setCloseHour').value = BUSINESS.closeHour;
+    renderWeekHours();
     document.getElementById('setSlotMin').value = String(BUSINESS.slotMin);
+    document.getElementById('setLeadHours').value = BUSINESS.leadHours ?? 0;
+    document.getElementById('setBufferMin').value = BUSINESS.bufferMin ?? 0;
     document.getElementById('setHoursFull').value = BUSINESS.hoursFull;
   } else if(kind==='policy'){
     body.innerHTML = `
@@ -2002,12 +2185,114 @@ function openSettingsSheet(kind){
 function closeSettingsSheet(){
   document.getElementById('settingsSheetBackdrop').classList.remove('show');
 }
+
+/* ---- 縣市／區域 ---- */
+const TW_AREAS = {
+  '基隆市':['仁愛區','信義區','中正區','中山區','安樂區','暖暖區','七堵區'],
+  '台北市':['中正區','大同區','中山區','松山區','大安區','萬華區','信義區','士林區','北投區','內湖區','南港區','文山區'],
+  '新北市':['板橋區','三重區','中和區','永和區','新莊區','新店區','土城區','蘆洲區','樹林區','汐止區','鶯歌區','三峽區','淡水區','林口區','五股區','泰山區','八里區','深坑區','石碇區','瑞芳區','平溪區','雙溪區','貢寮區','金山區','萬里區','烏來區','三芝區','石門區','坪林區'],
+  '桃園市':['桃園區','中壢區','平鎮區','八德區','楊梅區','蘆竹區','大溪區','龍潭區','龜山區','大園區','觀音區','新屋區','復興區'],
+  '新竹市':['東區','北區','香山區'],
+  '新竹縣':['竹北市','竹東鎮','新埔鎮','關西鎮','湖口鄉','新豐鄉','芎林鄉','橫山鄉','北埔鄉','寶山鄉','峨眉鄉','尖石鄉','五峰鄉'],
+  '苗栗縣':['苗栗市','頭份市','竹南鎮','後龍鎮','通霄鎮','苑裡鎮','卓蘭鎮','造橋鄉','西湖鄉','頭屋鄉','公館鄉','銅鑼鄉','三義鄉','大湖鄉','獅潭鄉','三灣鄉','南庄鄉','泰安鄉'],
+  '台中市':['中區','東區','南區','西區','北區','北屯區','西屯區','南屯區','太平區','大里區','霧峰區','烏日區','豐原區','后里區','石岡區','東勢區','和平區','新社區','潭子區','大雅區','神岡區','大肚區','沙鹿區','龍井區','梧棲區','清水區','大甲區','外埔區','大安區'],
+  '彰化縣':['彰化市','員林市','和美鎮','鹿港鎮','溪湖鎮','二林鎮','田中鎮','北斗鎮','花壇鄉','芬園鄉','大村鄉','永靖鄉','伸港鄉','線西鄉','福興鄉','秀水鄉','埔心鄉','埔鹽鄉','大城鄉','芳苑鄉','竹塘鄉','社頭鄉','二水鄉','田尾鄉','埤頭鄉','溪州鄉'],
+  '南投縣':['南投市','埔里鎮','草屯鎮','竹山鎮','集集鎮','名間鄉','鹿谷鄉','中寮鄉','魚池鄉','國姓鄉','水里鄉','信義鄉','仁愛鄉'],
+  '雲林縣':['斗六市','斗南鎮','虎尾鎮','西螺鎮','土庫鎮','北港鎮','莿桐鄉','林內鄉','古坑鄉','大埤鄉','元長鄉','四湖鄉','口湖鄉','水林鄉','東勢鄉','褒忠鄉','台西鄉','崙背鄉','二崙鄉','麥寮鄉'],
+  '嘉義市':['東區','西區'],
+  '嘉義縣':['太保市','朴子市','布袋鎮','大林鎮','民雄鄉','溪口鄉','新港鄉','六腳鄉','東石鄉','義竹鄉','鹿草鄉','水上鄉','中埔鄉','竹崎鄉','梅山鄉','番路鄉','大埔鄉','阿里山鄉'],
+  '台南市':['中西區','東區','南區','北區','安平區','安南區','永康區','歸仁區','新化區','左鎮區','玉井區','楠西區','南化區','仁德區','關廟區','龍崎區','官田區','麻豆區','佳里區','西港區','七股區','將軍區','學甲區','北門區','新營區','後壁區','白河區','東山區','六甲區','下營區','柳營區','鹽水區','善化區','大內區','山上區','新市區','安定區'],
+  '高雄市':['楠梓區','左營區','鼓山區','三民區','鹽埕區','前金區','新興區','苓雅區','前鎮區','旗津區','小港區','鳳山區','大寮區','鳥松區','林園區','仁武區','大樹區','大社區','岡山區','路竹區','橋頭區','梓官區','彌陀區','永安區','燕巢區','田寮區','阿蓮區','茄萣區','湖內區','旗山區','美濃區','內門區','杉林區','甲仙區','六龜區','茂林區','桃源區','那瑪夏區'],
+  '屏東縣':['屏東市','潮州鎮','東港鎮','恆春鎮','萬丹鄉','長治鄉','麟洛鄉','九如鄉','里港鄉','鹽埔鄉','高樹鄉','萬巒鄉','內埔鄉','竹田鄉','新埤鄉','枋寮鄉','新園鄉','崁頂鄉','林邊鄉','南州鄉','佳冬鄉','琉球鄉','車城鄉','滿州鄉','枋山鄉','三地門鄉','霧台鄉','瑪家鄉','泰武鄉','來義鄉','春日鄉','獅子鄉','牡丹鄉'],
+  '宜蘭縣':['宜蘭市','羅東鎮','蘇澳鎮','頭城鎮','礁溪鄉','壯圍鄉','員山鄉','冬山鄉','五結鄉','三星鄉','大同鄉','南澳鄉'],
+  '花蓮縣':['花蓮市','鳳林鎮','玉里鎮','新城鄉','吉安鄉','壽豐鄉','光復鄉','豐濱鄉','瑞穗鄉','富里鄉','秀林鄉','萬榮鄉','卓溪鄉'],
+  '台東縣':['台東市','成功鎮','關山鎮','卑南鄉','鹿野鄉','池上鄉','東河鄉','長濱鄉','太麻里鄉','大武鄉','綠島鄉','海端鄉','延平鄉','金峰鄉','達仁鄉','蘭嶼鄉'],
+  '澎湖縣':['馬公市','湖西鄉','白沙鄉','西嶼鄉','望安鄉','七美鄉'],
+  '金門縣':['金城鎮','金湖鎮','金沙鎮','金寧鄉','烈嶼鄉','烏坵鄉'],
+  '連江縣':['南竿鄉','北竿鄉','莒光鄉','東引鄉']
+};
+function renderCityOptions(){
+  const citySel = document.getElementById('setCity');
+  if(!citySel) return;
+  citySel.innerHTML = '<option value="">請選擇</option>' + Object.keys(TW_AREAS).map(c=>`<option value="${c}">${c}</option>`).join('');
+  citySel.value = BUSINESS.city || '';
+  renderDistrictOptions(BUSINESS.district || '');
+}
+function renderDistrictOptions(selected){
+  const citySel = document.getElementById('setCity');
+  const distSel = document.getElementById('setDistrict');
+  if(!citySel || !distSel) return;
+  const list = TW_AREAS[citySel.value] || [];
+  distSel.innerHTML = '<option value="">請選擇</option>' + list.map(d=>`<option value="${d}">${d}</option>`).join('');
+  if(selected) distSel.value = selected;
+}
+function onCityChange(){ renderDistrictOptions(''); }
+async function toggleHideAddr(){
+  const next = !(BUSINESS.hideAddress === true);
+  document.getElementById('hideAddrSwitch').classList.toggle('on', next);
+  try{
+    await db.collection('meta').doc('business').set({ hideAddress: next }, { merge:true });
+    showToast(next ? '已開啟：預約成立後才顯示詳細地址' : '已關閉：完整地址將公開顯示');
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
+
+/* ---- 每週營業時間 ---- */
+function defaultWeekHours(){
+  return [0,1,2,3,4,5,6].map(i=>({
+    open: true,
+    from: String(BUSINESS.openHour||9).padStart(2,'0')+':00',
+    to: String(BUSINESS.closeHour||18).padStart(2,'0')+':00'
+  }));
+}
+function renderWeekHours(){
+  const wrap = document.getElementById('weekHoursList');
+  if(!wrap) return;
+  const wh = (BUSINESS.weekHours && BUSINESS.weekHours.length===7) ? BUSINESS.weekHours : defaultWeekHours();
+  const order = [1,2,3,4,5,6,0]; // 週一 → 週日
+  wrap.innerHTML = order.map(i=>`
+    <div class="wk-row">
+      <span class="wd">${WD_NAMES[i]}</span>
+      <input type="checkbox" id="wkOpen${i}" ${wh[i].open?'checked':''}>
+      <span class="lb">營業</span>
+      <input type="time" id="wkFrom${i}" value="${wh[i].from}">
+      <span class="dash">—</span>
+      <input type="time" id="wkTo${i}" value="${wh[i].to}">
+    </div>
+  `).join('');
+}
+async function saveWeekHours(){
+  const wh = [0,1,2,3,4,5,6].map(i=>({
+    open: document.getElementById('wkOpen'+i).checked,
+    from: document.getElementById('wkFrom'+i).value || '09:00',
+    to: document.getElementById('wkTo'+i).value || '18:00'
+  }));
+  for(const d of wh){
+    if(d.open && d.to <= d.from){ showToast('請確認每天的結束時間晚於開始時間'); return; }
+  }
+  // 同步一組概略的 openHour/closeHour，供舊有時段計算與海報使用
+  const openDays = wh.filter(d=>d.open);
+  const minFrom = openDays.length ? openDays.reduce((a,d)=> d.from<a?d.from:a, '23:59') : '09:00';
+  const maxTo = openDays.length ? openDays.reduce((a,d)=> d.to>a?d.to:a, '00:00') : '18:00';
+  try{
+    await db.collection('meta').doc('business').set({
+      weekHours: wh,
+      openHour: Number(minFrom.split(':')[0]),
+      closeHour: Number(maxTo.split(':')[0]) || 18
+    }, { merge:true });
+    showToast('營業時間已儲存');
+  }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
+}
 async function saveShopfront(){
   const data = {
     name: document.getElementById('setName').value.trim() || DEFAULT_BUSINESS.name,
-    tagline: document.getElementById('setTagline').value.trim(),
+    tagline: document.getElementById('setTagline').value,
+    city: document.getElementById('setCity').value,
+    district: document.getElementById('setDistrict').value,
     address: document.getElementById('setAddr').value.trim(),
     phone: document.getElementById('setPhone').value.trim(),
+    instagram: document.getElementById('setIg').value.trim(),
+    lineUrl: document.getElementById('setLine').value.trim(),
+    notice: document.getElementById('setNotice').value,
     bookingPrefix: document.getElementById('setPrefix').value.trim() || 'BK',
     customerUrl: document.getElementById('calLinkInput2').value.trim()
   };
@@ -2017,12 +2302,10 @@ async function saveShopfront(){
   }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
 }
 async function saveHours(){
-  const openHour = Number(document.getElementById('setOpenHour').value);
-  const closeHour = Number(document.getElementById('setCloseHour').value);
-  if(!(openHour>=0 && closeHour>openHour)){ showToast('請確認營業時間設定正確'); return; }
   const data = {
-    openHour, closeHour,
     slotMin: Number(document.getElementById('setSlotMin').value),
+    leadHours: Number(document.getElementById('setLeadHours').value) || 0,
+    bufferMin: Number(document.getElementById('setBufferMin').value) || 0,
     hoursFull: document.getElementById('setHoursFull').value.trim()
   };
   try{
