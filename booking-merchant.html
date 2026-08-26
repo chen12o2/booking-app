@@ -1215,12 +1215,13 @@ function setStatusFilter(s){
 function bookingCardHtml(b){
   const svcs = bookingServices(b);
   const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '（服務已刪除）';
+  const cust = displayCustomer(b);
   return `
     <div class="bk-card" onclick="openBookingSheet('${b.id}')">
       <div class="bk-top">
         <div>
           <h3>${svcLabel}</h3>
-          <div class="sub">${b.customer.name} · ${b.customer.phone}</div>
+          <div class="sub">${cust.name} · ${cust.phone}</div>
         </div>
         <span class="status-pill ${statusClass(b.status)}">${statusLabel(b.status)}</span>
       </div>
@@ -1497,6 +1498,24 @@ async function saveManualBooking(){
   }
 }
 
+/* 顧客資料若在「顧客」頁被修改過，預約詳情要自動顯示最新資料，
+   而不是停留在建立當下存進 booking 裡的舊快照 */
+function displayCustomer(b){
+  const snapshot = b.customer || {};
+  const live = b.customerId ? loadCustomers().find(c=>c.id===b.customerId)
+             : loadCustomers().find(c=>c.phone===snapshot.phone);
+  if(!live) return snapshot;
+  return {
+    ...snapshot,
+    name: live.name || snapshot.name,
+    phone: live.phone || snapshot.phone,
+    lineId: live.lineId || snapshot.lineId,
+    birthday: live.birthday || snapshot.birthday,
+    gender: live.gender || snapshot.gender,
+    email: live.email || snapshot.email
+    // note 是該次預約自己的備註，不隨顧客資料異動而改變
+  };
+}
 function visitCount(b){
   // 只計算商家已標記「完成」的預約，才算真的來過
   const key = b.customerId;
@@ -1508,20 +1527,21 @@ function openBookingSheet(id){
   const b = loadBookings().find(x=>x.id===id);
   if(!b) return;
   const body = document.getElementById('bookingDetailBody');
-  const age = b.customer.birthday ? calcAge(b.customer.birthday) : null;
+  const cust = displayCustomer(b);
+  const age = cust.birthday ? calcAge(cust.birthday) : null;
   const svcs = bookingServices(b);
-  const birthdayDisp = b.customer.birthday ? b.customer.birthday.replace(/-/g,'/') : '';
+  const birthdayDisp = cust.birthday ? cust.birthday.replace(/-/g,'/') : '';
   body.innerHTML = `
     <div class="bkt-code">${b.code} <span class="status-pill ${statusClass(b.status)}" style="margin-left:6px;">${statusLabel(b.status)}</span></div>
     <div class="bkt-header">
-      <div class="bkt-avatar">${(b.customer.name||'？').slice(0,1)}</div>
+      <div class="bkt-avatar">${(cust.name||'？').slice(0,1)}</div>
       <div class="bkt-who">
-        <h4>${b.customer.name}</h4>
-        <div class="ln">${b.customer.phone}</div>
-        ${b.customer.email ? `<div class="ln">${b.customer.email}</div>` : ''}
-        ${b.customer.lineId ? `<div class="ln">LINE：${b.customer.lineId}</div>` : ''}
+        <h4>${cust.name}</h4>
+        <div class="ln">${cust.phone}</div>
+        ${cust.email ? `<div class="ln">${cust.email}</div>` : ''}
+        ${cust.lineId ? `<div class="ln">LINE：${cust.lineId}</div>` : ''}
         <div class="ln">來過 <b>${visitCount(b)}</b> 次</div>
-        <div class="ln">生日 ${birthdayDisp ? birthdayDisp+(age!==null?'（'+age+' 歲）':'') : '未填寫'} ・ 性別 ${b.customer.gender || '未填寫'}</div>
+        <div class="ln">生日 ${birthdayDisp ? birthdayDisp+(age!==null?'（'+age+' 歲）':'') : '未填寫'} ・ 性別 ${cust.gender || '未填寫'}</div>
       </div>
     </div>
     <div class="bkt-service-card">
@@ -1531,7 +1551,7 @@ function openBookingSheet(id){
           <span>$${s.price||0}</span>
         </div>`).join('') : `<div class="bkt-svc-row"><span class="nm">（服務已刪除）</span></div>`}
       <div class="bkt-svc-row"><span class="tm">${b.date}（${b.time}）・ <span id="staffNameDisplay" onclick="startStaffReassign('${b.id}')" style="text-decoration:underline; cursor:pointer;">${b.staff ? b.staff.name : '不指定'}</span></span></div>
-      ${b.customer.note ? `<div class="bkt-svc-row" style="margin-top:6px;"><span class="tm">備註：${b.customer.note}</span></div>` : ''}
+      ${cust.note ? `<div class="bkt-svc-row" style="margin-top:6px;"><span class="tm">備註：${cust.note}</span></div>` : ''}
       <div class="bkt-total">
         <span class="lbl">總計</span>
         <div class="bkt-total-row">
@@ -1907,7 +1927,8 @@ async function saveProduct(){
     name,
     desc: document.getElementById('prdFormDesc').value.trim(),
     price: Number(document.getElementById('prdFormPrice').value) || 0,
-    stock: stockRaw==='' ? null : Number(stockRaw)
+    stock: stockRaw==='' ? null : Number(stockRaw),
+    order: id ? (PRODUCTS.find(p=>p.id===id)?.order ?? PRODUCTS.length) : PRODUCTS.length
   };
   try{
     if(id){ await db.collection('products').doc(id).update(prd); }
@@ -2057,7 +2078,7 @@ function renderCalendarTimeline(){
           <div class="dur">${dur} 分</div>
         </div>
         <div class="cal-body">
-          <div class="nm">${b.customer.name}</div>
+          <div class="nm">${displayCustomer(b).name}</div>
           <div class="sv">${svcs.length ? svcs.map(s=>s.name).join('、') : '（服務已刪除）'}</div>
           <div class="rowline">
             <span class="status-pill ${statusClass(b.status)}">${statusLabel(b.status)}</span>

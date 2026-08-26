@@ -683,23 +683,23 @@ function startPublicListeners(){
     }, err=>console.error('business listener', err))
   );
   unsubscribers.push(
-    db.collection('services').orderBy('order','asc').onSnapshot(snap=>{
-      SERVICES = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    db.collection('services').onSnapshot(snap=>{
+      SERVICES = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(a.order??9999)-(b.order??9999));
       if(SERVICES.length===0) SERVICES = [...DEFAULT_SERVICES];
       rerenderActiveScreen();
     }, err=>console.error('services listener', err))
   );
   unsubscribers.push(
-    db.collection('staff').orderBy('order','asc').onSnapshot(snap=>{
-      STAFF = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    db.collection('staff').onSnapshot(snap=>{
+      STAFF = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(a.order??9999)-(b.order??9999));
       if(STAFF.length===0) STAFF = [...DEFAULT_STAFF];
       if(!state.staff || !STAFF.find(s=>s.id===state.staff.id)) state.staff = STAFF[0];
       rerenderActiveScreen();
     }, err=>console.error('staff listener', err))
   );
   unsubscribers.push(
-    db.collection('products').orderBy('order','asc').onSnapshot(snap=>{
-      PRODUCTS = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    db.collection('products').onSnapshot(snap=>{
+      PRODUCTS = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(a.order??9999)-(b.order??9999));
       rerenderActiveScreen();
     }, err=>console.error('products listener', err))
   );
