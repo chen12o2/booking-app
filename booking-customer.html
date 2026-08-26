@@ -231,12 +231,17 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .field{ margin-bottom:16px; }
 .field-hint{ font-size:11px; color:var(--ink-soft); margin-top:5px; line-height:1.5; }
 .field label{ display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; }
-.field input, .field textarea{
+.field input, .field textarea, .field select{
   width:100%; border:1.5px solid var(--line); border-radius:10px; padding:12px 13px;
   font-family:'Noto Sans TC', sans-serif; font-size:14.5px; background:var(--white); color:var(--ink);
+  appearance:none; -webkit-appearance:none; box-sizing:border-box;
+}
+.field select{
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236B6356'><path d='M5.5 7.5L10 12l4.5-4.5H5.5z'/></svg>");
+  background-repeat:no-repeat; background-position:right 13px center; background-size:16px; padding-right:36px;
 }
 .field textarea{ resize:vertical; min-height:70px; }
-.field input:focus, .field textarea:focus{ outline:2px solid var(--ledger); outline-offset:1px; }
+.field input:focus, .field textarea:focus, .field select:focus{ outline:2px solid var(--ledger); outline-offset:1px; }
 
 .toggle-row{
   display:flex; align-items:center; justify-content:space-between; gap:12px;
@@ -1278,10 +1283,13 @@ async function submitBooking(){
    CONFIRMATION TICKET
    ============================================================ */
 function statusLabel(s){
-  return { pending:'待商家確認', upcoming:'即將到來', done:'已完成', cancelled:'已取消', noshow:'未到' }[s] || s;
+  return { pending:'待商家確認', upcoming:'已確認', done:'已完成', cancelled:'已取消', noshow:'未到' }[s] || s;
 }
 function statusClass(s){
   return { pending:'status-pending', upcoming:'status-upcoming', done:'status-done', cancelled:'status-cancelled', noshow:'status-cancelled' }[s] || '';
+}
+function sealText(s){
+  return { pending:'待<br>確認', upcoming:'已<br>確認', done:'已<br>完成', cancelled:'已<br>取消', noshow:'未<br>到' }[s] || statusLabel(s);
 }
 function renderConfirmTicket(b){
   document.getElementById('confirmTicket').innerHTML = ticketHtml(b, true);
@@ -1305,7 +1313,7 @@ function ticketHtml(b, big){
       <div class="tk-eyebrow">${big? (isPending ? 'AWAITING CONFIRMATION' : 'BOOKING CONFIRMED') : 'E-TICKET'}</div>
       <h2>${svcLabel}</h2>
       <div class="tk-sub">${BUSINESS.name}</div>
-      ${big? `<div class="stamp-seal">${isPending ? '待<br>確認' : '已<br>確認'}</div>` : ''}
+      <div class="stamp-seal">${sealText(b.status)}</div>
     </div>
     <div class="ticket-perf">
       <div class="circle l"></div>
