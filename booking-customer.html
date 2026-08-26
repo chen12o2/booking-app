@@ -376,6 +376,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
 <div id="app">
@@ -633,6 +634,26 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+
+/* EmailJS：顧客送出新預約時，寄一封通知信到商家信箱
+   （只負責「通知商家有新預約」，不是給顧客的確認信） */
+const EMAILJS_SERVICE_ID = 'service_nhg6b7n';
+const EMAILJS_TEMPLATE_ID = 'template_bde0nwr';
+const EMAILJS_PUBLIC_KEY = 'sQQe0YG54IEPn6Wa2';
+if(window.emailjs){ emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY }); }
+function sendMerchantNotifyEmail(booking){
+  if(!window.emailjs) return;
+  const svcs = bookingServices(booking);
+  const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '';
+  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+    customer_name: booking.customer.name || '',
+    customer_phone: booking.customer.phone || '',
+    service_name: svcLabel,
+    booking_date: booking.date || '',
+    booking_time: booking.time || '',
+    customer_note: booking.customer.note || '（無）'
+  }).catch(err=>console.error('EmailJS 寄送失敗', err));
+}
 
 /* ============================================================
    資料層：所有商家與預約資料都存在 Firestore，商家後台編輯的
@@ -1333,6 +1354,7 @@ async function submitBooking(){
   try{
     const ref = await db.collection('bookings').add(booking);
     lastBooking = { id: ref.id, ...booking };
+    sendMerchantNotifyEmail(lastBooking);
     renderConfirmTicket(lastBooking);
     navStack = ['home'];
     goScreen('confirm');
