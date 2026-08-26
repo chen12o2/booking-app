@@ -64,8 +64,10 @@ body{
 .topbar h1{
   font-family:'Noto Serif TC', serif;
   font-size:17px; font-weight:700; margin:0; flex:1;
-  letter-spacing:.5px;
+  letter-spacing:.5px; display:flex; align-items:center; gap:6px; min-width:0;
 }
+.topbar h1 .topbar-ic{ font-size:15px; flex-shrink:0; }
+.topbar h1 #topbarBrandName{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .back-btn{
   width:34px; height:34px; border-radius:50%;
   border:1.5px solid var(--line); background:var(--white);
@@ -673,7 +675,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 
     <div class="topbar" id="topbar">
       <div id="backBtnWrap"></div>
-      <h1 id="topbarTitle">總覽</h1>
+      <h1 id="topbarTitle"><span class="topbar-ic">🏷️</span> <span id="topbarBrandName">總覽</span></h1>
       <span class="tag" onclick="lockApp()" style="cursor:pointer;">🔒 鎖定</span>
     </div>
 
@@ -704,6 +706,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 
       <!-- ============ SHARE (was CALENDAR) ============ -->
       <section class="screen" id="screen-calendar">
+        <div class="section-title"><span class="lead">分享</span></div>
         <div class="about-card" style="text-align:center;">
           <div id="qrCodeWrap" style="margin-bottom:10px;"></div>
           <div class="field-hint">掃描或分享連結，讓顧客直接進入預約頁</div>
@@ -729,6 +732,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
       </section>
 
       <section class="screen" id="screen-bookings">
+        <div class="section-title"><span class="lead">預約管理</span></div>
         <div class="about-card" style="margin-bottom:16px;">
           <div class="cal-grid-toolbar">
             <button class="btn-caret" onclick="calGridShiftMonth(-1)">‹</button>
@@ -1285,6 +1289,8 @@ function startListeners(){
   unsubscribers.push(
     db.collection('meta').doc('business').onSnapshot(snap=>{
       BUSINESS = snap.exists ? {...DEFAULT_BUSINESS, ...snap.data()} : {...DEFAULT_BUSINESS};
+      const brandEl = document.getElementById('topbarBrandName');
+      if(brandEl) brandEl.textContent = BUSINESS.name || '商家後台';
       rerenderActiveScreen();
     }, err=>console.error('business listener', err))
   );
@@ -1502,8 +1508,7 @@ function goScreen(id, opts={}){
   const navEl = document.querySelector('.nav-item[data-nav="'+((id==='staff'||id==='shopfront')?'settings':(id==='customer-detail'?'customers':id))+'"]');
   if(navEl) navEl.classList.add('active');
 
-  const titles = { dashboard:'總覽', calendar:'分享', bookings:'預約管理', customers:'顧客資料', services:'服務項目', staff:'服務人員', shopfront:'商店門面', settings:'設定', 'customer-detail':'顧客詳情' };
-  document.getElementById('topbarTitle').textContent = titles[id] || '商家後台';
+  document.getElementById('topbarBrandName').textContent = BUSINESS.name || '商家後台';
   document.getElementById('backBtnWrap').innerHTML = (id==='staff'||id==='shopfront') ? '<div class="back-btn" onclick="goScreen(\'settings\')">←</div>' : (id==='customer-detail' ? '<div class="back-btn" onclick="goScreen(\'customers\')">←</div>' : '');
 
   if(!opts.noPush){ navStack.push(id); }
@@ -2812,9 +2817,23 @@ function copyBookingLinkForPoster(){
   navigator.clipboard.writeText(url).then(()=>showToast('已複製連結')).catch(()=>showToast('複製失敗'));
 }
 /* 回傳某天可約的開始時間陣列（已排除被預約走的時段與過去時間），最多回傳 4 筆代表性時段 */
+/* 找出讓這一天整天休息的那筆 break 設定的標籤文字（找不到就給預設「公休」） */
+function closedDayLabel(dateKey){
+  const [y,m,d] = dateKey.split('-').map(Number);
+  const wd = new Date(y,m-1,d).getDay();
+  const hit = (BUSINESS.breaks||[]).find(b=>{
+    if(!breakAppliesToDate(b, dateKey, wd)) return false;
+    if(b.allDay===true) return true;
+    if(!b.ranges || b.ranges.length===0) return true;
+    return false;
+  });
+  if(hit && hit.label) return hit.label;
+  if(hit) return '休息';
+  return '公休';
+}
 function availableSlotsForDate(dateKey){
   const hours = merchantDayHours(dateKey);
-  if(!hours) return { closed:true, slots:[] };
+  if(!hours) return { closed:true, slots:[], label: closedDayLabel(dateKey) };
   const [fh,fm] = hours.from.split(':').map(Number);
   const [th,tm] = hours.to.split(':').map(Number);
   const slotMin = BUSINESS.slotMin || 30;
@@ -2841,7 +2860,9 @@ function availableSlotsForDate(dateKey){
     for(let i=0;i<4;i++){ sample.push(all[Math.round(i*step)]); }
     sample = [...new Set(sample)];
   }
-  return { closed:false, full: all.length===0, slots: sample };
+  // 整天營業但因部分時段休息導致當天完全沒有可約時段時，也附上休息標籤方便辨識
+  const label = (all.length===0) ? closedDayLabel(dateKey) : null;
+  return { closed:false, full: all.length===0, slots: sample, label };
 }
 function renderSlotPosterPreview(){
   const wrap = document.getElementById('posterPreviewWrap');
@@ -2858,9 +2879,9 @@ function renderSlotPosterPreview(){
     const dateKey = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const info = availableSlotsForDate(dateKey);
     if(info.closed){
-      cells += `<div class="day"><div class="dnum">${d}</div></div>`;
+      cells += `<div class="day full"><div class="dnum">${d}</div><div class="tm">${info.label||''}</div></div>`;
     } else if(info.full){
-      cells += `<div class="day full"><div class="dnum">${d}</div><div class="tm">已約滿</div></div>`;
+      cells += `<div class="day full"><div class="dnum">${d}</div><div class="tm">${info.label||'已約滿'}</div></div>`;
     } else {
       cells += `<div class="day"><div class="dnum">${d}</div><div class="tm">${info.slots.join('<br>')}</div></div>`;
     }
@@ -2925,14 +2946,15 @@ function downloadSlotPoster(){
     const info = availableSlotsForDate(dateKey);
     ctx.font = '700 12px "Space Mono", monospace'; ctx.fillStyle = '#26221B';
     ctx.fillText(String(d), cx, cyTop);
-    if(!info.closed){
-      if(info.full){
-        ctx.font = '400 9px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(107,99,86,0.55)';
-        ctx.fillText('已約滿', cx, cyTop+16);
-      } else {
-        ctx.font = '400 9.5px "Space Mono", monospace'; ctx.fillStyle = '#6B6356';
-        info.slots.forEach((t,i)=>{ ctx.fillText(t, cx, cyTop+16+i*12); });
-      }
+    if(info.closed){
+      ctx.font = '400 9px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(107,99,86,0.55)';
+      ctx.fillText(info.label||'', cx, cyTop+16);
+    } else if(info.full){
+      ctx.font = '400 9px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(107,99,86,0.55)';
+      ctx.fillText(info.label||'已約滿', cx, cyTop+16);
+    } else {
+      ctx.font = '400 9.5px "Space Mono", monospace'; ctx.fillStyle = '#6B6356';
+      info.slots.forEach((t,i)=>{ ctx.fillText(t, cx, cyTop+16+i*12); });
     }
   }
 
@@ -3006,6 +3028,7 @@ function previewCustomerLink(){
 function renderShopfrontScreen(){
   const body = document.getElementById('shopfrontBody');
   body.innerHTML = `
+    <div class="section-title"><span class="lead">商店門面</span></div>
     <div class="field-hint" style="margin-bottom:14px;">顧客在預約頁看到的一切。</div>
     <div class="about-card logo-upload-card">
       <div class="logo-preview" id="logoPreview">🏷️</div>
