@@ -1118,12 +1118,35 @@ function pickDate(key){
   renderDateStrip(); renderTimeGrid();
   document.getElementById('dtNextBtn').disabled = true;
 }
+/* 判斷某個 break 設定是否適用於指定日期（單次／每週重複／整月挑日子，
+   也相容沒有 type 欄位的舊資料，視為單次） */
+function breakAppliesToDate(b, dateKey, weekday){
+  if(!b.type || b.type==='single') return b.date===dateKey;
+  if(b.type==='weekly') return (b.weekdays||[]).includes(weekday);
+  if(b.type==='monthly') return (b.dates||[]).includes(dateKey);
+  return false;
+}
+function isTimeBlockedByBreak(dateKey, label){
+  const [y,m,d] = dateKey.split('-').map(Number);
+  const wd = new Date(y,m-1,d).getDay();
+  const mins = toMinutes(label);
+  return (BUSINESS.breaks||[]).some(b=>{
+    if(!breakAppliesToDate(b, dateKey, wd)) return false;
+    if(b.allDay) return true;
+    return (b.ranges||[]).some(r=> mins >= toMinutes(r.start) && mins < toMinutes(r.end));
+  });
+}
 /* 取得某一天的營業時段（依商家「時段與可約」的每週設定；未設定則沿用整體營業時間） */
 function dayHours(dateKey){
-  const breakEntry = (BUSINESS.breaks || []).find(b=>b.date===dateKey);
-  if(breakEntry) return null;
   const [y,m,d] = dateKey.split('-').map(Number);
   const wd = new Date(y, m-1, d).getDay();
+  const fullyClosed = (BUSINESS.breaks||[]).some(b=>{
+    if(!breakAppliesToDate(b, dateKey, wd)) return false;
+    if(b.allDay===true) return true;
+    if(!b.ranges || b.ranges.length===0) return true;
+    return false;
+  });
+  if(fullyClosed) return null;
   const wh = BUSINESS.weekHours;
   if(wh && wh.length===7){
     const conf = wh[wd];
@@ -1154,7 +1177,9 @@ function isDateWithinOpenWindow(dateKey){
 function renderTimeGrid(){
   const wrap = document.getElementById('timeGrid');
   if(!state.date){ wrap.innerHTML=''; return; }
-  const breakEntry = (BUSINESS.breaks || []).find(b=>b.date===state.date);
+  const [wy,wm,wd] = state.date.split('-').map(Number);
+  const weekday = new Date(wy,wm-1,wd).getDay();
+  const breakEntry = (BUSINESS.breaks || []).find(b=>breakAppliesToDate(b, state.date, weekday) && (b.allDay===true || !b.ranges || b.ranges.length===0));
   const hours = dayHours(state.date);
   if(!hours){
     const msg = breakEntry ? (breakEntry.label || '休息') : '本日公休';
@@ -1176,7 +1201,8 @@ function renderTimeGrid(){
     const slotDate = new Date(y,m-1,d,h,mm);
     const isPast = slotDate < earliest;
     const isBooked = isSlotBuffered(state.date, label, svcDuration);
-    const disabled = isPast || isBooked;
+    const isBreak = isTimeBlockedByBreak(state.date, label);
+    const disabled = isPast || isBooked || isBreak;
     const sel = state.time===label ? 'selected' : '';
     html += `<div class="time-slot ${disabled?'disabled':sel}" ${disabled?'':`onclick="pickTime('${label}')"`}>${label}</div>`;
   }

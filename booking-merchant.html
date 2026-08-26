@@ -253,6 +253,28 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .bkt-link-row a{ font-size:12.5px; color:var(--ledger-dark); text-decoration:underline; cursor:pointer; }
 .bkt-danger-row{ text-align:center; margin-top:10px; }
 .bkt-danger-row a{ font-size:12.5px; color:var(--stamp-dark); text-decoration:underline; cursor:pointer; }
+.cust-detail-header{ display:flex; gap:14px; margin-bottom:20px; }
+.cust-detail-header .avatar{
+  width:56px; height:56px; border-radius:50%; flex-shrink:0; background:var(--paper-2);
+  display:flex; align-items:center; justify-content:center; font-family:'Noto Serif TC',serif;
+  font-weight:700; font-size:21px; color:var(--gold);
+}
+.cust-detail-header .who h4{ margin:0 0 4px; font-size:17px; font-weight:700; }
+.cust-detail-header .who .ln{ font-size:12.5px; color:var(--ink-soft); line-height:1.7; }
+.cust-section-hd{ display:flex; align-items:center; justify-content:space-between; margin:22px 0 10px; }
+.cust-section-hd h4{ margin:0; font-size:14.5px; font-weight:700; }
+.cust-section-hd a{ font-size:12.5px; color:var(--ledger-dark); text-decoration:underline; cursor:pointer; }
+.cust-note-hint{ font-size:11px; color:var(--ink-soft); margin-bottom:10px; line-height:1.6; }
+.cust-note-count{ text-align:right; font-size:11px; color:var(--ink-soft); margin-top:6px; }
+.cust-hist-card{ background:var(--white); border:1.5px solid var(--line); border-radius:12px; padding:13px 15px; margin-bottom:10px; cursor:pointer; }
+.cust-hist-card .svc{ font-weight:700; font-size:13.5px; margin-bottom:4px; }
+.cust-hist-card .meta{ font-size:11.5px; color:var(--ink-soft); margin-bottom:8px; }
+.cust-hist-card .foot{ display:flex; align-items:center; gap:8px; font-size:12px; }
+.cust-hist-card .foot .price{ font-family:'Space Mono',monospace; font-weight:700; }
+.cust-hist-card .foot .code{ margin-left:auto; font-family:'Space Mono',monospace; font-size:10.5px; color:var(--ink-soft); }
+.cust-danger-zone{ border:1.5px solid var(--stamp); background:#FBF0EC; border-radius:12px; padding:16px; margin-top:22px; }
+.cust-danger-zone h4{ margin:0 0 4px; font-size:14px; color:var(--stamp-dark); }
+.cust-danger-zone p{ margin:0 0 12px; font-size:12px; color:var(--ink-soft); }
 .btn-noshow{ background:transparent; border:1.5px solid var(--stamp); color:var(--stamp-dark); }
 .btn-success{ background:var(--ledger); color:var(--white); }
 .bkt-total-row{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
@@ -497,6 +519,21 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .break-row .info{ font-size:13px; }
 .break-row .info .lbl{ color:var(--ink-soft); font-size:11.5px; margin-top:2px; }
 .break-row .del{ color:var(--stamp-dark); font-size:12px; cursor:pointer; text-decoration:underline; flex-shrink:0; }
+.break-tab-pair{ display:flex; background:var(--paper-2); border-radius:99px; padding:4px; gap:2px; margin-bottom:18px; }
+.break-tab{ flex:1; border:none; background:transparent; padding:11px 6px; border-radius:99px; font-size:13px; font-weight:700; color:var(--ink-soft); cursor:pointer; }
+.break-tab.active{ background:var(--gold); color:var(--white); }
+.check-row{ display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:400; color:var(--ink); cursor:pointer; }
+.check-row input{ width:18px; height:18px; accent-color:var(--ledger); }
+.break-range-row{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.break-range-row input[type="time"]{ flex:1; min-width:0; }
+.break-range-row .sep{ color:var(--ink-soft); }
+.break-range-row .rm{ color:var(--stamp-dark); font-size:16px; cursor:pointer; flex-shrink:0; padding:4px; }
+.chip-pick-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.chip-pick{ border:1.5px solid var(--line); background:var(--white); border-radius:99px; padding:7px 16px; font-size:12.5px; color:var(--ink); cursor:pointer; }
+.wd-pick-row{ display:flex; gap:6px; }
+.wd-pick{ flex:1; aspect-ratio:1; border-radius:50%; border:1.5px solid var(--line); background:var(--white); color:var(--ink); font-size:13px; cursor:pointer; }
+.wd-pick.active{ background:var(--gold); border-color:var(--gold); color:var(--white); }
+.break-preview-line{ background:var(--paper-2); border-radius:10px; padding:10px 14px; font-size:12px; color:var(--ink-soft); min-height:20px; }
 .wk-row{
   display:flex; align-items:center; gap:8px; background:var(--white); border:1.5px solid var(--line);
   border-radius:10px; padding:10px 12px; margin-bottom:8px;
@@ -712,6 +749,11 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
         <div id="customersList"></div>
       </section>
 
+      <!-- ============ CUSTOMER DETAIL (full page) ============ -->
+      <section class="screen" id="screen-customer-detail">
+        <div id="customerDetailBody"></div>
+      </section>
+
       <!-- ============ SERVICES ============ -->
       <section class="screen" id="screen-services">
         <div class="section-title"><span class="lead"><span class="num">1</span>服務項目</span><button class="add-btn" onclick="openServiceForm()">＋ 新增服務</button></div>
@@ -889,6 +931,83 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
     </div>
   </div>
 
+  <!-- ============ SLOT MODE CONFIRM MODAL ============ -->
+  <div class="modal-backdrop" id="slotModeConfirmBackdrop" onclick="if(event.target===this)closeSlotModeConfirm()">
+    <div class="modal-card">
+      <h3>切換到指定時段？</h3>
+      <p class="field-hint" style="margin-bottom:20px; line-height:1.7;">指定時段目前僅支援滾動式開放——切換後「每月整月開放」設定會先停用、改以滾動式開放。之後切回「依營業時間」模式即可恢復原本的每月開放設定。</p>
+      <div class="sheet-actions">
+        <button class="btn btn-outline" onclick="closeSlotModeConfirm()">返回</button>
+        <button class="btn btn-primary" onclick="confirmSlotModeSwitch()">切換</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ BREAK ENTRY SHEET ============ -->
+  <div class="sheet-backdrop" id="breakEntryBackdrop" onclick="if(event.target===this)closeBreakEntry()">
+    <div class="sheet" style="position:relative; max-height:92vh;">
+      <div class="sheet-close" onclick="closeBreakEntry()">✕</div>
+      <div class="sheet-handle"></div>
+      <h3>新增休息時段</h3>
+      <div class="break-tab-pair">
+        <button class="break-tab active" id="breakTabSingle" onclick="setBreakTab('single')">單次</button>
+        <button class="break-tab" id="breakTabWeekly" onclick="setBreakTab('weekly')">每週重複</button>
+        <button class="break-tab" id="breakTabMonthly" onclick="setBreakTab('monthly')">整月挑日子</button>
+      </div>
+
+      <div id="breakTabSingleBody">
+        <div class="field"><label for="breakDateInput">日期</label><input type="date" id="breakDateInput" onchange="refreshBreakPreview()"></div>
+      </div>
+      <div id="breakTabWeeklyBody" style="display:none;">
+        <div class="field">
+          <label>星期</label>
+          <div class="wd-pick-row" id="breakWeekdayPick">
+            ${['日','一','二','三','四','五','六'].map((wd,i)=>`<button class="wd-pick" data-wd="${i}" onclick="toggleBreakWeekday(${i})">${wd}</button>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div id="breakTabMonthlyBody" style="display:none;">
+        <div class="field">
+          <label>挑選日期（可複選）</label>
+          <div class="cal-grid-toolbar">
+            <button class="btn-caret" onclick="breakMonthShift(-1)">‹</button>
+            <div class="cal-month" id="breakMonthLabel">—</div>
+            <button class="btn-caret" onclick="breakMonthShift(1)">›</button>
+          </div>
+          <div class="cal-grid-wd"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+          <div class="cal-grid" id="breakMonthGrid"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="check-row"><input type="checkbox" id="breakAllDayCheck" onchange="onBreakAllDayToggle()"> 整天休息</label>
+      </div>
+      <div id="breakRangesWrap">
+        <div class="field"><label>時段</label></div>
+        <div id="breakRangesList"></div>
+        <div class="bkt-link-row" style="text-align:left; margin:-4px 0 14px;"><a onclick="addBreakRange()">＋ 再加一個時段</a></div>
+      </div>
+
+      <div class="field">
+        <label for="breakLabelInput">標籤</label>
+        <input type="text" id="breakLabelInput" placeholder="例：午休／休假" oninput="refreshBreakPreview()">
+        <div class="chip-pick-row">
+          <button class="chip-pick" onclick="pickBreakLabel('午休')">午休</button>
+          <button class="chip-pick" onclick="pickBreakLabel('休假')">休假</button>
+          <button class="chip-pick" onclick="pickBreakLabel('私事')">私事</button>
+          <button class="chip-pick" onclick="pickBreakLabel('進修')">進修</button>
+        </div>
+      </div>
+
+      <div id="breakPreviewLine" class="break-preview-line"></div>
+
+      <div class="sheet-actions" style="margin-top:16px;">
+        <button class="btn btn-outline" onclick="closeBreakEntry()">取消</button>
+        <button class="btn btn-primary" onclick="createBreakEntry()">建立</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ SERVICE FORM SHEET ============ -->
   <div class="sheet-backdrop" id="serviceSheetBackdrop" onclick="if(event.target===this)closeServiceForm()">
     <div class="sheet" style="position:relative;">
@@ -975,7 +1094,6 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
       </div>
       <div class="field"><label for="custFormEmail">Email（選填）</label><input type="email" id="custFormEmail" placeholder="you@example.com"></div>
       <div class="field-hint" id="custFormEmailHint" style="margin-top:-10px; margin-bottom:16px;"></div>
-      <div class="field"><label for="custFormNote">備註（選填）</label><textarea id="custFormNote"></textarea></div>
       <button class="btn btn-outline" id="custAddBookingBtn" style="width:100%; margin-bottom:14px; display:none;" onclick="const cid=document.getElementById('custFormId').value; closeCustomerForm(); openManualBookingForm(cid);">＋ 幫這位顧客新增預約</button>
       <div class="sheet-actions">
         <button class="btn btn-ghost" id="custDeleteBtn" style="display:none;" onclick="deleteCustomer()">刪除</button>
@@ -1166,6 +1284,7 @@ function rerenderActiveScreen(){
   if(id==='services'){ renderServicesList(); renderProductsList(); }
   if(id==='staff') renderStaffListView();
   if(id==='shopfront') renderShopfrontScreen();
+  if(id==='customer-detail') renderCustomerDetailScreen();
   
 }
 
@@ -1334,12 +1453,12 @@ function goScreen(id, opts={}){
   document.querySelectorAll('#mainApp .screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const navEl = document.querySelector('.nav-item[data-nav="'+((id==='staff'||id==='shopfront')?'settings':id)+'"]');
+  const navEl = document.querySelector('.nav-item[data-nav="'+((id==='staff'||id==='shopfront')?'settings':(id==='customer-detail'?'customers':id))+'"]');
   if(navEl) navEl.classList.add('active');
 
-  const titles = { dashboard:'總覽', calendar:'分享', bookings:'預約管理', customers:'顧客資料', services:'服務項目', staff:'服務人員', shopfront:'商店門面', settings:'設定' };
+  const titles = { dashboard:'總覽', calendar:'分享', bookings:'預約管理', customers:'顧客資料', services:'服務項目', staff:'服務人員', shopfront:'商店門面', settings:'設定', 'customer-detail':'顧客詳情' };
   document.getElementById('topbarTitle').textContent = titles[id] || '商家後台';
-  document.getElementById('backBtnWrap').innerHTML = (id==='staff'||id==='shopfront') ? '<div class="back-btn" onclick="goScreen(\'settings\')">←</div>' : '';
+  document.getElementById('backBtnWrap').innerHTML = (id==='staff'||id==='shopfront') ? '<div class="back-btn" onclick="goScreen(\'settings\')">←</div>' : (id==='customer-detail' ? '<div class="back-btn" onclick="goScreen(\'customers\')">←</div>' : '');
 
   if(!opts.noPush){ navStack.push(id); }
   window.scrollTo(0,0);
@@ -1351,6 +1470,7 @@ function goScreen(id, opts={}){
   if(id==='services') { renderServicesList(); renderProductsList(); }
   if(id==='staff') renderStaffListView();
   if(id==='shopfront') renderShopfrontScreen();
+  if(id==='customer-detail') renderCustomerDetailScreen();
   
 }
 
@@ -1474,6 +1594,11 @@ function calcAge(birthday){
 function customerBookingCount(customerId){
   return loadBookings().filter(b=>b.customerId===customerId).length;
 }
+function customerLastDoneDate(c){
+  const done = loadBookings().filter(b=> b.status==='done' && (c.id ? b.customerId===c.id : b.customer.phone===c.phone));
+  if(done.length===0) return null;
+  return done.map(b=>b.date).sort().reverse()[0];
+}
 function renderCustomersList(){
   const wrap = document.getElementById('customersList');
   const q = (document.getElementById('customerSearch').value||'').trim().toLowerCase();
@@ -1492,13 +1617,15 @@ function renderCustomersList(){
   wrap.innerHTML = list.map(c=>{
     const age = calcAge(c.birthday);
     const count = customerBookingCount(c.id);
+    const lastDone = customerLastDoneDate(c);
     return `
-    <div class="crud-card" onclick="openCustomerForm('${c.id}')" style="cursor:pointer;">
+    <div class="crud-card" onclick="openCustomerDetail('${c.id}')" style="cursor:pointer;">
       <div class="crud-ic">${(c.name||'？').slice(0,1)}</div>
       <div class="crud-body">
         <h4>${c.name||'（未提供姓名）'} ${c.hasAccount ? '<span class="status-pill status-upcoming" style="margin-left:4px;">會員</span>' : ''}</h4>
         <p>📱 ${c.phone||'—'}${c.lineId ? ' · LINE ' + c.lineId : ''}</p>
         ${c.email ? `<p>✉️ ${c.email}</p>` : ''}
+        ${lastDone ? `<p style="color:var(--ink-soft);">最近 ${lastDone.replace(/-/g,'/')}</p>` : ''}
         <div class="crud-meta">
           ${c.birthday ? `<span>🎂 ${c.birthday}${age!==null ? '（'+age+' 歲）' : ''}</span>` : ''}
           <span>共 ${count} 筆預約</span>
@@ -1506,6 +1633,92 @@ function renderCustomersList(){
       </div>
     </div>`;
   }).join('');
+}
+
+/* ---- 顧客詳情（獨立全頁） ---- */
+let currentCustomerDetailId = null;
+function openCustomerDetail(id){
+  currentCustomerDetailId = id;
+  goScreen('customer-detail');
+}
+function customerHistoryBookings(c){
+  return loadBookings()
+    .filter(b=> c.id ? b.customerId===c.id : b.customer.phone===c.phone)
+    .sort((a,b)=> (b.date+b.time).localeCompare(a.date+a.time));
+}
+function renderCustomerDetailScreen(){
+  const c = loadCustomers().find(x=>x.id===currentCustomerDetailId);
+  const body = document.getElementById('customerDetailBody');
+  if(!c){ body.innerHTML = `<div class="empty-state"><p>找不到這位顧客，可能已被刪除。</p></div>`; return; }
+  const age = calcAge(c.birthday);
+  const count = customerBookingCount(c.id);
+  const history = customerHistoryBookings(c);
+  body.innerHTML = `
+    <div class="cust-detail-header">
+      <div class="avatar">${(c.name||'？').slice(0,1)}</div>
+      <div class="who">
+        <h4>${c.name||'（未提供姓名）'}</h4>
+        <div class="ln">${c.phone||'—'}</div>
+        ${c.email ? `<div class="ln">${c.email}</div>` : ''}
+        <div class="ln">來過 <b>${count}</b> 次</div>
+        <div class="ln">生日 ${c.birthday ? c.birthday.replace(/-/g,'/')+(age!==null?'（'+age+' 歲）':'') : '未填寫'} ・ 性別 ${c.gender || '未填寫'}</div>
+      </div>
+    </div>
+
+    <div class="cust-section-hd"><h4>聯絡資料</h4><a onclick="openCustomerForm('${c.id}')">編輯聯絡資料</a></div>
+
+    <div class="cust-section-hd" style="margin-top:22px;"><h4>內部備註</h4></div>
+    <div class="cust-note-hint">只有你看得到，顧客不會看到。請勿填寫病歷、醫療、健康檢查等特種個人資料。</div>
+    <textarea id="custDetailNote" rows="4" maxlength="500" oninput="document.getElementById('custNoteCount').textContent = this.value.length + ' / 500'">${c.note||''}</textarea>
+    <div class="cust-note-count" id="custNoteCount">${(c.note||'').length} / 500</div>
+    <div style="text-align:right; margin-top:10px;">
+      <button class="btn btn-outline btn-sm" onclick="saveInternalNote('${c.id}')">儲存</button>
+    </div>
+
+    <div class="cust-section-hd"><h4>預約歷史（${history.length} 筆）</h4></div>
+    ${history.length===0 ? `<div class="field-hint">目前尚無預約紀錄。</div>` : history.map(b=>{
+      const svcs = bookingServices(b);
+      const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '（服務已刪除）';
+      const dur = svcs.reduce((sum,s)=>sum+(s.duration||0),0);
+      const [yy,mm,dd] = b.date.split('-').map(Number);
+      const wd = ['日','一','二','三','四','五','六'][new Date(yy,mm-1,dd).getDay()];
+      return `
+      <div class="cust-hist-card" onclick="closeCustomerDetailAndOpenBooking('${b.id}')">
+        <div class="svc">${svcLabel}</div>
+        <div class="meta">${mm}/${dd}（週${wd}）${b.time} ・ ${dur} 分鐘</div>
+        <div class="foot">
+          <span class="price">$${bookingActualTotal(b)}</span>
+          <span class="status-pill ${statusClass(b.status)}">${statusLabel(b.status)}</span>
+          <span class="code">${b.code}</span>
+        </div>
+      </div>`;
+    }).join('')}
+
+    <div class="cust-danger-zone">
+      <h4>危險區</h4>
+      <p>永久刪除此客戶資料，無法復原。</p>
+      <button class="btn btn-danger" style="width:100%;" onclick="deleteCustomerFromDetail('${c.id}')">刪除客戶</button>
+    </div>
+  `;
+}
+async function saveInternalNote(id){
+  const note = document.getElementById('custDetailNote').value.trim();
+  try{
+    await db.collection('customers').doc(id).update({ note });
+    showToast('備註已儲存');
+  }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
+}
+function closeCustomerDetailAndOpenBooking(bookingId){
+  goScreen('bookings', {noPush:true});
+  setTimeout(()=>openBookingSheet(bookingId), 60);
+}
+async function deleteCustomerFromDetail(id){
+  if(!confirm('確定要永久刪除這位顧客的資料嗎？此動作無法復原。')) return;
+  try{
+    await db.collection('customers').doc(id).delete();
+    showToast('顧客資料已刪除');
+    goScreen('customers');
+  }catch(err){ showToast('刪除失敗，請檢查網路連線後再試'); }
 }
 function openCustomerForm(id){
   const isEdit = !!id;
@@ -1523,7 +1736,6 @@ function openCustomerForm(id){
     document.getElementById('custFormBirthday').value = c.birthday || '';
     document.getElementById('custFormGender').value = c.gender || '';
     document.getElementById('custFormEmail').value = c.email || '';
-    document.getElementById('custFormNote').value = c.note || '';
     hint.textContent = c.hasAccount ? '此顧客已註冊會員帳號，Email 為登入信箱，修改請務必告知顧客。' : '此顧客尚未註冊會員帳號（後台手動新增的紀錄）。';
   } else {
     document.getElementById('custFormId').value = '';
@@ -1533,7 +1745,6 @@ function openCustomerForm(id){
     document.getElementById('custFormBirthday').value = '';
     document.getElementById('custFormGender').value = '';
     document.getElementById('custFormEmail').value = '';
-    document.getElementById('custFormNote').value = '';
     hint.textContent = '手動新增的顧客尚無登入密碼，僅作為後台紀錄使用。';
   }
   document.getElementById('customerSheetBackdrop').classList.add('show');
@@ -1550,8 +1761,7 @@ async function saveCustomer(){
     lineId: document.getElementById('custFormLineId').value.trim(),
     birthday: document.getElementById('custFormBirthday').value,
     gender: document.getElementById('custFormGender').value,
-    email: normEmailM(document.getElementById('custFormEmail').value),
-    note: document.getElementById('custFormNote').value.trim()
+    email: normEmailM(document.getElementById('custFormEmail').value)
   };
   try{
     if(id){
@@ -2072,8 +2282,7 @@ function viewCustomerFromBooking(id){
   closeBookingSheet();
   const cust = b.customerId ? loadCustomers().find(c=>c.id===b.customerId) : loadCustomers().find(c=>c.phone===b.customer.phone);
   if(cust){
-    goScreen('customers');
-    setTimeout(()=>openCustomerForm(cust.id), 50);
+    openCustomerDetail(cust.id);
   } else {
     goScreen('bookings');
     document.getElementById('bookingSearch').value = b.customer.phone;
@@ -2328,8 +2537,41 @@ function addMinutes(timeStr, mins){
   return String(Math.floor(total/60)%24).padStart(2,'0')+':'+String(total%60).padStart(2,'0');
 }
 /* 判斷某一天商家端的營業時段（跟顧客頁 dayHours 邏輯相同，各自維護一份） */
+/* 判斷某個 break 設定是否適用於指定日期（涵蓋單次／每週重複／整月挑日子三種型態，
+   也相容沒有 type 欄位的舊資料，視為單次） */
+function breakAppliesToDate(b, dateKey, weekday){
+  if(!b.type || b.type==='single') return b.date===dateKey;
+  if(b.type==='weekly') return (b.weekdays||[]).includes(weekday);
+  if(b.type==='monthly') return (b.dates||[]).includes(dateKey);
+  return false;
+}
+function isDateFullyClosedByBreak(dateKey){
+  const [y,m,d] = dateKey.split('-').map(Number);
+  const wd = new Date(y,m-1,d).getDay();
+  return (BUSINESS.breaks||[]).some(b=>{
+    if(!breakAppliesToDate(b, dateKey, wd)) return false;
+    if(b.allDay===true) return true;
+    if(!b.ranges || b.ranges.length===0) return true; // 舊資料沒有時段細節，視為整天休息
+    return false;
+  });
+}
+/* 判斷某個時間點是否落在當天任何一個「休息時段」的時間範圍內（非整天休息的部分時段封鎖） */
+function isTimeBlockedByBreak(dateKey, label){
+  const [y,m,d] = dateKey.split('-').map(Number);
+  const wd = new Date(y,m-1,d).getDay();
+  const mins = (function(t){ const [h,mm]=t.split(':').map(Number); return h*60+mm; })(label);
+  return (BUSINESS.breaks||[]).some(b=>{
+    if(!breakAppliesToDate(b, dateKey, wd)) return false;
+    if(b.allDay) return true;
+    return (b.ranges||[]).some(r=>{
+      const s = (function(t){ const [h,mm]=t.split(':').map(Number); return h*60+mm; })(r.start);
+      const e = (function(t){ const [h,mm]=t.split(':').map(Number); return h*60+mm; })(r.end);
+      return mins >= s && mins < e;
+    });
+  });
+}
 function merchantDayHours(dateKey){
-  if((BUSINESS.breaks||[]).some(b=>b.date===dateKey)) return null;
+  if(isDateFullyClosedByBreak(dateKey)) return null;
   const [y,m,d] = dateKey.split('-').map(Number);
   const wd = new Date(y,m-1,d).getDay();
   const wh = BUSINESS.weekHours;
@@ -2492,6 +2734,7 @@ function availableSlotsForDate(dateKey){
   for(let cur=fh*60+fm; cur<th*60+tm; cur+=slotMin){
     const label = String(Math.floor(cur/60)).padStart(2,'0')+':'+String(cur%60).padStart(2,'0');
     if(taken.includes(label)) continue;
+    if(isTimeBlockedByBreak(dateKey, label)) continue;
     if(isToday){
       const slotDate = new Date(y,m-1,d,Math.floor(cur/60),cur%60);
       if(slotDate < now) continue;
@@ -2764,26 +3007,27 @@ function openSettingsSheet(kind){
         <div class="field-hint">依你的營業時間與服務時長，自動排出可約時段（目前僅支援此模式，「指定時段」尚未開放細部設定）。</div>
       </div>
       <div class="field"><label for="setSlotMin">時段間隔（分鐘）</label>
-        <select id="setSlotMin">
+        <select id="setSlotMin" onchange="updateBufferHint()">
           <option value="15">15 分鐘</option>
           <option value="30">30 分鐘</option>
           <option value="60">60 分鐘</option>
         </select>
-        <div class="field-hint">顧客每隔多久可以選一個時段。例如 30＝顧客只能選 10:00、10:30、11:00…</div>
+        <div class="field-hint">顧客每隔多久可以選一個時段？例如 30＝顧客只能選 10:00、10:30、11:00…<br>間隔越大，顧客可選的起始時間越少，且格子從「營業開始時間」往後推——例如營業 11:00 開、間隔 120 → 顧客只能選 11:00、13:00、15:00…，適合想把一天排成固定整段區塊的店家。</div>
       </div>
       <div class="field"><label for="setLeadHours">最早幾小時後可預約</label>
         <input type="number" id="setLeadHours" min="0" step="1">
         <div class="field-hint">顧客現在下單，至少要等多久才能來？例如 24＝顧客最早只能約明天的這個時間之後。</div>
       </div>
       <div class="field"><label for="setBufferMin">預約間緩衝（分鐘）</label>
-        <input type="number" id="setBufferMin" min="0" step="5">
-        <div class="field-hint">每筆預約後留多少時間收尾、準備下一位客人，這段時間不會再開放給其他人預約。</div>
+        <input type="number" id="setBufferMin" min="0" step="5" oninput="updateBufferHint()">
+        <div class="field-hint">每筆預約後留多少時間收尾、準備下一位客人。注意：這段緩衝也要在打烊前完成，所以最晚的可預約時段會往前推——例如營業到 22:00、緩衝 60 分、服務 3 小時，最晚只能約到 18:00。想讓客人約晚一點，就把緩衝調低或延後營業時間。</div>
+        <div class="field-hint" id="bufferHintBox" style="margin-top:8px; background:var(--paper-2); padding:10px 12px; border-radius:10px;"></div>
       </div>
       <div class="field"><label for="setHoursFull">營業時間文字（顯示用）</label><input type="text" id="setHoursFull" placeholder="週一至週日 09:00–18:00"></div>
 
       <div class="section-title" style="margin-bottom:10px; margin-top:22px;"><span class="lead">開放方式</span></div>
       <div class="toggle-pair" style="margin-bottom:12px;">
-        <button class="toggle-opt" id="openModeMonthly" onclick="setOpenMode('monthly')">每月整月開放</button>
+        <button class="toggle-opt" id="openModeMonthly" onclick="tryOpenModeMonthly()">每月整月開放</button>
         <button class="toggle-opt" id="openModeRolling" onclick="setOpenMode('rolling')">滾動式</button>
       </div>
       <div id="monthlyOpenFields">
@@ -2807,6 +3051,7 @@ function openSettingsSheet(kind){
     document.getElementById('setMonthlyTime').value = BUSINESS.monthlyOpenTime ?? '12:00';
     setSlotMode(BUSINESS.slotMode === 'custom' ? 'custom' : 'auto', true);
     setOpenMode(BUSINESS.openMode === 'rolling' ? 'rolling' : 'monthly', true);
+    updateBufferHint();
   } else if(kind==='policy'){
     body.innerHTML = `
       <div class="field-hint" style="margin-bottom:14px;">預約要不要你確認、顧客要填什麼、多晚之前能取消。</div>
@@ -3069,35 +3314,40 @@ async function saveWeekHours(){
 }
 
 /* ---- 休息時段（臨時休假／午休等特定日期不接客） ---- */
+const WD_LABELS = ['日','一','二','三','四','五','六'];
+function summarizeBreak(b){
+  const timePart = b.allDay ? '全天' : (b.ranges||[]).map(r=>r.start+'–'+r.end).join('、');
+  if(b.type==='weekly'){
+    return `每週 ${(b.weekdays||[]).map(w=>'週'+WD_LABELS[w]).join('、')}・${timePart}`;
+  }
+  if(b.type==='monthly'){
+    return `${(b.dates||[]).length} 天（${(b.dates||[]).slice(0,3).join('、')}${(b.dates||[]).length>3?'…':''}）・${timePart}`;
+  }
+  return `${b.date}・${timePart}`;
+}
 function renderBreaksList(){
   const wrap = document.getElementById('breaksList');
   if(!wrap) return;
   const todayKey = new Date().toISOString().slice(0,10);
-  const breaks = (BUSINESS.breaks || []).filter(b=>b.date>=todayKey).sort((a,b)=>a.date.localeCompare(b.date));
-  if(breaks.length===0){
+  const all = BUSINESS.breaks || [];
+  const upcoming = all.filter(b=>{
+    if(b.type==='weekly') return true;
+    if(b.type==='monthly') return (b.dates||[]).some(d=>d>=todayKey);
+    return (b.date||'') >= todayKey;
+  });
+  if(upcoming.length===0){
     wrap.innerHTML = `<div class="field-hint">目前沒有設定休息時段。固定每週店休請用上方「營業時間」。</div>`;
     return;
   }
-  wrap.innerHTML = breaks.map((b,idx)=>{
-    const realIdx = (BUSINESS.breaks||[]).indexOf(b);
+  wrap.innerHTML = upcoming.map(b=>{
+    const realIdx = all.indexOf(b);
+    const tag = { single:'單次', weekly:'每週重複', monthly:'整月挑日子' }[b.type] || '單次';
     return `
     <div class="break-row">
-      <div class="info">${b.date}<div class="lbl">${b.label || '休息'}</div></div>
+      <div class="info">${tag} ${summarizeBreak(b)}<div class="lbl">${b.label || '休息'}</div></div>
       <span class="del" onclick="deleteBreakEntry(${realIdx})">刪除</span>
     </div>`;
   }).join('');
-}
-async function addBreakEntry(){
-  const date = prompt('請輸入休息日期（格式：YYYY-MM-DD）：');
-  if(!date) return;
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){ showToast('日期格式不正確，請用 YYYY-MM-DD'); return; }
-  const label = prompt('備註（選填，例如：進修、私事）：') || '';
-  const breaks = [...(BUSINESS.breaks || []), { date, label }];
-  try{
-    await db.collection('meta').doc('business').set({ breaks }, { merge:true });
-    showToast('已新增休息時段');
-    renderBreaksList();
-  }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
 }
 async function deleteBreakEntry(idx){
   const breaks = (BUSINESS.breaks || []).filter((_,i)=>i!==idx);
@@ -3108,12 +3358,174 @@ async function deleteBreakEntry(idx){
   }catch(err){ showToast('刪除失敗，請檢查網路連線後再試'); }
 }
 
+/* ---- 新增休息時段（單次／每週重複／整月挑日子） ---- */
+let breakTab = 'single';
+let breakSelectedWeekdays = [];
+let breakSelectedDates = [];
+let breakMonthCursor = new Date();
+function addBreakEntry(){
+  breakTab = 'single';
+  breakSelectedWeekdays = [];
+  breakSelectedDates = [];
+  breakMonthCursor = new Date();
+  document.getElementById('breakDateInput').value = new Date().toISOString().slice(0,10);
+  document.getElementById('breakAllDayCheck').checked = false;
+  document.getElementById('breakLabelInput').value = '';
+  document.querySelectorAll('.wd-pick').forEach(el=>el.classList.remove('active'));
+  setBreakTab('single');
+  document.getElementById('breakRangesList').innerHTML = '';
+  addBreakRange();
+  document.getElementById('breakEntryBackdrop').classList.add('show');
+}
+function closeBreakEntry(){
+  document.getElementById('breakEntryBackdrop').classList.remove('show');
+}
+function setBreakTab(tab){
+  breakTab = tab;
+  document.getElementById('breakTabSingle').classList.toggle('active', tab==='single');
+  document.getElementById('breakTabWeekly').classList.toggle('active', tab==='weekly');
+  document.getElementById('breakTabMonthly').classList.toggle('active', tab==='monthly');
+  document.getElementById('breakTabSingleBody').style.display = tab==='single' ? 'block' : 'none';
+  document.getElementById('breakTabWeeklyBody').style.display = tab==='weekly' ? 'block' : 'none';
+  document.getElementById('breakTabMonthlyBody').style.display = tab==='monthly' ? 'block' : 'none';
+  if(tab==='monthly') renderBreakMonthGrid();
+  refreshBreakPreview();
+}
+function toggleBreakWeekday(wd){
+  const idx = breakSelectedWeekdays.indexOf(wd);
+  if(idx>-1){ breakSelectedWeekdays.splice(idx,1); } else { breakSelectedWeekdays.push(wd); }
+  document.querySelector('.wd-pick[data-wd="'+wd+'"]').classList.toggle('active');
+  refreshBreakPreview();
+}
+function breakMonthShift(dir){
+  breakMonthCursor = new Date(breakMonthCursor.getFullYear(), breakMonthCursor.getMonth()+dir, 1);
+  renderBreakMonthGrid();
+}
+function renderBreakMonthGrid(){
+  const y = breakMonthCursor.getFullYear(), m = breakMonthCursor.getMonth();
+  document.getElementById('breakMonthLabel').textContent = y+' 年 '+(m+1)+' 月';
+  const firstDow = new Date(y,m,1).getDay();
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  let html = '';
+  for(let i=0;i<firstDow;i++){ html += `<div class="day-cell empty"></div>`; }
+  for(let d=1; d<=daysInMonth; d++){
+    const dateKey = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const sel = breakSelectedDates.includes(dateKey) ? 'selected' : '';
+    html += `<div class="day-cell ${sel}" onclick="toggleBreakDate('${dateKey}')">${d}</div>`;
+  }
+  document.getElementById('breakMonthGrid').innerHTML = html;
+}
+function toggleBreakDate(dateKey){
+  const idx = breakSelectedDates.indexOf(dateKey);
+  if(idx>-1){ breakSelectedDates.splice(idx,1); } else { breakSelectedDates.push(dateKey); }
+  renderBreakMonthGrid();
+  refreshBreakPreview();
+}
+function onBreakAllDayToggle(){
+  document.getElementById('breakRangesWrap').style.display = document.getElementById('breakAllDayCheck').checked ? 'none' : 'block';
+  refreshBreakPreview();
+}
+function addBreakRange(){
+  const list = document.getElementById('breakRangesList');
+  const row = document.createElement('div');
+  row.className = 'break-range-row';
+  row.innerHTML = `
+    <input type="time" class="brk-start" value="13:00" onchange="refreshBreakPreview()">
+    <span class="sep">–</span>
+    <input type="time" class="brk-end" value="14:00" onchange="refreshBreakPreview()">
+    <span class="rm" onclick="this.parentElement.remove(); refreshBreakPreview();">✕</span>
+  `;
+  list.appendChild(row);
+  refreshBreakPreview();
+}
+function pickBreakLabel(label){
+  document.getElementById('breakLabelInput').value = label;
+  refreshBreakPreview();
+}
+function collectBreakRanges(){
+  return [...document.querySelectorAll('#breakRangesList .break-range-row')].map(row=>({
+    start: row.querySelector('.brk-start').value,
+    end: row.querySelector('.brk-end').value
+  })).filter(r=>r.start && r.end);
+}
+function refreshBreakPreview(){
+  const el = document.getElementById('breakPreviewLine');
+  if(!el) return;
+  const allDay = document.getElementById('breakAllDayCheck').checked;
+  const ranges = collectBreakRanges();
+  const label = document.getElementById('breakLabelInput').value.trim();
+  const timePart = allDay ? '全天' : (ranges.length ? ranges.map(r=>r.start+'–'+r.end).join('、') : '（尚未設定時段）');
+  let head = '';
+  if(breakTab==='single'){
+    const d = document.getElementById('breakDateInput').value;
+    head = `單次 ${d ? d.replace(/-/g,'/') : '（尚未選日期）'}`;
+  } else if(breakTab==='weekly'){
+    head = breakSelectedWeekdays.length ? `每週 ${breakSelectedWeekdays.sort().map(w=>'週'+WD_LABELS[w]).join('、')}` : '每週（尚未選星期）';
+  } else {
+    head = breakSelectedDates.length ? `已選 ${breakSelectedDates.length} 天` : '整月挑日子（尚未選日期）';
+  }
+  el.textContent = `${head} ・ ${timePart}${label ? '　'+label : ''}`;
+}
+async function createBreakEntry(){
+  const allDay = document.getElementById('breakAllDayCheck').checked;
+  const ranges = allDay ? [] : collectBreakRanges();
+  if(!allDay && ranges.length===0){ showToast('請至少設定一個時段，或勾選整天休息'); return; }
+  const label = document.getElementById('breakLabelInput').value.trim();
+  let entry;
+  if(breakTab==='single'){
+    const date = document.getElementById('breakDateInput').value;
+    if(!date){ showToast('請選擇日期'); return; }
+    entry = { type:'single', date, allDay, ranges, label };
+  } else if(breakTab==='weekly'){
+    if(breakSelectedWeekdays.length===0){ showToast('請至少選一個星期'); return; }
+    entry = { type:'weekly', weekdays:[...breakSelectedWeekdays], allDay, ranges, label };
+  } else {
+    if(breakSelectedDates.length===0){ showToast('請至少選一天'); return; }
+    entry = { type:'monthly', dates:[...breakSelectedDates], allDay, ranges, label };
+  }
+  const breaks = [...(BUSINESS.breaks || []), entry];
+  try{
+    await db.collection('meta').doc('business').set({ breaks }, { merge:true });
+    showToast('已新增休息時段');
+    closeBreakEntry();
+    renderBreaksList();
+  }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
+}
+
 /* ---- 可約時段產生方式 / 開放方式 ---- */
+let savedOpenModeBeforeCustom = null;
 function setSlotMode(mode, silent){
+  const current = document.getElementById('slotModeAuto').dataset.val || 'auto';
+  if(!silent && mode==='custom' && current!=='custom'){
+    openSlotModeConfirm();
+    return;
+  }
   document.getElementById('slotModeAuto').classList.toggle('active', mode==='auto');
   document.getElementById('slotModeCustom').classList.toggle('active', mode==='custom');
   document.getElementById('slotModeAuto').dataset.val = mode;
-  if(!silent && mode==='custom'){ showToast('「指定時段」尚未開放細部設定，目前仍會沿用「依營業時間」自動產生時段'); }
+  if(!silent && mode==='auto' && savedOpenModeBeforeCustom){
+    setOpenMode(savedOpenModeBeforeCustom);
+    savedOpenModeBeforeCustom = null;
+  }
+}
+function openSlotModeConfirm(){
+  document.getElementById('slotModeConfirmBackdrop').classList.add('show');
+}
+function closeSlotModeConfirm(){
+  document.getElementById('slotModeConfirmBackdrop').classList.remove('show');
+}
+function confirmSlotModeSwitch(){
+  savedOpenModeBeforeCustom = document.getElementById('openModeMonthly').dataset.val || 'monthly';
+  setSlotMode('custom', true);
+  setOpenMode('rolling');
+  closeSlotModeConfirm();
+}
+function tryOpenModeMonthly(){
+  if((document.getElementById('slotModeAuto').dataset.val||'auto') === 'custom'){
+    showToast('目前是「指定時段」模式，僅支援滾動式開放；請先切回「依營業時間」才能改用每月整月開放');
+    return;
+  }
+  setOpenMode('monthly');
 }
 function setOpenMode(mode, silent){
   document.getElementById('openModeMonthly').classList.toggle('active', mode==='monthly');
@@ -3136,6 +3548,26 @@ function updateMonthlyOpenHint(){
   const hintDate = openThreshold.getMonth()+1 + '/' + openThreshold.getDate() + '（週'+WD[openThreshold.getDay()]+'）';
   document.getElementById('monthlyOpenHint').textContent =
     `顧客現在可訂到 ${m+1}/${lastDayThisMonth}；${nextMonthLabel}將於 ${hintDate} ${time} 開放。`;
+}
+/* 以目前設定推算「最晚可預約幾點」，並在時段間隔／緩衝欄位下方即時顯示 */
+function updateBufferHint(){
+  const box = document.getElementById('bufferHintBox');
+  if(!box) return;
+  const bufferMin = Number(document.getElementById('setBufferMin').value) || 0;
+  if(SERVICES.length===0){ box.textContent = ''; return; }
+  const longest = SERVICES.reduce((a,s)=> (s.duration||0) > (a.duration||0) ? s : a, SERVICES[0]);
+  // 取目前任一個有營業的星期幾當範例（優先找今天，否則找第一個有開的日子）
+  const wh = BUSINESS.weekHours;
+  let closeHour = BUSINESS.closeHour || 18;
+  if(wh && wh.length===7){
+    const todayWd = new Date().getDay();
+    let conf = wh[todayWd] && wh[todayWd].open ? wh[todayWd] : wh.find(d=>d && d.open);
+    if(conf && conf.to){ closeHour = Number(conf.to.split(':')[0]) + Number(conf.to.split(':')[1])/60; }
+  }
+  const latestMin = closeHour*60 - bufferMin - (longest.duration||0);
+  if(latestMin < 0){ box.textContent = `以最長服務「${longest.name}」（${longest.duration} 分）計算，目前的緩衝與服務時長已超過營業時間，顧客可能約不到最後的時段，建議調低緩衝或延後打烊時間。`; return; }
+  const hh = Math.floor(latestMin/60), mm = Math.round(latestMin%60);
+  box.innerHTML = `<span>⏱</span> 以最長服務「${longest.name}」（${longest.duration} 分）計算，顧客最晚可預約 ${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}。`;
 }
 async function saveShopfront(){
   const data = {
