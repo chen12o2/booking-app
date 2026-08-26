@@ -193,11 +193,35 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .sheet{
   width:100%; max-width:430px; background:var(--paper); border-radius:20px 20px 0 0;
   padding:20px 20px calc(24px + env(safe-area-inset-bottom)); max-height:86vh; overflow-y:auto;
+  overflow-x:hidden; overflow-wrap:break-word; word-break:break-word;
   animation:sheetUp .25s ease;
 }
 @keyframes sheetUp{ from{ transform:translateY(24px); opacity:.4; } to{ transform:none; opacity:1; } }
 .sheet-handle{ width:36px; height:4px; background:var(--line); border-radius:99px; margin:0 auto 16px; }
 .sheet h3{ font-family:'Noto Serif TC',serif; font-size:17px; margin:0 0 14px; }
+
+/* ---- centered modal (adjust amount) ---- */
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(38,34,27,.45); z-index:90; display:none;
+  align-items:center; justify-content:center; padding:24px;
+}
+.modal-backdrop.show{ display:flex; }
+.modal-card{
+  width:100%; max-width:380px; background:var(--paper); border-radius:18px; padding:22px;
+  animation:sheetUp .2s ease;
+}
+.modal-card h3{ font-family:'Noto Serif TC',serif; font-size:17px; margin:0 0 8px; }
+.amount-input-box{
+  display:flex; align-items:center; gap:8px; border:1.5px solid var(--gold); border-radius:12px;
+  padding:14px 16px; background:var(--white);
+}
+.amount-input-box .cur{ font-family:'Space Mono',monospace; font-size:16px; color:var(--ink-soft); }
+.amount-input-box input{
+  border:none; outline:none; background:transparent; font-family:'Space Mono',monospace;
+  font-size:22px; font-weight:700; color:var(--ink); flex:1; min-width:0; padding:0;
+}
+.strike-price{ text-decoration:line-through; color:var(--ink-soft); font-size:13px; margin-right:6px; }
+.amount-fixed-badge{ font-size:10.5px; color:var(--stamp-dark); background:#FBF3E1; padding:3px 9px; border-radius:99px; margin-left:6px; }
 .detail-row{ display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--paper-2); font-size:13px; }
 .detail-row:last-child{ border-bottom:none; }
 .detail-row .lbl{ color:var(--ink-soft); }
@@ -400,6 +424,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 .field textarea{ resize:vertical; min-height:60px; }
 .field input:focus, .field textarea:focus, .field select:focus{ outline:2px solid var(--ledger); outline-offset:1px; }
 .field-row{ display:flex; gap:12px; }
+.field-row .field{ min-width:0; flex:1; }
 .field-row .field{ flex:1; }
 .field-hint{ font-size:11px; color:var(--ink-soft); margin-top:5px; line-height:1.5; }
 
@@ -688,6 +713,22 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
       </div>
       <div class="sheet-actions">
         <button class="btn btn-primary" style="width:100%;" onclick="saveEditItems()">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ADJUST ACTUAL AMOUNT MODAL ============ -->
+  <div class="modal-backdrop" id="adjustAmountBackdrop" onclick="if(event.target===this)closeAdjustAmount()">
+    <div class="modal-card">
+      <h3>調整實收金額</h3>
+      <p class="field-hint" id="adjustAmountHint" style="margin-bottom:16px;"></p>
+      <div class="amount-input-box">
+        <span class="cur">NT$</span>
+        <input type="number" id="adjustAmountInput" inputmode="numeric" min="0" step="1">
+      </div>
+      <div class="sheet-actions" style="margin-top:18px;">
+        <button class="btn btn-outline" onclick="closeAdjustAmount()">取消</button>
+        <button class="btn btn-primary" onclick="confirmAdjustAmount()">儲存實收</button>
       </div>
     </div>
   </div>
@@ -1555,7 +1596,7 @@ function openBookingSheet(id){
       <div class="bkt-total">
         <span class="lbl">總計</span>
         <div class="bkt-total-row">
-          <span class="amt">$${bookingActualTotal(b)}</span>
+          <span class="amt">${(b.actualAmount!==undefined && b.actualAmount!==null && b.actualAmount!==bookingTotal(b)) ? `<span class="strike-price">NT$${bookingTotal(b)}</span>NT$${b.actualAmount}<span class="amount-fixed-badge">已修正</span>` : '$'+bookingActualTotal(b)}</span>
           <button class="btn-adjust" onclick="adjustActualAmount('${b.id}')">✎ 調整實收</button>
         </div>
       </div>
@@ -1622,17 +1663,32 @@ async function confirmStaffReassign(id, staffId){
     openBookingSheet(id);
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
-async function adjustActualAmount(id){
+let adjustAmountBookingId = null;
+function adjustActualAmount(id){
   const b = loadBookings().find(x=>x.id===id);
   if(!b) return;
+  adjustAmountBookingId = id;
+  const original = bookingTotal(b);
   const current = bookingActualTotal(b);
-  const input = prompt('請輸入實際收款金額：', current);
-  if(input===null) return;
+  document.getElementById('adjustAmountHint').textContent = `只影響你的營收統計與記帳；顧客看到的預約金額不變（NT$${original}）。可填 0（儲值／招待折抵）。`;
+  document.getElementById('adjustAmountInput').value = current;
+  document.getElementById('adjustAmountBackdrop').classList.add('show');
+  setTimeout(()=>document.getElementById('adjustAmountInput').focus(), 50);
+}
+function closeAdjustAmount(){
+  document.getElementById('adjustAmountBackdrop').classList.remove('show');
+  adjustAmountBookingId = null;
+}
+async function confirmAdjustAmount(){
+  if(!adjustAmountBookingId) return;
+  const input = document.getElementById('adjustAmountInput').value;
   const val = Number(input);
-  if(isNaN(val) || val<0){ showToast('請輸入有效的金額'); return; }
+  if(input===''||isNaN(val) || val<0){ showToast('請輸入有效的金額'); return; }
   try{
-    await db.collection('bookings').doc(id).update({ actualAmount: val });
+    await db.collection('bookings').doc(adjustAmountBookingId).update({ actualAmount: val });
     showToast('實收金額已更新');
+    const id = adjustAmountBookingId;
+    closeAdjustAmount();
     openBookingSheet(id);
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
