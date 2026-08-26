@@ -379,6 +379,55 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 }
 @media (max-width:430px){ .cal-fab{ right:24px; } }
 
+/* ---- month grid (預約管理) ---- */
+.cal-grid-toolbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.btn-caret{
+  width:32px; height:32px; border-radius:50%; border:1.5px solid var(--line); background:var(--white);
+  font-size:16px; cursor:pointer; color:var(--ink); line-height:1;
+}
+.cal-grid-wd{ display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:11px; color:var(--ink-soft); margin-bottom:6px; }
+.cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.cal-grid .day-cell{
+  aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  border-radius:9px; font-size:12px; cursor:pointer; position:relative; color:var(--ink);
+}
+.cal-grid .day-cell.empty{ visibility:hidden; cursor:default; }
+.cal-grid .day-cell.today{ box-shadow:inset 0 0 0 1.5px var(--stamp); font-weight:700; }
+.cal-grid .day-cell.has-bookings{ background:var(--paper-2); }
+.cal-grid .day-cell .dot{ width:5px; height:5px; border-radius:50%; background:var(--stamp); margin-top:2px; }
+.cal-grid .day-cell.selected{ background:var(--stamp); color:var(--white); }
+.cal-grid .day-cell.selected .dot{ background:var(--white); }
+
+/* ---- share page: QR + availability poster ---- */
+#qrCodeWrap img{ width:200px; height:200px; border-radius:12px; }
+.avail-poster{
+  border-radius:14px; overflow:hidden; border:1.5px solid var(--line);
+}
+.avail-poster .hd{ background:var(--ledger); color:var(--white); text-align:center; padding:16px; }
+.avail-poster .hd h4{ margin:0 0 4px; font-family:'Noto Serif TC',serif; font-size:16px; }
+.avail-poster .hd p{ margin:0; font-size:11px; opacity:.85; }
+.avail-poster .mo{ text-align:center; font-family:'Noto Serif TC',serif; font-weight:700; font-size:14px; padding:12px 0 6px; background:var(--white); }
+.avail-poster .wd{ display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:10.5px; color:var(--ink-soft); background:var(--white); padding-bottom:4px; }
+.avail-poster .grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; background:var(--white); padding:4px 10px 16px; }
+.avail-poster .cell{ aspect-ratio:1; display:flex; align-items:center; justify-content:center; }
+.avail-poster .cell .circ{
+  width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-family:'Space Mono',monospace; color:var(--white);
+}
+.avail-poster .cell .circ.empty{ visibility:hidden; }
+.avail-poster .cell .circ.st-open{ background:#5C8A6B; }
+.avail-poster .cell .circ.st-limited{ background:var(--gold); }
+.avail-poster .cell .circ.st-full{ background:var(--stamp-dark); }
+.avail-poster .cell .circ.st-closed{ background:#C9C2AC; }
+.avail-legend{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; padding:0 10px 14px; background:var(--white); }
+.avail-legend span{ font-size:10.5px; color:var(--ink-soft); display:flex; align-items:center; gap:4px; }
+.avail-legend .dot{ width:8px; height:8px; border-radius:50%; }
+.avail-legend .dot.st-open{ background:#5C8A6B; }
+.avail-legend .dot.st-limited{ background:var(--gold); }
+.avail-legend .dot.st-full{ background:var(--stamp-dark); }
+.avail-legend .dot.st-closed{ background:#C9C2AC; }
+.avail-poster .url{ text-align:center; font-family:'Space Mono',monospace; font-size:10px; color:var(--ink-soft); background:var(--white); padding-bottom:14px; word-break:break-all; }
+
 /* ---- shopfront / hours extras ---- */
 .toggle-row-inline{
   display:flex; align-items:center; justify-content:space-between; gap:12px;
@@ -553,10 +602,14 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
         <div id="recentBookings"></div>
       </section>
 
-      <!-- ============ BOOKINGS ============ -->
-      <!-- ============ CALENDAR ============ -->
+      <!-- ============ SHARE (was CALENDAR) ============ -->
       <section class="screen" id="screen-calendar">
-        <div class="about-card" style="margin-bottom:16px;">
+        <div class="about-card" style="text-align:center;">
+          <div id="qrCodeWrap" style="margin-bottom:10px;"></div>
+          <div class="field-hint">掃描或分享連結，讓顧客直接進入預約頁</div>
+        </div>
+
+        <div class="about-card" style="margin-top:16px;">
           <div class="section-title" style="margin-bottom:10px;"><span class="lead"><span class="num">🔗</span>分享你的預約頁</span></div>
           <div class="link-box">
             <input type="text" id="calLinkInput" readonly placeholder="請至「設定→商店門面」貼上顧客頁網址">
@@ -564,23 +617,35 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
           </div>
           <div class="sheet-actions" style="margin-top:10px;">
             <button class="btn btn-outline" onclick="previewCustomerLink()">預覽</button>
-            <button class="btn btn-primary" onclick="goScreen('settings'); setTimeout(()=>openSettingsSheet('shopfront'),60);">產生可約月曆圖</button>
+            <button class="btn btn-primary" onclick="goScreen('settings'); setTimeout(()=>openSettingsSheet('shopfront'),60);">下載傳統海報</button>
           </div>
         </div>
-        <div class="cal-toolbar">
-          <div class="cal-month" id="calMonthLabel">—</div>
-          <button class="btn-today" onclick="calGoToday()">今天</button>
+
+        <div class="about-card" style="margin-top:16px;">
+          <div class="section-title" style="margin-bottom:12px;"><span class="lead">可預約日曆圖</span></div>
+          <div id="availPoster"></div>
+          <button class="btn btn-ghost" style="width:100%; margin-top:12px;" onclick="downloadAvailPoster()">下載日曆圖</button>
         </div>
-        <div id="calTimeline"></div>
-        <button class="cal-fab" onclick="openManualBookingForm()">＋</button>
       </section>
 
       <section class="screen" id="screen-bookings">
+        <div class="about-card" style="margin-bottom:16px;">
+          <div class="cal-grid-toolbar">
+            <button class="btn-caret" onclick="calGridShiftMonth(-1)">‹</button>
+            <div class="cal-month" id="calGridMonthLabel">—</div>
+            <button class="btn-caret" onclick="calGridShiftMonth(1)">›</button>
+          </div>
+          <div class="field-hint" id="calGridCount" style="text-align:center; margin-bottom:10px;">共 0 筆預約</div>
+          <div class="cal-grid-wd">
+            <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+          </div>
+          <div class="cal-grid" id="calGridDays"></div>
+        </div>
         <button class="btn btn-outline" style="width:100%; margin-bottom:14px;" onclick="openManualBookingForm()">＋ 手動新增預約</button>
         <div class="filter-row" id="statusFilterRow">
           <div class="filter-chip active" data-status="all" onclick="setStatusFilter('all')">全部</div>
           <div class="filter-chip" data-status="pending" onclick="setStatusFilter('pending')">待確認</div>
-          <div class="filter-chip" data-status="upcoming" onclick="setStatusFilter('upcoming')">即將到來</div>
+          <div class="filter-chip" data-status="upcoming" onclick="setStatusFilter('upcoming')">已確認</div>
           <div class="filter-chip" data-status="done" onclick="setStatusFilter('done')">已完成</div>
           <div class="filter-chip" data-status="noshow" onclick="setStatusFilter('noshow')">未到</div>
           <div class="filter-chip" data-status="cancelled" onclick="setStatusFilter('cancelled')">已取消</div>
@@ -676,10 +741,10 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 
     <div class="navbar">
       <button class="nav-item active" data-nav="dashboard" onclick="goScreen('dashboard')"><div class="ic">📊</div>總覽</button>
-      <button class="nav-item" data-nav="calendar" onclick="goScreen('calendar')"><div class="ic">📅</div>日曆</button>
       <button class="nav-item" data-nav="bookings" onclick="goScreen('bookings')"><div class="ic">🎫</div>預約</button>
       <button class="nav-item" data-nav="customers" onclick="goScreen('customers')"><div class="ic">🧑</div>顧客</button>
       <button class="nav-item" data-nav="services" onclick="goScreen('services')"><div class="ic">🔖</div>服務</button>
+      <button class="nav-item" data-nav="calendar" onclick="goScreen('calendar')"><div class="ic">🔗</div>分享</button>
       <button class="nav-item" data-nav="settings" onclick="goScreen('settings')"><div class="ic">⚙️</div>設定</button>
     </div>
   </div>
@@ -997,8 +1062,8 @@ function rerenderActiveScreen(){
   if(!active) return;
   const id = active.id.replace('screen-','');
   if(id==='dashboard') renderDashboard();
-  if(id==='bookings') renderBookingsList();
-  if(id==='calendar'){ renderCalLink(); renderCalendarTimeline(); }
+  if(id==='bookings'){ renderCalGrid(); renderBookingsList(); }
+  if(id==='calendar'){ renderCalLink(); renderSharePage(); }
   if(id==='customers') renderCustomersList();
   if(id==='services'){ renderServicesList(); renderProductsList(); }
   if(id==='staff') renderStaffListView();
@@ -1174,7 +1239,7 @@ function goScreen(id, opts={}){
   const navEl = document.querySelector('.nav-item[data-nav="'+((id==='staff'||id==='shopfront')?'settings':id)+'"]');
   if(navEl) navEl.classList.add('active');
 
-  const titles = { dashboard:'總覽', calendar:'日曆', bookings:'預約管理', customers:'顧客資料', services:'服務項目', staff:'服務人員', shopfront:'商店門面', settings:'設定' };
+  const titles = { dashboard:'總覽', calendar:'分享', bookings:'預約管理', customers:'顧客資料', services:'服務項目', staff:'服務人員', shopfront:'商店門面', settings:'設定' };
   document.getElementById('topbarTitle').textContent = titles[id] || '商家後台';
   document.getElementById('backBtnWrap').innerHTML = (id==='staff'||id==='shopfront') ? '<div class="back-btn" onclick="goScreen(\'settings\')">←</div>' : '';
 
@@ -1182,8 +1247,8 @@ function goScreen(id, opts={}){
   window.scrollTo(0,0);
 
   if(id==='dashboard') renderDashboard();
-  if(id==='bookings') renderBookingsList();
-  if(id==='calendar'){ renderCalLink(); renderCalendarTimeline(); }
+  if(id==='bookings'){ renderCalGrid(); renderBookingsList(); }
+  if(id==='calendar'){ renderCalLink(); renderSharePage(); }
   if(id==='customers') renderCustomersList();
   if(id==='services') { renderServicesList(); renderProductsList(); }
   if(id==='staff') renderStaffListView();
@@ -1197,7 +1262,7 @@ function goScreen(id, opts={}){
 function fmtDateKey(d){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
-function statusLabel(s){ return { pending:'待確認', upcoming:'即將到來', done:'已完成', cancelled:'已取消', noshow:'未到' }[s] || s; }
+function statusLabel(s){ return { pending:'待確認', upcoming:'已確認', done:'已完成', cancelled:'已取消', noshow:'未到' }[s] || s; }
 function statusClass(s){ return { pending:'status-pending', upcoming:'status-upcoming', done:'status-done', cancelled:'status-cancelled', noshow:'status-noshow' }[s] || ''; }
 /* 一筆預約可能只有單一 service（舊資料／顧客頁建立），
    也可能有多個 services（商家後台「編輯項目」後），統一用這兩個
@@ -1278,7 +1343,11 @@ function renderBookingsList(){
   const q = (document.getElementById('bookingSearch').value||'').trim().toLowerCase();
   let list = all;
   if(statusFilter !== 'all'){ list = list.filter(b=>b.status===statusFilter); }
+  if(calGridSelectedDate){ list = list.filter(b=>b.date===calGridSelectedDate); }
   if(q){ list = list.filter(b=> b.customer.name.toLowerCase().includes(q) || b.customer.phone.replace(/[-\s]/g,'').includes(q.replace(/[-\s]/g,''))); }
+
+  const countEl = document.getElementById('calGridCount');
+  if(countEl) countEl.textContent = `共 ${list.length} 筆預約` + (calGridSelectedDate ? `（${calGridSelectedDate}）` : '');
 
   const wrap = document.getElementById('bookingsList');
   if(list.length===0){
@@ -1629,7 +1698,7 @@ function openBookingSheet(id){
     body.appendChild(hint);
     const restoreRow = document.createElement('div');
     restoreRow.className = 'bkt-restore-link';
-    restoreRow.innerHTML = `<a onclick="updateBookingStatus('${b.id}','upcoming')">恢復為即將到來</a>`;
+    restoreRow.innerHTML = `<a onclick="updateBookingStatus('${b.id}','upcoming')">恢復為已確認</a>`;
     body.appendChild(restoreRow);
   }
 
@@ -2079,70 +2148,173 @@ function renderCalLink(){
   if(el) el.value = BUSINESS.customerUrl || '';
 }
 
-/* ---- 日曆：依日期分組的行程時間軸 ---- */
+/* ---- 分享頁：QR Code + 可預約日曆圖 ---- */
 const WD_NAMES = ['週日','週一','週二','週三','週四','週五','週六'];
 function addMinutes(timeStr, mins){
   const [hh,mm] = timeStr.split(':').map(Number);
   const total = hh*60 + mm + mins;
   return String(Math.floor(total/60)%24).padStart(2,'0')+':'+String(total%60).padStart(2,'0');
 }
-function calGoToday(){
-  const el = document.getElementById('calTodayAnchor');
-  if(el){ el.scrollIntoView({behavior:'smooth', block:'start'}); }
-  else { showToast('今天沒有預約'); }
+/* 判斷某一天商家端的營業時段（跟顧客頁 dayHours 邏輯相同，各自維護一份） */
+function merchantDayHours(dateKey){
+  if((BUSINESS.breaks||[]).some(b=>b.date===dateKey)) return null;
+  const [y,m,d] = dateKey.split('-').map(Number);
+  const wd = new Date(y,m-1,d).getDay();
+  const wh = BUSINESS.weekHours;
+  if(wh && wh.length===7){
+    const conf = wh[wd];
+    if(!conf || !conf.open) return null;
+    return { from: conf.from||'09:00', to: conf.to||'18:00' };
+  }
+  return { from: String(BUSINESS.openHour||9).padStart(2,'0')+':00', to: String(BUSINESS.closeHour||18).padStart(2,'0')+':00' };
 }
-function renderCalendarTimeline(){
-  const wrap = document.getElementById('calTimeline');
+function totalSlotsForDay(dateKey){
+  const hours = merchantDayHours(dateKey);
+  if(!hours) return 0;
+  const [fh,fm] = hours.from.split(':').map(Number);
+  const [th,tm] = hours.to.split(':').map(Number);
+  const mins = (th*60+tm) - (fh*60+fm);
+  return Math.max(0, Math.floor(mins / (BUSINESS.slotMin||30)));
+}
+/* 回傳 'closed' | 'full' | 'limited' | 'open' */
+function dayAvailabilityStatus(dateKey){
+  const total = totalSlotsForDay(dateKey);
+  if(total===0) return 'closed';
+  const taken = loadBookings().filter(b=>b.date===dateKey && (b.status==='upcoming'||b.status==='pending')).length;
+  if(taken===0) return 'open';
+  if(taken>=total) return 'full';
+  return 'limited';
+}
+function renderSharePage(){
+  const url = (BUSINESS.customerUrl||'').trim();
+  const qrWrap = document.getElementById('qrCodeWrap');
+  if(qrWrap){
+    qrWrap.innerHTML = url
+      ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}" alt="預約頁 QR Code">`
+      : `<div class="field-hint">請先至「設定→商店門面」貼上顧客頁網址，才能產生 QR Code</div>`;
+  }
+  renderAvailPoster();
+}
+function renderAvailPoster(){
+  const wrap = document.getElementById('availPoster');
   if(!wrap) return;
-  const list = loadBookings()
-    .filter(b=>b.status!=='cancelled')
-    .sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const firstDow = new Date(y,m,1).getDay();
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  const statusLabelMap = { open:'可預約', limited:'名額有限', full:'已額滿', closed:'休息' };
+  let cells = '';
+  for(let i=0;i<firstDow;i++){ cells += `<div class="cell"><div class="circ empty"></div></div>`; }
+  for(let d=1; d<=daysInMonth; d++){
+    const dateKey = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const st = dayAvailabilityStatus(dateKey);
+    cells += `<div class="cell"><div class="circ st-${st}" title="${statusLabelMap[st]}">${d}</div></div>`;
+  }
+  wrap.innerHTML = `
+    <div class="avail-poster">
+      <div class="hd"><h4>${BUSINESS.name||'預約服務'}</h4><p>掃碼或透過連結立即預約</p></div>
+      <div class="mo">${y} 年 ${m+1} 月</div>
+      <div class="wd"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+      <div class="grid">${cells}</div>
+      <div class="avail-legend">
+        <span><span class="dot st-open"></span>可預約</span>
+        <span><span class="dot st-limited"></span>名額有限</span>
+        <span><span class="dot st-full"></span>已額滿</span>
+        <span><span class="dot st-closed"></span>休息</span>
+      </div>
+      <div class="url">${BUSINESS.customerUrl||''}</div>
+    </div>
+  `;
+}
+function downloadAvailPoster(){
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const firstDow = new Date(y,m,1).getDay();
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  const colors = { open:'#5C8A6B', limited:'#C9A15A', full:'#8F6420', closed:'#C9C2AC' };
+  const canvas = document.createElement('canvas');
+  canvas.width = 600; canvas.height = 760;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#FFFDF8'; ctx.fillRect(0,0,600,760);
+  ctx.fillStyle = '#7A5C2E'; ctx.fillRect(0,0,600,110);
+  ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center';
+  ctx.font = '700 26px "Noto Serif TC", serif';
+  ctx.fillText(BUSINESS.name||'預約服務', 300, 55);
+  ctx.font = '400 13px "Noto Sans TC", sans-serif';
+  ctx.fillText('掃碼或透過連結立即預約', 300, 82);
+  ctx.fillStyle = '#26221B';
+  ctx.font = '700 20px "Noto Serif TC", serif';
+  ctx.fillText(y+' 年 '+(m+1)+' 月', 300, 150);
+  const wdNames = ['日','一','二','三','四','五','六'];
+  const colW = 600/7;
+  ctx.font = '700 13px "Noto Sans TC", sans-serif';
+  ctx.fillStyle = '#6B6356';
+  wdNames.forEach((wd,i)=>{ ctx.fillText(wd, colW*i+colW/2, 185); });
+  const startY = 210, rowH = 66, r = 22;
+  for(let d=1; d<=daysInMonth; d++){
+    const idx = firstDow + d - 1;
+    const col = idx % 7, row = Math.floor(idx/7);
+    const cx = colW*col + colW/2, cy = startY + rowH*row;
+    const dateKey = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const st = dayAvailabilityStatus(dateKey);
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.fillStyle = colors[st]; ctx.fill();
+    ctx.fillStyle = '#FFFFFF'; ctx.font = '700 13px "Space Mono", monospace';
+    ctx.fillText(String(d), cx, cy+5);
+  }
+  const legendY = startY + rowH*Math.ceil((firstDow+daysInMonth)/7) + 30;
+  const legend = [['可預約',colors.open],['名額有限',colors.limited],['已額滿',colors.full],['休息',colors.closed]];
+  let lx = 90;
+  ctx.font = '400 13px "Noto Sans TC", sans-serif'; ctx.textAlign = 'left';
+  legend.forEach(([label,color])=>{
+    ctx.beginPath(); ctx.arc(lx,legendY,5,0,Math.PI*2); ctx.fillStyle = color; ctx.fill();
+    ctx.fillStyle = '#6B6356'; ctx.fillText(label, lx+12, legendY+4);
+    lx += ctx.measureText(label).width + 44;
+  });
+  ctx.textAlign = 'center'; ctx.font = '400 12px "Space Mono", monospace'; ctx.fillStyle = '#6B6356';
+  ctx.fillText(BUSINESS.customerUrl||'', 300, legendY+40);
 
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = (BUSINESS.name||'booking') + '-可預約日曆圖.png';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  showToast('日曆圖已下載');
+}
+
+/* ---- 預約管理：月曆網格 ---- */
+let calGridDate = new Date();
+let calGridSelectedDate = null;
+function calGridShiftMonth(dir){
+  calGridDate = new Date(calGridDate.getFullYear(), calGridDate.getMonth()+dir, 1);
+  renderCalGrid();
+}
+function calGridPickDay(dateKey){
+  calGridSelectedDate = (calGridSelectedDate===dateKey) ? null : dateKey;
+  renderCalGrid();
+  renderBookingsList();
+}
+function renderCalGrid(){
+  const wrap = document.getElementById('calGridDays');
+  if(!wrap) return;
+  const y = calGridDate.getFullYear(), m = calGridDate.getMonth();
+  document.getElementById('calGridMonthLabel').textContent = y+' 年 '+(m+1)+' 月';
+  const firstDow = new Date(y,m,1).getDay();
+  const daysInMonth = new Date(y,m+1,0).getDate();
   const now = new Date();
   const todayKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
-  document.getElementById('calMonthLabel').textContent = now.getFullYear()+' 年 '+(now.getMonth()+1)+' 月';
-
-  if(list.length===0){
-    wrap.innerHTML = `<div class="cal-empty"><div style="font-size:36px; margin-bottom:10px;">📅</div><h3 style="font-family:'Noto Serif TC',serif; margin:0 0 6px;">尚無行程</h3><p style="font-size:13px; margin:0;">顧客預約或你手動新增後，會依日期顯示在這裡。</p></div>`;
-    return;
-  }
-
+  const bookingsByDate = {};
+  loadBookings().filter(b=>b.status!=='cancelled').forEach(b=>{ bookingsByDate[b.date] = (bookingsByDate[b.date]||0)+1; });
   let html = '';
-  let lastMonth = '';
-  let lastDate = '';
-  list.forEach(b=>{
-    const [y,m,d] = b.date.split('-').map(Number);
-    const monthKey = y+'-'+m;
-    if(monthKey !== lastMonth){
-      html += `<div class="cal-month-sep">${y} 年 ${m} 月</div>`;
-      lastMonth = monthKey;
-    }
-    if(b.date !== lastDate){
-      const wd = WD_NAMES[new Date(y, m-1, d).getDay()];
-      const anchor = (b.date===todayKey) ? ' id="calTodayAnchor"' : '';
-      html += `<div class="cal-day-sep"${anchor}><span class="wd">${wd}</span><span class="dt">${m}/${d}</span></div>`;
-      lastDate = b.date;
-    }
-    const svcs = bookingServices(b);
-    const dur = svcs.reduce((sum,s)=>sum+(s.duration||0),0) || 30;
-    const endTime = addMinutes(b.time, dur);
-    const isPast = new Date(y, m-1, d, ...b.time.split(':').map(Number)) < now;
-    html += `
-      <div class="cal-card ${isPast?'is-past':''}" onclick="openBookingSheet('${b.id}')">
-        <div class="cal-time">
-          <div class="hm">${b.time}</div>
-          <div class="dur">${dur} 分</div>
-        </div>
-        <div class="cal-body">
-          <div class="nm">${displayCustomer(b).name}</div>
-          <div class="sv">${svcs.length ? svcs.map(s=>s.name).join('、') : '（服務已刪除）'}</div>
-          <div class="rowline">
-            <span class="status-pill ${statusClass(b.status)}">${statusLabel(b.status)}</span>
-            <span class="rng">${b.time}–${endTime}</span>
-          </div>
-        </div>
-      </div>`;
-  });
+  for(let i=0;i<firstDow;i++){ html += `<div class="day-cell empty"></div>`; }
+  for(let d=1; d<=daysInMonth; d++){
+    const dateKey = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const has = bookingsByDate[dateKey] > 0;
+    const cls = ['day-cell'];
+    if(dateKey===todayKey) cls.push('today');
+    if(has) cls.push('has-bookings');
+    if(dateKey===calGridSelectedDate) cls.push('selected');
+    html += `<div class="${cls.join(' ')}" onclick="calGridPickDay('${dateKey}')">${d}${has?'<div class="dot"></div>':''}</div>`;
+  }
   wrap.innerHTML = html;
 }
 function previewCustomerLink(){
