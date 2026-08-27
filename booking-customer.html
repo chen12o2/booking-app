@@ -1194,9 +1194,8 @@ function renderDateStrip(){
     const key = fmtDateKey(d);
     const outOfWindow = !isDateWithinOpenWindow(key);
     const breakReason = closedDayReason(key);
-    const closed = outOfWindow || !!breakReason;
     const sel = state.date===key ? 'selected' : '';
-    html += `<div class="date-chip ${sel} ${closed?'disabled':''} ${breakReason?'break-day':''}" ${closed?'':`onclick="pickDate('${key}')"`}>
+    html += `<div class="date-chip ${sel} ${outOfWindow?'disabled':''} ${breakReason?'break-day':''}" ${outOfWindow?'':`onclick="pickDate('${key}')"`}>
       <div class="dow">週${dows[d.getDay()]}</div>
       <div class="dom">${d.getDate()}</div>
       ${breakReason ? `<div class="reason">${breakReason}</div>` : `<div class="mon">${String(d.getMonth()+1).padStart(2,'0')}月</div>`}
