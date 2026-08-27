@@ -950,7 +950,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
           </div>
           <div class="settings-row" onclick="openSettingsSheet('notify')">
             <div class="settings-ic">🔔</div>
-            <div class="settings-body"><h4>通知</h4><p>LINE 即時通知</p></div>
+            <div class="settings-body"><h4>通知</h4><p>行事曆整合</p></div>
             <div class="settings-chevron">›</div>
           </div>
           <div class="settings-row" onclick="goScreen('staff')">
@@ -966,17 +966,263 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         </div>
       </section>
 
-    </main>
+      <!-- ============ SETTINGS DETAIL (full page) ============ -->
+      <section class="screen" id="screen-settings-detail">
+        <div id="settingsDetailBody"></div>
+      </section>
 
-    <!-- ============ SETTINGS SUB-SHEETS ============ -->
-    <div class="sheet-backdrop" id="settingsSheetBackdrop" onclick="if(event.target===this)closeSettingsSheet()">
-      <div class="sheet" style="position:relative; max-height:90vh;">
-        <div class="sheet-close" onclick="closeSettingsSheet()">✕</div>
-        <div class="sheet-handle"></div>
-        <h3 id="settingsSheetTitle">設定</h3>
-        <div id="settingsSheetBody"></div>
-      </div>
-    </div>
+      <!-- ============ BOOKING DETAIL (full page) ============ -->
+      <section class="screen" id="screen-booking-detail">
+        <div class="section-title" style="margin-bottom:14px;"><span class="lead">預約詳情</span></div>
+        <div id="bookingDetailBody"></div>
+      </section>
+
+      <!-- ============ MANUAL BOOKING FORM (full page) ============ -->
+      <section class="screen" id="screen-manual-booking">
+        <div class="section-title" style="margin-bottom:14px;"><span class="lead">手動新增預約</span></div>
+
+        <div class="filter-row" style="margin-bottom:16px;">
+          <div class="filter-chip active" data-custmode="existing" onclick="setManualCustMode('existing')">選擇既有顧客</div>
+          <div class="filter-chip" data-custmode="new" onclick="setManualCustMode('new')">新顧客資料</div>
+        </div>
+
+        <div id="mbExistingWrap">
+          <div class="field">
+            <label for="mbCustomerSelect">選擇顧客</label>
+            <select id="mbCustomerSelect"></select>
+          </div>
+        </div>
+        <div id="mbNewWrap" style="display:none;">
+          <div class="field"><label for="mbNewName">姓名</label><input type="text" id="mbNewName" placeholder="顧客姓名"></div>
+          <div class="field"><label for="mbNewPhone">手機號碼</label><input type="tel" id="mbNewPhone" placeholder="0912-345-678"></div>
+          <div class="field"><label for="mbNewLineId">LINE ID（選填）</label><input type="text" id="mbNewLineId"></div>
+          <div class="field"><label for="mbNewBirthday">生日（選填）</label><input type="date" id="mbNewBirthday"></div>
+          <div class="field"><label for="mbNewGender">性別（選填）</label>
+            <select id="mbNewGender">
+              <option value="">不透露</option>
+              <option value="女">女</option>
+              <option value="男">男</option>
+              <option value="其他">其他</option>
+            </select>
+          </div>
+          <div class="field"><label for="mbNewEmail">Email（選填）</label><input type="email" id="mbNewEmail"></div>
+        </div>
+
+        <div class="field"><label for="mbService">服務項目</label><select id="mbService"></select></div>
+        <div class="field"><label for="mbStaff">服務人員</label><select id="mbStaff"></select></div>
+        <div class="field-row">
+          <div class="field"><label for="mbDate">日期</label><input type="date" id="mbDate" onchange="renderManualTimeOptions()"></div>
+          <div class="field"><label for="mbTime">時間</label><select id="mbTime"></select></div>
+        </div>
+        <div class="field"><label for="mbNote">備註（選填）</label><textarea id="mbNote"></textarea></div>
+
+        <button class="btn btn-primary" style="width:100%; margin-bottom:20px;" onclick="saveManualBooking()">建立預約</button>
+      </section>
+
+      <!-- ============ SERVICE FORM (full page) ============ -->
+      <section class="screen" id="screen-service-form">
+        <div class="section-title" style="margin-bottom:14px;"><span class="lead" id="serviceFormTitle">新增服務</span></div>
+        <input type="hidden" id="svcFormId">
+        <div class="field"><label for="svcFormIcon">圖示（emoji）</label><input type="text" id="svcFormIcon" maxlength="4" placeholder="🔹"></div>
+        <div class="field"><label for="svcFormName">服務名稱</label><input type="text" id="svcFormName" placeholder="例如：基礎預約"></div>
+        <div class="field"><label for="svcFormDesc">服務說明</label><textarea id="svcFormDesc" placeholder="簡短描述這項服務"></textarea></div>
+        <div class="field-row">
+          <div class="field"><label for="svcFormDuration">時長（分鐘）</label><input type="number" id="svcFormDuration" min="5" step="5"></div>
+          <div class="field"><label for="svcFormPrice">價格（NT$）</label><input type="number" id="svcFormPrice" min="0" step="10"></div>
+        </div>
+        <div class="toggle-row-inline">
+          <div>
+            <div class="tt">需收定金</div>
+            <div class="ds">開啟後，顧客預約這項服務時會看到定金說明與收款資訊（需先在「設定→定金」建立規則）。</div>
+          </div>
+          <div class="switch" id="svcDepositSwitch" onclick="this.classList.toggle('on')"><div class="knob"></div></div>
+        </div>
+        <div class="sheet-actions" style="margin-bottom:20px;">
+          <button class="btn btn-ghost" id="svcDeleteBtn" style="display:none;" onclick="deleteService()">刪除</button>
+          <button class="btn btn-primary" onclick="saveService()">儲存</button>
+        </div>
+      </section>
+
+      <!-- ============ PRODUCT FORM (full page) ============ -->
+      <section class="screen" id="screen-product-form">
+        <div class="section-title" style="margin-bottom:14px;"><span class="lead" id="productFormTitle">新增商品</span></div>
+        <input type="hidden" id="prdFormId">
+        <div class="about-card logo-upload-card">
+          <div class="logo-preview" id="prdImagePreview" style="border-radius:10px;">🛍️</div>
+          <div class="logo-upload-actions">
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('prdImageFileInput').click()">上傳商品圖片</button>
+            <button class="btn btn-ghost btn-sm" id="prdRemoveImageBtn" style="display:none;" onclick="removeProductImage()">移除圖片</button>
+          </div>
+          <input type="file" id="prdImageFileInput" accept="image/*" style="display:none;" onchange="handleProductImageUpload(event)">
+        </div>
+        <div class="field"><label for="prdFormIcon">圖示（emoji，沒有上傳圖片時顯示用）</label><input type="text" id="prdFormIcon" maxlength="4" placeholder="🛍️"></div>
+        <div class="field"><label for="prdFormName">商品名稱</label><input type="text" id="prdFormName" placeholder="例如：居家保養組"></div>
+        <div class="field"><label for="prdFormDesc">商品說明</label><textarea id="prdFormDesc" placeholder="簡短描述這項商品"></textarea></div>
+        <div class="field-row">
+          <div class="field"><label for="prdFormPrice">價格（NT$）</label><input type="number" id="prdFormPrice" min="0" step="10"></div>
+          <div class="field"><label for="prdFormStock">庫存數量（選填）</label><input type="number" id="prdFormStock" min="0" step="1" placeholder="不填表示不限"></div>
+        </div>
+        <div class="sheet-actions" style="margin-bottom:20px;">
+          <button class="btn btn-ghost" id="prdDeleteBtn" style="display:none;" onclick="deleteProduct()">刪除</button>
+          <button class="btn btn-primary" onclick="saveProduct()">儲存</button>
+        </div>
+      </section>
+
+      <!-- ============ STAFF FORM (full page) ============ -->
+      <section class="screen" id="screen-staff-form">
+        <div class="section-title" style="margin-bottom:14px;"><span class="lead" id="staffFormTitle">新增人員</span></div>
+        <input type="hidden" id="stfFormId">
+        <div class="field"><label for="stfFormName">姓名</label><input type="text" id="stfFormName" placeholder="例如：A 專員"></div>
+        <div class="field"><label for="stfFormRole">職稱／說明</label><input type="text" id="stfFormRole" placeholder="例如：資深"></div>
+        <div class="sheet-actions" style="margin-bottom:20px;">
+          <button class="btn btn-ghost" id="stfDeleteBtn" style="display:none;" onclick="deleteStaff()">刪除</button>
+          <button class="btn btn-primary" onclick="saveStaff()">儲存</button>
+        </div>
+      </section>
+
+      <!-- ============ CUSTOMER FORM (full page) ============ -->
+      <section class="screen" id="screen-customer-form">
+        <div class="section-title" style="margin-bottom:14px;"><span class="lead" id="customerFormTitle">新增顧客</span></div>
+        <input type="hidden" id="custFormId">
+        <div class="field"><label for="custFormName">姓名</label><input type="text" id="custFormName" placeholder="顧客姓名"></div>
+        <div class="field"><label for="custFormPhone">手機號碼</label><input type="tel" id="custFormPhone" placeholder="0912-345-678"></div>
+        <div class="field"><label for="custFormLineId">LINE ID（選填）</label><input type="text" id="custFormLineId"></div>
+        <div class="field"><label for="custFormBirthday">生日（選填，西元年月日）</label><input type="date" id="custFormBirthday"></div>
+        <div class="field"><label for="custFormGender">性別（選填）</label>
+          <select id="custFormGender">
+            <option value="">不透露</option>
+            <option value="女">女</option>
+            <option value="男">男</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="field"><label for="custFormEmail">Email（選填）</label><input type="email" id="custFormEmail" placeholder="you@example.com"></div>
+        <div class="field-hint" id="custFormEmailHint" style="margin-top:-10px; margin-bottom:16px;"></div>
+        <button class="btn btn-outline" id="custAddBookingBtn" style="width:100%; margin-bottom:14px; display:none;" onclick="const cid=document.getElementById('custFormId').value; closeCustomerForm(); openManualBookingForm(cid);">＋ 幫這位顧客新增預約</button>
+        <div class="sheet-actions" style="margin-bottom:20px;">
+          <button class="btn btn-ghost" id="custDeleteBtn" style="display:none;" onclick="deleteCustomer()">刪除</button>
+          <button class="btn btn-primary" onclick="saveCustomer()">儲存</button>
+        </div>
+      </section>
+
+      <!-- ============ BREAK ENTRY (full page) ============ -->
+      <section class="screen" id="screen-break-entry">
+        <div class="section-title" style="margin-bottom:14px;"><span class="lead">新增休息時段</span></div>
+        <div class="break-tab-pair">
+          <button class="break-tab active" id="breakTabSingle" onclick="setBreakTab('single')">單次</button>
+          <button class="break-tab" id="breakTabWeekly" onclick="setBreakTab('weekly')">每週重複</button>
+          <button class="break-tab" id="breakTabMonthly" onclick="setBreakTab('monthly')">整月挑日子</button>
+        </div>
+
+        <div id="breakTabSingleBody">
+          <div class="field"><label for="breakDateInput">日期</label><input type="date" id="breakDateInput" onchange="refreshBreakPreview()"></div>
+        </div>
+        <div id="breakTabWeeklyBody" style="display:none;">
+          <div class="field">
+            <label>重複週幾</label>
+            <div class="wd-pick-row" id="breakWeekdayPick">
+              <button class="wd-pick" data-wd="1" onclick="toggleBreakWeekday(1)">一</button>
+              <button class="wd-pick" data-wd="2" onclick="toggleBreakWeekday(2)">二</button>
+              <button class="wd-pick" data-wd="3" onclick="toggleBreakWeekday(3)">三</button>
+              <button class="wd-pick" data-wd="4" onclick="toggleBreakWeekday(4)">四</button>
+              <button class="wd-pick" data-wd="5" onclick="toggleBreakWeekday(5)">五</button>
+              <button class="wd-pick" data-wd="6" onclick="toggleBreakWeekday(6)">六</button>
+              <button class="wd-pick" data-wd="0" onclick="toggleBreakWeekday(0)">日</button>
+            </div>
+            <div class="chip-pick-row">
+              <button class="chip-pick" onclick="pickBreakWeekdayPreset('weekday')">平日</button>
+              <button class="chip-pick" onclick="pickBreakWeekdayPreset('weekend')">週末</button>
+              <button class="chip-pick" onclick="pickBreakWeekdayPreset('everyday')">每天</button>
+            </div>
+            <div class="field-hint" id="breakWeekdayError" style="color:var(--stamp-dark); display:none;">請至少選一個週幾</div>
+          </div>
+          <div class="field">
+            <label>結束日期（必填）</label>
+            <div class="chip-pick-row" style="margin-bottom:10px;">
+              <button class="chip-pick" onclick="pickBreakEndPreset(1)">1 個月</button>
+              <button class="chip-pick" onclick="pickBreakEndPreset(3)">3 個月</button>
+              <button class="chip-pick" onclick="pickBreakEndPreset(6)">6 個月</button>
+            </div>
+            <input type="date" id="breakEndDateInput" onchange="refreshBreakPreview()">
+            <div class="field-hint">重複時段會建立到這個結束日為止（最長 6 個月，不提供「永久」）。</div>
+          </div>
+        </div>
+        <div id="breakTabMonthlyBody" style="display:none;">
+          <div class="field">
+            <label>挑選日期（可複選）</label>
+            <div class="cal-grid-toolbar">
+              <button class="btn-caret" onclick="breakMonthShift(-1)">‹</button>
+              <div class="cal-month" id="breakMonthLabel">—</div>
+              <button class="btn-caret" onclick="breakMonthShift(1)">›</button>
+            </div>
+            <div class="cal-grid-wd"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+            <div class="cal-grid" id="breakMonthGrid"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="check-row"><input type="checkbox" id="breakAllDayCheck" onchange="onBreakAllDayToggle()"> 整天休息</label>
+        </div>
+        <div id="breakRangesWrap">
+          <div class="field"><label>時段</label></div>
+          <div id="breakRangesList"></div>
+          <div class="bkt-link-row" style="text-align:left; margin:-4px 0 14px;"><a onclick="addBreakRange()">＋ 再加一個時段</a></div>
+        </div>
+
+        <div class="field">
+          <label for="breakLabelInput">標籤</label>
+          <input type="text" id="breakLabelInput" placeholder="例：午休／休假" oninput="refreshBreakPreview()">
+          <div class="chip-pick-row">
+            <button class="chip-pick" onclick="pickBreakLabel('午休')">午休</button>
+            <button class="chip-pick" onclick="pickBreakLabel('休假')">休假</button>
+            <button class="chip-pick" onclick="pickBreakLabel('私事')">私事</button>
+            <button class="chip-pick" onclick="pickBreakLabel('進修')">進修</button>
+          </div>
+        </div>
+
+        <div id="breakPreviewLine" class="break-preview-line"></div>
+
+        <div class="sheet-actions" style="margin:16px 0 20px;">
+          <button class="btn btn-outline" onclick="closeBreakEntry()">取消</button>
+          <button class="btn btn-primary" onclick="createBreakEntry()">建立</button>
+        </div>
+      </section>
+
+      <!-- ============ EDIT ITEMS (full page) ============ -->
+      <section class="screen" id="screen-edit-items">
+        <div class="section-title" style="margin-bottom:14px;"><span class="lead">編輯項目</span></div>
+        <div class="field-hint" id="editItemsWho" style="margin-bottom:14px;"></div>
+        <div class="field">
+          <label>服務（可複選）</label>
+          <div class="dropdown-select" id="editItemsDropdown" onclick="toggleEditItemsDropdown()">
+            <span id="editItemsSummary">請選擇服務</span>
+            <span class="dropdown-caret" id="editItemsCaret">▾</span>
+          </div>
+          <div id="editItemsListWrap" class="dropdown-panel" style="display:none;">
+            <div id="editItemsList"></div>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width:100%; margin-bottom:20px;" onclick="saveEditItems()">儲存</button>
+      </section>
+
+      <!-- ============ POSTER GENERATOR (full page) ============ -->
+      <section class="screen" id="screen-poster-gen">
+        <div class="section-title" style="margin-bottom:14px;"><span class="lead">產生可約月曆圖</span></div>
+        <div class="toggle-pair" style="margin-bottom:14px;">
+          <button class="toggle-opt" id="posterMonthCur" onclick="setPosterMonth(0)">本月</button>
+          <button class="toggle-opt" id="posterMonthNext" onclick="setPosterMonth(1)">下個月</button>
+        </div>
+        <div class="poster-info-note">ⓘ 場次由系統依你的營業時間自動建議，已約走的自動劃掉。</div>
+        <div id="posterPreviewWrap"></div>
+        <div class="field-hint" style="text-align:center; margin:12px 0;">手機：按「下載圖片」後選「儲存影像」即存入相簿，或長按上方預覽圖儲存。</div>
+        <button class="btn btn-outline" style="width:100%; margin-bottom:14px;" onclick="explainAdjustSlots()">▤ 調整場次（選用）</button>
+        <div class="sheet-actions" style="margin-bottom:20px;">
+          <button class="btn btn-outline" onclick="copyBookingLinkForPoster()">🔗 複製預約連結</button>
+          <button class="btn btn-primary" onclick="downloadSlotPoster()">⬇ 下載圖片</button>
+        </div>
+      </section>
+
+    </main>
 
     <div class="navbar">
       <button class="nav-item active" data-nav="dashboard" onclick="goScreen('dashboard')"><div class="ic">📊</div>總覽</button>
@@ -988,39 +1234,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
     </div>
   </div>
 
-  <!-- ============ BOOKING DETAIL SHEET ============ -->
-  <div class="sheet-backdrop" id="bookingSheetBackdrop" onclick="if(event.target===this)closeBookingSheet()">
-    <div class="sheet" style="position:relative;">
-      <div class="sheet-close" onclick="closeBookingSheet()">✕</div>
-      <div class="sheet-handle"></div>
-      <h3>預約詳情</h3>
-      <div id="bookingDetailBody"></div>
-    </div>
-  </div>
-
   <!-- ============ EDIT ITEMS SHEET ============ -->
-  <div class="sheet-backdrop" id="editItemsSheetBackdrop" onclick="if(event.target===this)closeEditItems()">
-    <div class="sheet" style="position:relative;">
-      <div class="sheet-close" onclick="closeEditItems()">✕</div>
-      <div class="sheet-handle"></div>
-      <h3>編輯項目</h3>
-      <div class="field-hint" id="editItemsWho" style="margin-bottom:14px;"></div>
-      <div class="field">
-        <label>服務（可複選）</label>
-        <div class="dropdown-select" id="editItemsDropdown" onclick="toggleEditItemsDropdown()">
-          <span id="editItemsSummary">請選擇服務</span>
-          <span class="dropdown-caret" id="editItemsCaret">▾</span>
-        </div>
-        <div id="editItemsListWrap" class="dropdown-panel" style="display:none;">
-          <div id="editItemsList"></div>
-        </div>
-      </div>
-      <div class="sheet-actions">
-        <button class="btn btn-primary" style="width:100%;" onclick="saveEditItems()">儲存</button>
-      </div>
-    </div>
-  </div>
-
   <!-- ============ ADJUST ACTUAL AMOUNT MODAL ============ -->
   <div class="modal-backdrop" id="adjustAmountBackdrop" onclick="if(event.target===this)closeAdjustAmount()">
     <div class="modal-card">
@@ -1060,33 +1274,6 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
     </div>
   </div>
 
-  <!-- ============ POSTER GENERATOR SHEET ============ -->
-  <div class="sheet-backdrop" id="posterGenBackdrop" onclick="if(event.target===this)closePosterGen()">
-    <div class="sheet poster-gen-sheet" style="position:relative; max-height:92vh; overflow:hidden; padding:0; display:flex; flex-direction:column;">
-      <div class="poster-gen-head">
-        <div class="sheet-close" onclick="closePosterGen()">✕</div>
-        <div class="sheet-handle"></div>
-        <h3 style="margin-bottom:12px;">產生可約月曆圖</h3>
-        <div class="toggle-pair" style="margin-bottom:14px;">
-          <button class="toggle-opt" id="posterMonthCur" onclick="setPosterMonth(0)">本月</button>
-          <button class="toggle-opt" id="posterMonthNext" onclick="setPosterMonth(1)">下個月</button>
-        </div>
-        <div class="poster-info-note" style="margin-bottom:0;">ⓘ 場次由系統依你的營業時間自動建議，已約走的自動劃掉。</div>
-      </div>
-      <div class="poster-gen-scroll">
-        <div id="posterPreviewWrap"></div>
-      </div>
-      <div class="poster-gen-foot">
-        <div class="field-hint" style="text-align:center; margin-bottom:12px;">手機：按「下載圖片」後選「儲存影像」即存入相簿，或長按上方預覽圖儲存。</div>
-        <button class="btn btn-outline" style="width:100%; margin-bottom:14px;" onclick="explainAdjustSlots()">▤ 調整場次（選用）</button>
-        <div class="sheet-actions" style="margin:0;">
-          <button class="btn btn-outline" onclick="copyBookingLinkForPoster()">🔗 複製預約連結</button>
-          <button class="btn btn-primary" onclick="downloadSlotPoster()">⬇ 下載圖片</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- ============ SLOT MODE CONFIRM MODAL ============ -->
   <div class="modal-backdrop" id="slotModeConfirmBackdrop" onclick="if(event.target===this)closeSlotModeConfirm()">
     <div class="modal-card">
@@ -1100,242 +1287,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
   </div>
 
   <!-- ============ BREAK ENTRY SHEET ============ -->
-  <div class="sheet-backdrop" id="breakEntryBackdrop" onclick="if(event.target===this)closeBreakEntry()">
-    <div class="sheet" style="position:relative; max-height:92vh;">
-      <div class="sheet-close" onclick="closeBreakEntry()">✕</div>
-      <div class="sheet-handle"></div>
-      <h3>新增休息時段</h3>
-      <div class="break-tab-pair">
-        <button class="break-tab active" id="breakTabSingle" onclick="setBreakTab('single')">單次</button>
-        <button class="break-tab" id="breakTabWeekly" onclick="setBreakTab('weekly')">每週重複</button>
-        <button class="break-tab" id="breakTabMonthly" onclick="setBreakTab('monthly')">整月挑日子</button>
-      </div>
-
-      <div id="breakTabSingleBody">
-        <div class="field"><label for="breakDateInput">日期</label><input type="date" id="breakDateInput" onchange="refreshBreakPreview()"></div>
-      </div>
-      <div id="breakTabWeeklyBody" style="display:none;">
-        <div class="field">
-          <label>重複週幾</label>
-          <div class="wd-pick-row" id="breakWeekdayPick">
-            <button class="wd-pick" data-wd="1" onclick="toggleBreakWeekday(1)">一</button>
-            <button class="wd-pick" data-wd="2" onclick="toggleBreakWeekday(2)">二</button>
-            <button class="wd-pick" data-wd="3" onclick="toggleBreakWeekday(3)">三</button>
-            <button class="wd-pick" data-wd="4" onclick="toggleBreakWeekday(4)">四</button>
-            <button class="wd-pick" data-wd="5" onclick="toggleBreakWeekday(5)">五</button>
-            <button class="wd-pick" data-wd="6" onclick="toggleBreakWeekday(6)">六</button>
-            <button class="wd-pick" data-wd="0" onclick="toggleBreakWeekday(0)">日</button>
-          </div>
-          <div class="chip-pick-row">
-            <button class="chip-pick" onclick="pickBreakWeekdayPreset('weekday')">平日</button>
-            <button class="chip-pick" onclick="pickBreakWeekdayPreset('weekend')">週末</button>
-            <button class="chip-pick" onclick="pickBreakWeekdayPreset('everyday')">每天</button>
-          </div>
-          <div class="field-hint" id="breakWeekdayError" style="color:var(--stamp-dark); display:none;">請至少選一個週幾</div>
-        </div>
-        <div class="field">
-          <label>結束日期（必填）</label>
-          <div class="chip-pick-row" style="margin-bottom:10px;">
-            <button class="chip-pick" onclick="pickBreakEndPreset(1)">1 個月</button>
-            <button class="chip-pick" onclick="pickBreakEndPreset(3)">3 個月</button>
-            <button class="chip-pick" onclick="pickBreakEndPreset(6)">6 個月</button>
-          </div>
-          <input type="date" id="breakEndDateInput" onchange="refreshBreakPreview()">
-          <div class="field-hint">重複時段會建立到這個結束日為止（最長 6 個月，不提供「永久」）。</div>
-        </div>
-      </div>
-      <div id="breakTabMonthlyBody" style="display:none;">
-        <div class="field">
-          <label>挑選日期（可複選）</label>
-          <div class="cal-grid-toolbar">
-            <button class="btn-caret" onclick="breakMonthShift(-1)">‹</button>
-            <div class="cal-month" id="breakMonthLabel">—</div>
-            <button class="btn-caret" onclick="breakMonthShift(1)">›</button>
-          </div>
-          <div class="cal-grid-wd"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
-          <div class="cal-grid" id="breakMonthGrid"></div>
-        </div>
-      </div>
-
-      <div class="field">
-        <label class="check-row"><input type="checkbox" id="breakAllDayCheck" onchange="onBreakAllDayToggle()"> 整天休息</label>
-      </div>
-      <div id="breakRangesWrap">
-        <div class="field"><label>時段</label></div>
-        <div id="breakRangesList"></div>
-        <div class="bkt-link-row" style="text-align:left; margin:-4px 0 14px;"><a onclick="addBreakRange()">＋ 再加一個時段</a></div>
-      </div>
-
-      <div class="field">
-        <label for="breakLabelInput">標籤</label>
-        <input type="text" id="breakLabelInput" placeholder="例：午休／休假" oninput="refreshBreakPreview()">
-        <div class="chip-pick-row">
-          <button class="chip-pick" onclick="pickBreakLabel('午休')">午休</button>
-          <button class="chip-pick" onclick="pickBreakLabel('休假')">休假</button>
-          <button class="chip-pick" onclick="pickBreakLabel('私事')">私事</button>
-          <button class="chip-pick" onclick="pickBreakLabel('進修')">進修</button>
-        </div>
-      </div>
-
-      <div id="breakPreviewLine" class="break-preview-line"></div>
-
-      <div class="sheet-actions" style="margin-top:16px;">
-        <button class="btn btn-outline" onclick="closeBreakEntry()">取消</button>
-        <button class="btn btn-primary" onclick="createBreakEntry()">建立</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============ SERVICE FORM SHEET ============ -->
-  <div class="sheet-backdrop" id="serviceSheetBackdrop" onclick="if(event.target===this)closeServiceForm()">
-    <div class="sheet" style="position:relative;">
-      <div class="sheet-close" onclick="closeServiceForm()">✕</div>
-      <div class="sheet-handle"></div>
-      <h3 id="serviceFormTitle">新增服務</h3>
-      <input type="hidden" id="svcFormId">
-      <div class="field"><label for="svcFormIcon">圖示（emoji）</label><input type="text" id="svcFormIcon" maxlength="4" placeholder="🔹"></div>
-      <div class="field"><label for="svcFormName">服務名稱</label><input type="text" id="svcFormName" placeholder="例如：基礎預約"></div>
-      <div class="field"><label for="svcFormDesc">服務說明</label><textarea id="svcFormDesc" placeholder="簡短描述這項服務"></textarea></div>
-      <div class="field-row">
-        <div class="field"><label for="svcFormDuration">時長（分鐘）</label><input type="number" id="svcFormDuration" min="5" step="5"></div>
-        <div class="field"><label for="svcFormPrice">價格（NT$）</label><input type="number" id="svcFormPrice" min="0" step="10"></div>
-      </div>
-      <div class="toggle-row-inline">
-        <div>
-          <div class="tt">需收定金</div>
-          <div class="ds">開啟後，顧客預約這項服務時會看到定金說明與收款資訊（需先在「設定→定金」建立規則）。</div>
-        </div>
-        <div class="switch" id="svcDepositSwitch" onclick="this.classList.toggle('on')"><div class="knob"></div></div>
-      </div>
-      <div class="sheet-actions">
-        <button class="btn btn-ghost" id="svcDeleteBtn" style="display:none;" onclick="deleteService()">刪除</button>
-        <button class="btn btn-primary" onclick="saveService()">儲存</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============ PRODUCT FORM SHEET ============ -->
-  <div class="sheet-backdrop" id="productSheetBackdrop" onclick="if(event.target===this)closeProductForm()">
-    <div class="sheet" style="position:relative;">
-      <div class="sheet-close" onclick="closeProductForm()">✕</div>
-      <div class="sheet-handle"></div>
-      <h3 id="productFormTitle">新增商品</h3>
-      <input type="hidden" id="prdFormId">
-      <div class="about-card logo-upload-card">
-        <div class="logo-preview" id="prdImagePreview" style="border-radius:10px;">🛍️</div>
-        <div class="logo-upload-actions">
-          <button class="btn btn-outline btn-sm" onclick="document.getElementById('prdImageFileInput').click()">上傳商品圖片</button>
-          <button class="btn btn-ghost btn-sm" id="prdRemoveImageBtn" style="display:none;" onclick="removeProductImage()">移除圖片</button>
-        </div>
-        <input type="file" id="prdImageFileInput" accept="image/*" style="display:none;" onchange="handleProductImageUpload(event)">
-      </div>
-      <div class="field"><label for="prdFormIcon">圖示（emoji，沒有上傳圖片時顯示用）</label><input type="text" id="prdFormIcon" maxlength="4" placeholder="🛍️"></div>
-      <div class="field"><label for="prdFormName">商品名稱</label><input type="text" id="prdFormName" placeholder="例如：居家保養組"></div>
-      <div class="field"><label for="prdFormDesc">商品說明</label><textarea id="prdFormDesc" placeholder="簡短描述這項商品"></textarea></div>
-      <div class="field-row">
-        <div class="field"><label for="prdFormPrice">價格（NT$）</label><input type="number" id="prdFormPrice" min="0" step="10"></div>
-        <div class="field"><label for="prdFormStock">庫存數量（選填）</label><input type="number" id="prdFormStock" min="0" step="1" placeholder="不填表示不限"></div>
-      </div>
-      <div class="sheet-actions">
-        <button class="btn btn-ghost" id="prdDeleteBtn" style="display:none;" onclick="deleteProduct()">刪除</button>
-        <button class="btn btn-primary" onclick="saveProduct()">儲存</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============ STAFF FORM SHEET ============ -->
-  <div class="sheet-backdrop" id="staffSheetBackdrop" onclick="if(event.target===this)closeStaffForm()">
-    <div class="sheet" style="position:relative;">
-      <div class="sheet-close" onclick="closeStaffForm()">✕</div>
-      <div class="sheet-handle"></div>
-      <h3 id="staffFormTitle">新增人員</h3>
-      <input type="hidden" id="stfFormId">
-      <div class="field"><label for="stfFormName">姓名</label><input type="text" id="stfFormName" placeholder="例如：A 專員"></div>
-      <div class="field"><label for="stfFormRole">職稱／說明</label><input type="text" id="stfFormRole" placeholder="例如：資深"></div>
-      <div class="sheet-actions">
-        <button class="btn btn-ghost" id="stfDeleteBtn" style="display:none;" onclick="deleteStaff()">刪除</button>
-        <button class="btn btn-primary" onclick="saveStaff()">儲存</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============ CUSTOMER FORM SHEET ============ -->
-  <div class="sheet-backdrop" id="customerSheetBackdrop" onclick="if(event.target===this)closeCustomerForm()">
-    <div class="sheet" style="position:relative;">
-      <div class="sheet-close" onclick="closeCustomerForm()">✕</div>
-      <div class="sheet-handle"></div>
-      <h3 id="customerFormTitle">新增顧客</h3>
-      <input type="hidden" id="custFormId">
-      <div class="field"><label for="custFormName">姓名</label><input type="text" id="custFormName" placeholder="顧客姓名"></div>
-      <div class="field"><label for="custFormPhone">手機號碼</label><input type="tel" id="custFormPhone" placeholder="0912-345-678"></div>
-      <div class="field"><label for="custFormLineId">LINE ID（選填）</label><input type="text" id="custFormLineId"></div>
-      <div class="field"><label for="custFormBirthday">生日（選填，西元年月日）</label><input type="date" id="custFormBirthday"></div>
-      <div class="field"><label for="custFormGender">性別（選填）</label>
-        <select id="custFormGender">
-          <option value="">不透露</option>
-          <option value="女">女</option>
-          <option value="男">男</option>
-          <option value="其他">其他</option>
-        </select>
-      </div>
-      <div class="field"><label for="custFormEmail">Email（選填）</label><input type="email" id="custFormEmail" placeholder="you@example.com"></div>
-      <div class="field-hint" id="custFormEmailHint" style="margin-top:-10px; margin-bottom:16px;"></div>
-      <button class="btn btn-outline" id="custAddBookingBtn" style="width:100%; margin-bottom:14px; display:none;" onclick="const cid=document.getElementById('custFormId').value; closeCustomerForm(); openManualBookingForm(cid);">＋ 幫這位顧客新增預約</button>
-      <div class="sheet-actions">
-        <button class="btn btn-ghost" id="custDeleteBtn" style="display:none;" onclick="deleteCustomer()">刪除</button>
-        <button class="btn btn-primary" onclick="saveCustomer()">儲存</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============ MANUAL BOOKING FORM SHEET ============ -->
-  <div class="sheet-backdrop" id="manualBookingSheetBackdrop" onclick="if(event.target===this)closeManualBookingForm()">
-    <div class="sheet" style="position:relative;">
-      <div class="sheet-close" onclick="closeManualBookingForm()">✕</div>
-      <div class="sheet-handle"></div>
-      <h3>手動新增預約</h3>
-
-      <div class="filter-row" style="margin-bottom:16px;">
-        <div class="filter-chip active" data-custmode="existing" onclick="setManualCustMode('existing')">選擇既有顧客</div>
-        <div class="filter-chip" data-custmode="new" onclick="setManualCustMode('new')">新顧客資料</div>
-      </div>
-
-      <div id="mbExistingWrap">
-        <div class="field">
-          <label for="mbCustomerSelect">選擇顧客</label>
-          <select id="mbCustomerSelect"></select>
-        </div>
-      </div>
-      <div id="mbNewWrap" style="display:none;">
-        <div class="field"><label for="mbNewName">姓名</label><input type="text" id="mbNewName" placeholder="顧客姓名"></div>
-        <div class="field"><label for="mbNewPhone">手機號碼</label><input type="tel" id="mbNewPhone" placeholder="0912-345-678"></div>
-        <div class="field"><label for="mbNewLineId">LINE ID（選填）</label><input type="text" id="mbNewLineId"></div>
-        <div class="field"><label for="mbNewBirthday">生日（選填）</label><input type="date" id="mbNewBirthday"></div>
-        <div class="field"><label for="mbNewGender">性別（選填）</label>
-          <select id="mbNewGender">
-            <option value="">不透露</option>
-            <option value="女">女</option>
-            <option value="男">男</option>
-            <option value="其他">其他</option>
-          </select>
-        </div>
-        <div class="field"><label for="mbNewEmail">Email（選填）</label><input type="email" id="mbNewEmail"></div>
-      </div>
-
-      <div class="field"><label for="mbService">服務項目</label><select id="mbService"></select></div>
-      <div class="field"><label for="mbStaff">服務人員</label><select id="mbStaff"></select></div>
-      <div class="field-row">
-        <div class="field"><label for="mbDate">日期</label><input type="date" id="mbDate" onchange="renderManualTimeOptions()"></div>
-        <div class="field"><label for="mbTime">時間</label><select id="mbTime"></select></div>
-      </div>
-      <div class="field"><label for="mbNote">備註（選填）</label><textarea id="mbNote"></textarea></div>
-
-      <div class="sheet-actions">
-        <button class="btn btn-primary" style="width:100%;" onclick="saveManualBooking()">建立預約</button>
-      </div>
-    </div>
-  </div>
-
+  <!-- ============ FORMS MOVED TO FULL PAGES BELOW ============ -->
   <div class="toast" id="toast"></div>
 </div>
 
@@ -1481,6 +1433,7 @@ function rerenderActiveScreen(){
   if(id==='staff') renderStaffListView();
   if(id==='shopfront') renderShopfrontScreen();
   if(id==='customer-detail') renderCustomerDetailScreen();
+  if(id==='settings-detail') renderSettingsDetailScreen();
   
 }
 
@@ -1649,11 +1602,32 @@ function goScreen(id, opts={}){
   document.querySelectorAll('#mainApp .screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const navEl = document.querySelector('.nav-item[data-nav="'+((id==='staff'||id==='shopfront')?'settings':(id==='customer-detail'?'customers':id))+'"]');
+  const navMap = {
+    'staff':'settings', 'shopfront':'settings', 'settings-detail':'settings', 'staff-form':'settings', 'break-entry':'settings',
+    'customer-detail':'customers', 'customer-form':'customers',
+    'booking-detail':'bookings', 'manual-booking':'bookings', 'edit-items':'bookings',
+    'service-form':'services', 'product-form':'services', 'poster-gen':'calendar'
+  };
+  const navEl = document.querySelector('.nav-item[data-nav="'+(navMap[id]||id)+'"]');
   if(navEl) navEl.classList.add('active');
 
   document.getElementById('topbarBrandName').textContent = BUSINESS.name || '商家後台';
-  document.getElementById('backBtnWrap').innerHTML = (id==='staff'||id==='shopfront') ? '<div class="back-btn" onclick="goScreen(\'settings\')">←</div>' : (id==='customer-detail' ? '<div class="back-btn" onclick="goScreen(\'customers\')">←</div>' : '');
+  const backHandlers = {
+    'staff': "goScreen('settings')",
+    'shopfront': "goScreen('settings')",
+    'settings-detail': "goScreen('settings')",
+    'customer-detail': "goScreen('customers')",
+    'customer-form': "closeCustomerForm()",
+    'booking-detail': "closeBookingSheet()",
+    'manual-booking': "closeManualBookingForm()",
+    'service-form': "closeServiceForm()",
+    'product-form': "closeProductForm()",
+    'staff-form': "closeStaffForm()",
+    'break-entry': "closeBreakEntry()",
+    'edit-items': "closeEditItems()",
+    'poster-gen': "closePosterGen()"
+  };
+  document.getElementById('backBtnWrap').innerHTML = backHandlers[id] ? '<div class="back-btn" onclick="'+backHandlers[id]+'">←</div>' : '';
 
   if(!opts.noPush){ navStack.push(id); }
   window.scrollTo(0,0);
@@ -1666,6 +1640,7 @@ function goScreen(id, opts={}){
   if(id==='staff') renderStaffListView();
   if(id==='shopfront') renderShopfrontScreen();
   if(id==='customer-detail') renderCustomerDetailScreen();
+  if(id==='settings-detail') renderSettingsDetailScreen();
   
 }
 
@@ -1946,9 +1921,12 @@ function openCustomerForm(id){
     document.getElementById('custFormEmail').value = '';
     hint.textContent = '手動新增的顧客尚無登入密碼，僅作為後台紀錄使用。';
   }
-  document.getElementById('customerSheetBackdrop').classList.add('show');
+  goScreen('customer-form');
 }
-function closeCustomerForm(){ document.getElementById('customerSheetBackdrop').classList.remove('show'); }
+function closeCustomerForm(){
+  const id = document.getElementById('custFormId').value;
+  goScreen(id ? 'customer-detail' : 'customers', {noPush:true});
+}
 async function saveCustomer(){
   const id = document.getElementById('custFormId').value;
   const name = document.getElementById('custFormName').value.trim();
@@ -1993,7 +1971,7 @@ function isSlotTaken(dateKey, label){
 let manualCustMode = 'existing';
 function setManualCustMode(mode){
   manualCustMode = mode;
-  document.querySelectorAll('#manualBookingSheetBackdrop .filter-chip').forEach(c=>c.classList.toggle('active', c.dataset.custmode===mode));
+  document.querySelectorAll('#screen-manual-booking .filter-chip').forEach(c=>c.classList.toggle('active', c.dataset.custmode===mode));
   document.getElementById('mbExistingWrap').style.display = mode==='existing' ? 'block' : 'none';
   document.getElementById('mbNewWrap').style.display = mode==='new' ? 'block' : 'none';
 }
@@ -2031,9 +2009,9 @@ function openManualBookingForm(prefillCustomerId){
   document.getElementById('mbDate').value = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
   renderManualTimeOptions();
 
-  document.getElementById('manualBookingSheetBackdrop').classList.add('show');
+  goScreen('manual-booking');
 }
-function closeManualBookingForm(){ document.getElementById('manualBookingSheetBackdrop').classList.remove('show'); }
+function closeManualBookingForm(){ goScreen('bookings', {noPush:true}); }
 function renderManualTimeOptions(){
   const dateKey = document.getElementById('mbDate').value;
   const timeSel = document.getElementById('mbTime');
@@ -2143,6 +2121,10 @@ function visitCount(b){
 function openBookingSheet(id){
   const b = loadBookings().find(x=>x.id===id);
   if(!b) return;
+  const activeEl = document.querySelector('#mainApp .screen.active');
+  if(activeEl && activeEl.id !== 'screen-booking-detail'){
+    bookingDetailReturnScreen = activeEl.id.replace('screen-','');
+  }
   const body = document.getElementById('bookingDetailBody');
   const cust = displayCustomer(b);
   const age = cust.birthday ? calcAge(cust.birthday) : null;
@@ -2230,7 +2212,7 @@ function openBookingSheet(id){
   dangerRow.innerHTML = `<a onclick="deleteBookingRecord('${b.id}')">刪除這筆紀錄</a>`;
   body.appendChild(dangerRow);
 
-  document.getElementById('bookingSheetBackdrop').classList.add('show');
+  goScreen('booking-detail');
 }
 function startStaffReassign(id){
   const b = loadBookings().find(x=>x.id===id);
@@ -2343,7 +2325,7 @@ async function confirmPayReconcile(){
   }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
 }
 
-function closeBookingSheet(){ document.getElementById('bookingSheetBackdrop').classList.remove('show'); }
+function closeBookingSheet(){ goScreen(bookingDetailReturnScreen, {noPush:true}); }
 
 /* ============================================================
    編輯項目：幫某筆預約增減服務（複選，下拉式選單樣式），
@@ -2365,7 +2347,7 @@ function openEditItems(id){
   document.getElementById('editItemsListWrap').style.display = 'none';
   document.getElementById('editItemsDropdown').classList.remove('open');
   document.getElementById('editItemsCaret').classList.remove('open');
-  document.getElementById('editItemsSheetBackdrop').classList.add('show');
+  goScreen('edit-items');
 }
 function toggleEditItemsDropdown(){
   editItemsOpen = !editItemsOpen;
@@ -2403,9 +2385,9 @@ function toggleEditItem(serviceId){
   renderEditItemsSummary();
 }
 function closeEditItems(){
-  document.getElementById('editItemsSheetBackdrop').classList.remove('show');
   editItemsBookingId = null;
   editItemsOpen = false;
+  goScreen('booking-detail', {noPush:true});
 }
 async function saveEditItems(){
   if(!editItemsBookingId) return;
@@ -2560,6 +2542,8 @@ async function deleteBookingRecord(id){
 /* ============================================================
    SERVICES CRUD
    ============================================================ */
+let currentSettingsKind = 'hours';
+let bookingDetailReturnScreen = 'bookings';
 let servicesTab = 'services';
 function setServicesTab(tab){
   servicesTab = tab;
@@ -2612,9 +2596,9 @@ function openServiceForm(id){
     document.getElementById('svcFormPrice').value = 0;
     document.getElementById('svcDepositSwitch').classList.remove('on');
   }
-  document.getElementById('serviceSheetBackdrop').classList.add('show');
+  goScreen('service-form');
 }
-function closeServiceForm(){ document.getElementById('serviceSheetBackdrop').classList.remove('show'); }
+function closeServiceForm(){ goScreen('services', {noPush:true}); }
 async function saveService(){
   const id = document.getElementById('svcFormId').value;
   const name = document.getElementById('svcFormName').value.trim();
@@ -2773,7 +2757,7 @@ function openProductForm(id){
     document.getElementById('prdFormStock').value = '';
     renderProductImagePreview(null);
   }
-  document.getElementById('productSheetBackdrop').classList.add('show');
+  goScreen('product-form');
 }
 function renderProductImagePreview(image){
   const preview = document.getElementById('prdImagePreview');
@@ -2812,7 +2796,7 @@ function handleProductImageUpload(e){
 function removeProductImage(){
   renderProductImagePreview(null);
 }
-function closeProductForm(){ document.getElementById('productSheetBackdrop').classList.remove('show'); }
+function closeProductForm(){ goScreen('services', {noPush:true}); }
 async function saveProduct(){
   const id = document.getElementById('prdFormId').value;
   const name = document.getElementById('prdFormName').value.trim();
@@ -2887,9 +2871,9 @@ function openStaffForm(id){
     document.getElementById('stfFormName').value = '';
     document.getElementById('stfFormRole').value = '';
   }
-  document.getElementById('staffSheetBackdrop').classList.add('show');
+  goScreen('staff-form');
 }
-function closeStaffForm(){ document.getElementById('staffSheetBackdrop').classList.remove('show'); }
+function closeStaffForm(){ goScreen('staff', {noPush:true}); }
 async function saveStaff(){
   const id = document.getElementById('stfFormId').value;
   const name = document.getElementById('stfFormName').value.trim();
@@ -3094,12 +3078,10 @@ function openPosterGen(){
   if(!(BUSINESS.customerUrl||'').trim()){ showToast('請先至「設定→商店門面」貼上顧客頁網址'); return; }
   posterMonthOffset = 0;
   setPosterMonth(0);
-  document.getElementById('posterGenBackdrop').classList.add('show');
-  document.body.style.overflow = 'hidden';
+  goScreen('poster-gen');
 }
 function closePosterGen(){
-  document.getElementById('posterGenBackdrop').classList.remove('show');
-  document.body.style.overflow = '';
+  goScreen('calendar', {noPush:true});
 }
 function setPosterMonth(offset){
   posterMonthOffset = offset;
@@ -3563,7 +3545,13 @@ function renderShopfrontScreen(){
 }
 const SETTINGS_SHEET_TITLES = { hours:'時段與可約', policy:'接單政策', deposit:'定金', notify:'通知', account:'帳號與關於' };
 function openSettingsSheet(kind){
-  document.getElementById('settingsSheetTitle').textContent = SETTINGS_SHEET_TITLES[kind] || '設定';
+  currentSettingsKind = kind;
+  goScreen('settings-detail');
+}
+function renderSettingsDetailScreen(){
+  const kind = currentSettingsKind;
+  const wrap = document.getElementById('settingsDetailBody');
+  wrap.innerHTML = `<div class="section-title" style="margin-bottom:14px;"><span class="lead">${SETTINGS_SHEET_TITLES[kind] || '設定'}</span></div><div id="settingsSheetBody"></div>`;
   const body = document.getElementById('settingsSheetBody');
 
   if(kind==='hours'){
@@ -3793,11 +3781,9 @@ function openSettingsSheet(kind){
     `;
     document.getElementById('accountEmailHint').textContent = '目前登入帳號：' + (currentEmail() || '—');
   }
-
-  document.getElementById('settingsSheetBackdrop').classList.add('show');
 }
 function closeSettingsSheet(){
-  document.getElementById('settingsSheetBackdrop').classList.remove('show');
+  goScreen('settings');
 }
 
 /* ---- 縣市／區域 ---- */
@@ -3962,10 +3948,11 @@ function addBreakEntry(){
   setBreakTab('single');
   document.getElementById('breakRangesList').innerHTML = '';
   addBreakRange();
-  document.getElementById('breakEntryBackdrop').classList.add('show');
+  goScreen('break-entry');
 }
 function closeBreakEntry(){
-  document.getElementById('breakEntryBackdrop').classList.remove('show');
+  currentSettingsKind = 'hours';
+  goScreen('settings-detail', {noPush:true});
 }
 function setBreakTab(tab){
   breakTab = tab;
