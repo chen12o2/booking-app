@@ -1099,8 +1099,12 @@ function quickPickService(id){
    STEP 1: SERVICE
    ============================================================ */
 function selectedServices(){
-  if(BUSINESS.allowMultiService){ return state.services || []; }
-  return state.service ? [state.service] : [];
+  // 用哪個欄位判斷「已選的服務」以 BUSINESS.allowMultiService 目前的設定為準，
+  // 但如果切換模式導致原本選好的資料存在另一個欄位裡，優先採用真的有資料的那邊，
+  // 避免商家中途調整設定、或畫面沒同步更新時，讓顧客明明選了服務卻送不出預約
+  if(state.services && state.services.length) return state.services;
+  if(state.service) return [state.service];
+  return [];
 }
 function selectedServicesTotal(){
   return selectedServices().reduce((sum,s)=>sum+(s.price||0),0);
@@ -1308,6 +1312,12 @@ function renderDepositNotice(svcs){
 }
 function renderInfoSummary(){
   const svcs = selectedServices();
+  if(svcs.length===0){
+    showToast('請先選擇服務項目');
+    navStack = ['home'];
+    goScreen('service');
+    return;
+  }
   const svcLabel = svcs.map(s=>s.name).join('、');
   document.getElementById('infoSummary').innerHTML = `
     <div class="row"><span class="lbl">服務項目</span><span class="val">${svcLabel}</span></div>
