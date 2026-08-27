@@ -884,12 +884,16 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         </div>
 
         <div id="svcServicesView">
-          <button class="add-btn" style="width:100%; margin-bottom:14px;" onclick="openServiceForm()">＋ 新增服務</button>
+          <div style="display:flex; justify-content:flex-end; margin-bottom:14px;">
+            <button class="add-btn" onclick="openServiceForm()">＋ 新增服務</button>
+          </div>
           <div id="servicesList"></div>
         </div>
 
         <div id="svcProductsView" style="display:none;">
-          <button class="add-btn" style="width:100%; margin-bottom:14px;" onclick="openProductForm()">＋ 新增商品</button>
+          <div style="display:flex; justify-content:flex-end; margin-bottom:14px;">
+            <button class="add-btn" onclick="openProductForm()">＋ 新增商品</button>
+          </div>
           <div id="productsList"></div>
         </div>
 
