@@ -807,7 +807,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
       </section>
 
       <section class="screen" id="screen-bookings">
-        <div class="section-title"><span class="lead">預約管理</span></div>
+        <div class="section-title"><span class="lead">預約管理</span><button class="add-btn" onclick="exportAllBookingsIcs()">⬇ 匯出全部為 .ics</button></div>
 
         <div class="cal-view-tabs">
           <button class="cal-view-tab active" id="calViewTabTimeline" onclick="setCalView('timeline')">行程</button>
@@ -3769,14 +3769,21 @@ function openSettingsSheet(kind){
     setDepositCalcMode(BUSINESS.depositMultiServiceCalc === 'max' ? 'max' : 'sum', true);
   } else if(kind==='notify'){
     body.innerHTML = `
-      <div class="field-hint" style="margin-bottom:14px;">預約相關的行事曆整合方式。</div>
+      <div class="field-hint" style="margin-bottom:14px;">預約相關的行事曆整合方式，可以在每筆預約詳情裡個別加入。</div>
       <div class="section-title" style="margin-bottom:2px;"><span class="lead">行事曆</span></div>
-      <div class="about-card">
+      <div class="about-card" style="margin-bottom:14px;">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-          <span style="font-weight:700; font-size:14px;">📅 加入行事曆</span>
+          <span style="font-weight:700; font-size:14px;">📅 Google 日曆</span>
           <span class="status-pill status-upcoming">可使用</span>
         </div>
-        <div class="field-hint">在每筆預約詳情裡，可以按「加入 Google 日曆」或「加入 iOS 行事曆」，手動把這筆預約加進你自己的行事曆——這是每筆各別加入，不是自動同步；顧客改期或取消不會自動更新你已加入的行程，需要的話請自行到行事曆調整。</div>
+        <div class="field-hint">在預約詳情頁按「加入 Google 日曆」，會開啟預填好日期時間店家資訊的 Google 日曆新增畫面，你自己按儲存確認加入——這是單筆手動加入，不是自動同步，顧客改期或取消不會自動更新已加入的行程。</div>
+      </div>
+      <div class="about-card">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+          <span style="font-weight:700; font-size:14px;">📆 iOS 行事曆</span>
+          <span class="status-pill status-upcoming">可使用</span>
+        </div>
+        <div class="field-hint">在預約詳情頁按「加入 iOS 行事曆」，會產生一個行事曆檔案（.ics）並跳出加入提示，直接匯入 iPhone 內建行事曆 App；「預約管理」頁最上面也有「匯出全部為 .ics」可以一次匯入所有預約——同樣是手動觸發，不是自動同步。</div>
       </div>
     `;
   } else if(kind==='account'){
@@ -4284,7 +4291,7 @@ async function saveDepositPolicy(){
 }
 
 /* ---- 加入行事曆（各別手動加入，不是自動同步）---- */
-function buildIcsForBooking(booking){
+function buildIcsEventBlock(booking){
   const svcs = bookingServices(booking);
   const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '';
   const totalDur = svcs.reduce((sum,s)=>sum+(s.duration||30),0) || 30;
@@ -4295,9 +4302,6 @@ function buildIcsForBooking(booking){
   const fmt = dt => dt.getFullYear()+String(dt.getMonth()+1).padStart(2,'0')+String(dt.getDate()).padStart(2,'0')+'T'+String(dt.getHours()).padStart(2,'0')+String(dt.getMinutes()).padStart(2,'0')+'00';
   const esc = s => String(s||'').replace(/[\n\r]/g,' ').replace(/([,;])/g,'\\$1');
   return [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//' + esc(BUSINESS.name||'booking') + '//預約//TW',
     'BEGIN:VEVENT',
     'UID:' + booking.id + '@' + (BUSINESS.name||'booking').replace(/\s/g,''),
     'DTSTART:' + fmt(start),
@@ -4305,22 +4309,47 @@ function buildIcsForBooking(booking){
     'SUMMARY:' + esc(svcLabel + '（' + (booking.customer.name||'') + '）'),
     'DESCRIPTION:' + esc('預約編號：' + booking.code + '　顧客：' + (booking.customer.name||'') + '　電話：' + (booking.customer.phone||'')),
     'LOCATION:' + esc(BUSINESS.address||''),
-    'END:VEVENT',
+    'END:VEVENT'
+  ].join('\r\n');
+}
+function buildIcsForBooking(booking){
+  const esc = s => String(s||'').replace(/[\n\r]/g,' ').replace(/([,;])/g,'\\$1');
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//' + esc(BUSINESS.name||'booking') + '//預約//TW',
+    buildIcsEventBlock(booking),
     'END:VCALENDAR'
   ].join('\r\n');
 }
-function addBookingToIosCalendar(id){
-  const b = loadBookings().find(x=>x.id===id);
-  if(!b) return;
-  const ics = buildIcsForBooking(b);
+function downloadIcsFile(ics, filename){
   const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = (b.code||'booking') + '.ics';
+  a.download = filename;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url), 3000);
+}
+function addBookingToIosCalendar(id){
+  const b = loadBookings().find(x=>x.id===id);
+  if(!b) return;
+  downloadIcsFile(buildIcsForBooking(b), (b.code||'booking') + '.ics');
   showToast('已產生行事曆檔案，請依提示加入');
+}
+function exportAllBookingsIcs(){
+  const bookings = loadBookings().filter(b=>b.status!=='cancelled');
+  if(bookings.length===0){ showToast('目前沒有可匯出的預約'); return; }
+  const esc = s => String(s||'').replace(/[\n\r]/g,' ').replace(/([,;])/g,'\\$1');
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//' + esc(BUSINESS.name||'booking') + '//預約//TW',
+    ...bookings.map(b=>buildIcsEventBlock(b)),
+    'END:VCALENDAR'
+  ].join('\r\n');
+  downloadIcsFile(ics, (BUSINESS.name||'booking') + '-所有預約.ics');
+  showToast(`已產生 ${bookings.length} 筆預約的行事曆檔案，請依提示加入`);
 }
 function addBookingToGoogleCalendar(id){
   const b = loadBookings().find(x=>x.id===id);
