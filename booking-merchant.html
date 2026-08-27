@@ -557,24 +557,15 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .avail-poster .hd p{ margin:0; font-size:11px; opacity:.85; }
 .avail-poster .mo{ text-align:center; font-family:'Noto Serif TC',serif; font-weight:700; font-size:14px; padding:12px 0 6px; background:var(--white); }
 .avail-poster .wd{ display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:10.5px; color:var(--ink-soft); background:var(--white); padding-bottom:4px; }
-.avail-poster .grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; background:var(--white); padding:4px 10px 16px; }
-.avail-poster .cell{ aspect-ratio:1; display:flex; align-items:center; justify-content:center; }
-.avail-poster .cell .circ{
-  width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-  font-size:11px; font-family:'Space Mono',monospace; color:var(--white);
-}
-.avail-poster .cell .circ.empty{ visibility:hidden; }
-.avail-poster .cell .circ.st-open{ background:#5C8A6B; }
-.avail-poster .cell .circ.st-limited{ background:var(--gold); }
-.avail-poster .cell .circ.st-full{ background:var(--stamp-dark); }
-.avail-poster .cell .circ.st-closed{ background:#C9C2AC; }
+.avail-poster .grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; background:var(--white); padding:4px 10px 16px; }
+.avail-poster .cell{ text-align:center; padding:2px 0; min-height:52px; }
+.avail-poster .cell.blank{ visibility:hidden; }
+.avail-poster .cell .dnum{ font-weight:700; font-size:11px; margin-bottom:2px; font-family:'Space Mono',monospace; }
+.avail-poster .cell .tm{ font-family:'Space Mono',monospace; font-size:8px; color:var(--ink-soft); line-height:1.45; }
+.avail-poster .cell.full .tm{ text-decoration:line-through; opacity:.5; }
+.avail-poster .cell.closed .tm{ color:var(--stamp-dark); font-weight:700; }
 .avail-legend{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; padding:0 10px 14px; background:var(--white); }
 .avail-legend span{ font-size:10.5px; color:var(--ink-soft); display:flex; align-items:center; gap:4px; }
-.avail-legend .dot{ width:8px; height:8px; border-radius:50%; }
-.avail-legend .dot.st-open{ background:#5C8A6B; }
-.avail-legend .dot.st-limited{ background:var(--gold); }
-.avail-legend .dot.st-full{ background:var(--stamp-dark); }
-.avail-legend .dot.st-closed{ background:#C9C2AC; }
 .avail-poster .url{ text-align:center; font-family:'Space Mono',monospace; font-size:10px; color:var(--ink-soft); background:var(--white); padding-bottom:14px; word-break:break-all; }
 
 /* ---- shopfront / hours extras ---- */
@@ -2996,13 +2987,18 @@ function renderAvailPoster(){
   const y = now.getFullYear(), m = now.getMonth();
   const firstDow = new Date(y,m,1).getDay();
   const daysInMonth = new Date(y,m+1,0).getDate();
-  const statusLabelMap = { open:'可預約', limited:'名額有限', full:'已額滿', closed:'休息' };
   let cells = '';
-  for(let i=0;i<firstDow;i++){ cells += `<div class="cell"><div class="circ empty"></div></div>`; }
+  for(let i=0;i<firstDow;i++){ cells += `<div class="cell blank"></div>`; }
   for(let d=1; d<=daysInMonth; d++){
     const dateKey = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    const st = dayAvailabilityStatus(dateKey);
-    cells += `<div class="cell"><div class="circ st-${st}" title="${statusLabelMap[st]}">${d}</div></div>`;
+    const info = availableSlotsForDate(dateKey);
+    if(info.closed){
+      cells += `<div class="cell closed"><div class="dnum">${d}</div><div class="tm">${info.label||''}</div></div>`;
+    } else if(info.full){
+      cells += `<div class="cell full"><div class="dnum">${d}</div><div class="tm">${info.label||'已約滿'}</div></div>`;
+    } else {
+      cells += `<div class="cell"><div class="dnum">${d}</div><div class="tm">${info.slots.slice(0,3).join('<br>')}</div></div>`;
+    }
   }
   wrap.innerHTML = `
     <div class="avail-poster">
@@ -3010,12 +3006,7 @@ function renderAvailPoster(){
       <div class="mo">${y} 年 ${m+1} 月</div>
       <div class="wd"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
       <div class="grid">${cells}</div>
-      <div class="avail-legend">
-        <span><span class="dot st-open"></span>可預約</span>
-        <span><span class="dot st-limited"></span>名額有限</span>
-        <span><span class="dot st-full"></span>已額滿</span>
-        <span><span class="dot st-closed"></span>休息</span>
-      </div>
+      <div class="avail-legend"><span>時段皆可微調，歡迎私訊</span><span>劃掉＝已約滿</span></div>
       <div class="url">${BUSINESS.customerUrl||''}</div>
     </div>
   `;
@@ -3025,48 +3016,55 @@ function downloadAvailPoster(){
   const y = now.getFullYear(), m = now.getMonth();
   const firstDow = new Date(y,m,1).getDay();
   const daysInMonth = new Date(y,m+1,0).getDate();
-  const colors = { open:'#5C8A6B', limited:'#C9A15A', full:'#8F6420', closed:'#C9C2AC' };
+  const rows = Math.ceil((firstDow+daysInMonth)/7);
+  const W = 600, headH = 110, moH = 40, wdH = 26, cellH = 66;
+  const gridTop = headH + moH + wdH;
+  const gridH = rows*cellH;
+  const legendH = 76;
+  const H = gridTop + gridH + legendH;
   const canvas = document.createElement('canvas');
-  canvas.width = 600; canvas.height = 760;
+  canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#FFFDF8'; ctx.fillRect(0,0,600,760);
-  ctx.fillStyle = '#7A5C2E'; ctx.fillRect(0,0,600,110);
+  ctx.fillStyle = '#FFFDF8'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = '#7A5C2E'; ctx.fillRect(0,0,W,headH);
   ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center';
   ctx.font = '700 26px "Noto Serif TC", serif';
-  ctx.fillText(BUSINESS.name||'預約服務', 300, 55);
+  ctx.fillText(BUSINESS.name||'預約服務', W/2, 55);
   ctx.font = '400 13px "Noto Sans TC", sans-serif';
-  ctx.fillText('掃碼或透過連結立即預約', 300, 82);
+  ctx.fillText('掃碼或透過連結立即預約', W/2, 82);
   ctx.fillStyle = '#26221B';
   ctx.font = '700 20px "Noto Serif TC", serif';
-  ctx.fillText(y+' 年 '+(m+1)+' 月', 300, 150);
+  ctx.fillText(y+' 年 '+(m+1)+' 月', W/2, headH+30);
   const wdNames = ['日','一','二','三','四','五','六'];
-  const colW = 600/7;
+  const colW = W/7;
   ctx.font = '700 13px "Noto Sans TC", sans-serif';
   ctx.fillStyle = '#6B6356';
-  wdNames.forEach((wd,i)=>{ ctx.fillText(wd, colW*i+colW/2, 185); });
-  const startY = 210, rowH = 66, r = 22;
+  wdNames.forEach((wd,i)=>{ ctx.fillText(wd, colW*i+colW/2, headH+moH+wdH-6); });
+  const cellsTop = gridTop + 16;
   for(let d=1; d<=daysInMonth; d++){
     const idx = firstDow + d - 1;
     const col = idx % 7, row = Math.floor(idx/7);
-    const cx = colW*col + colW/2, cy = startY + rowH*row;
+    const cx = colW*col + colW/2, cy = cellsTop + row*cellH;
     const dateKey = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    const st = dayAvailabilityStatus(dateKey);
-    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
-    ctx.fillStyle = colors[st]; ctx.fill();
-    ctx.fillStyle = '#FFFFFF'; ctx.font = '700 13px "Space Mono", monospace';
-    ctx.fillText(String(d), cx, cy+5);
+    const info = availableSlotsForDate(dateKey);
+    ctx.font = '700 12px "Space Mono", monospace'; ctx.fillStyle = '#26221B';
+    ctx.fillText(String(d), cx, cy);
+    if(info.closed){
+      ctx.font = '700 9.5px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#8F6420';
+      ctx.fillText(info.label||'', cx, cy+16);
+    } else if(info.full){
+      ctx.font = '400 9.5px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(107,99,86,0.55)';
+      ctx.fillText(info.label||'已約滿', cx, cy+16);
+    } else {
+      ctx.font = '400 9.5px "Space Mono", monospace'; ctx.fillStyle = '#6B6356';
+      info.slots.slice(0,3).forEach((t,i)=>{ ctx.fillText(t, cx, cy+16+i*12); });
+    }
   }
-  const legendY = startY + rowH*Math.ceil((firstDow+daysInMonth)/7) + 30;
-  const legend = [['可預約',colors.open],['名額有限',colors.limited],['已額滿',colors.full],['休息',colors.closed]];
-  let lx = 90;
-  ctx.font = '400 13px "Noto Sans TC", sans-serif'; ctx.textAlign = 'left';
-  legend.forEach(([label,color])=>{
-    ctx.beginPath(); ctx.arc(lx,legendY,5,0,Math.PI*2); ctx.fillStyle = color; ctx.fill();
-    ctx.fillStyle = '#6B6356'; ctx.fillText(label, lx+12, legendY+4);
-    lx += ctx.measureText(label).width + 44;
-  });
-  ctx.textAlign = 'center'; ctx.font = '400 12px "Space Mono", monospace'; ctx.fillStyle = '#6B6356';
-  ctx.fillText(BUSINESS.customerUrl||'', 300, legendY+40);
+  const legendY = gridTop + gridH + 28;
+  ctx.font = '400 11px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B6356';
+  ctx.fillText('時段皆可微調，歡迎私訊　劃掉＝已約滿', W/2, legendY);
+  ctx.font = '400 12px "Space Mono", monospace';
+  ctx.fillText(BUSINESS.customerUrl||'', W/2, legendY+26);
 
   downloadCanvasImage(canvas, (BUSINESS.name||'booking') + '-可預約日曆圖.png');
 }
@@ -3185,7 +3183,19 @@ function renderSlotPosterPreview(){
     </div>
   `;
 }
-function downloadSlotPoster(){
+/* 載入圖片供 canvas 使用；載不到（例如未設定 logo、或 QR 服務逾時）就回傳 null，
+   讓下載流程不會整個卡住，只是該處退回文字/空白呈現 */
+function loadImageAsync(src){
+  return new Promise(resolve=>{
+    if(!src){ resolve(null); return; }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = ()=>resolve(img);
+    img.onerror = ()=>resolve(null);
+    img.src = src;
+  });
+}
+async function downloadSlotPoster(){
   const now = new Date();
   const target = new Date(now.getFullYear(), now.getMonth()+posterMonthOffset, 1);
   const y = target.getFullYear(), m = target.getMonth();
@@ -3193,61 +3203,112 @@ function downloadSlotPoster(){
   const daysInMonth = new Date(y,m+1,0).getDate();
   const wdNames = ['一','二','三','四','五','六','日'];
   const rows = Math.ceil((firstDow+daysInMonth)/7);
+  const handle = (BUSINESS.customerUrl||'').replace(/^https?:\/\//,'');
+
+  // 2x 解析度：對應預覽卡片實際寬度（App 容器 430px 扣掉左右各 20px padding）
+  const S = 2;
+  const W = 390*S;
+  const padX = 14*S;
+  const innerW = W - padX*2;
+  const cellH = 58*S;
+  const gridPadY = 10*S, wdRowH = 20*S;
+  const gridH = gridPadY*2 + wdRowH + rows*cellH;
+  const headH = 24*S + 52*S + 10*S + 36*S + 6*S + 16*S + 10*S + 18*S + 4*S + 16*S + 14*S;
+  const footH = 26*S + 42*S + 12*S + 16*S + 16*S + 56*S + 20*S;
+  const H = headH + gridH + footH;
+
+  const [logoImg, qrImg] = await Promise.all([
+    loadImageAsync(BUSINESS.logo || ''),
+    loadImageAsync('https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(BUSINESS.customerUrl||''))
+  ]);
+
   const canvas = document.createElement('canvas');
-  const W = 700, headH = 210, gridTop = headH, cellW = W/7, cellH = 92;
-  const gridH = rows*cellH + 30;
-  const H = gridH + 260;
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#EFE6CE'; ctx.fillRect(0,0,W,H);
   ctx.textAlign = 'center';
-  // logo circle
-  ctx.beginPath(); ctx.arc(W/2, 60, 30, 0, Math.PI*2); ctx.fillStyle = '#FFFDF8'; ctx.fill();
-  ctx.fillStyle = '#26221B'; ctx.font = '700 26px "Noto Serif TC", serif';
-  ctx.fillText(EN_MONTHS[m], W/2, 145);
-  ctx.font = '400 13px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B6356';
-  ctx.fillText(y+' ・ '+(m+1)+'月可約時段', W/2, 168);
-  ctx.font = '700 15px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#26221B';
-  ctx.fillText(BUSINESS.name||'', W/2, 192);
-  const handle = (BUSINESS.customerUrl||'').replace(/^https?:\/\//,'');
-  ctx.font = '400 12px "Space Mono", monospace'; ctx.fillStyle = '#6B6356';
-  ctx.fillText(handle, W/2, 208);
 
-  // grid background
-  ctx.fillStyle = '#FFFDF8';
-  roundRect(ctx, 14, gridTop, W-28, gridH, 12); ctx.fill();
-  ctx.font = '700 11px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B6356';
-  wdNames.forEach((wd,i)=>{ ctx.fillText(wd, cellW*i+cellW/2, gridTop+18); });
+  // 背景漸層，跟預覽卡片一致（原本是純色，跟預覽對不起來）
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'#F0E9D8'); grad.addColorStop(1,'#E9E0C8');
+  ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
 
+  let cy = 24*S;
+  // logo（原本只畫一個空白圓圈，沒有真的放上 logo）
+  const logoR = 26*S;
+  ctx.beginPath(); ctx.arc(W/2, cy+logoR, logoR, 0, Math.PI*2);
+  ctx.fillStyle = '#F7F2E6'; ctx.fill();
+  if(logoImg){
+    ctx.save(); ctx.beginPath(); ctx.arc(W/2, cy+logoR, logoR, 0, Math.PI*2); ctx.clip();
+    ctx.drawImage(logoImg, W/2-logoR, cy, logoR*2, logoR*2);
+    ctx.restore();
+  } else {
+    ctx.font = (22*S)+'px sans-serif'; ctx.fillText('🏷️', W/2, cy+logoR+8*S);
+  }
+  cy += logoR*2 + 10*S;
+
+  ctx.fillStyle = '#26221B'; ctx.font = '900 '+(32*S)+'px "Noto Serif TC", serif';
+  cy += 30*S;
+  ctx.fillText(EN_MONTHS[m], W/2, cy);
+  cy += 6*S + 12*S;
+  ctx.fillStyle = '#6B6356'; ctx.font = '400 '+(11*S)+'px "Noto Sans TC", sans-serif';
+  ctx.fillText(y+' ・ '+(m+1)+'月可約時段', W/2, cy);
+  cy += 10*S + 13*S;
+  ctx.fillStyle = '#26221B'; ctx.font = '700 '+(13*S)+'px "Noto Sans TC", sans-serif';
+  ctx.fillText(BUSINESS.name||'', W/2, cy);
+  cy += 4*S + 12*S;
+  ctx.fillStyle = '#6B6356'; ctx.font = '400 '+(11*S)+'px "Space Mono", monospace';
+  ctx.fillText(handle, W/2, cy);
+  cy += 14*S;
+
+  // 可約時段格線
+  const gridTop = cy;
+  ctx.fillStyle = '#FFFFFF';
+  roundRect(ctx, padX, gridTop, innerW, gridH, 10*S); ctx.fill();
+  const cellW = innerW / 7;
+  ctx.font = '700 '+(10*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B6356';
+  wdNames.forEach((wd,i)=>{ ctx.fillText(wd, padX+cellW*i+cellW/2, gridTop+gridPadY+10*S); });
+
+  const cellsTop = gridTop + gridPadY + wdRowH;
   for(let d=1; d<=daysInMonth; d++){
     const idx = firstDow + d - 1;
     const col = idx % 7, row = Math.floor(idx/7);
-    const cx = cellW*col + cellW/2, cyTop = gridTop + 28 + row*cellH;
+    const cx = padX + cellW*col + cellW/2, cyTop = cellsTop + row*cellH + 12*S;
     const dateKey = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const info = availableSlotsForDate(dateKey);
-    ctx.font = '700 12px "Space Mono", monospace'; ctx.fillStyle = '#26221B';
+    ctx.font = '700 '+(11*S)+'px "Space Mono", monospace'; ctx.fillStyle = '#26221B';
     ctx.fillText(String(d), cx, cyTop);
     if(info.closed){
-      ctx.font = '700 9px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#8F6420';
-      ctx.fillText(info.label||'', cx, cyTop+16);
+      ctx.font = '700 '+(8.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#8F6420';
+      ctx.fillText(info.label||'', cx, cyTop+14*S);
     } else if(info.full){
-      ctx.font = '400 9px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(107,99,86,0.55)';
-      ctx.fillText(info.label||'已約滿', cx, cyTop+16);
+      ctx.font = '400 '+(8.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(107,99,86,0.55)';
+      ctx.fillText(info.label||'已約滿', cx, cyTop+14*S);
     } else {
-      ctx.font = '400 9.5px "Space Mono", monospace'; ctx.fillStyle = '#6B6356';
-      info.slots.forEach((t,i)=>{ ctx.fillText(t, cx, cyTop+16+i*12); });
+      ctx.font = '400 '+(8.5*S)+'px "Space Mono", monospace'; ctx.fillStyle = '#6B6356';
+      info.slots.slice(0,3).forEach((t,i)=>{ ctx.fillText(t, cx, cyTop+14*S+i*11*S); });
     }
   }
 
-  const ctaY = gridTop + gridH + 40;
-  ctx.font = '700 14px "Noto Sans TC", sans-serif';
+  cy = gridTop + gridH + 26*S;
+  // CTA 按鈕
   const ctaText = '→ 立即線上預約 ・ '+handle;
-  const ctaW = ctx.measureText(ctaText).width + 40;
-  roundRect(ctx, W/2-ctaW/2, ctaY-22, ctaW, 40, 20);
+  ctx.font = '700 '+(12*S)+'px "Noto Sans TC", sans-serif';
+  const ctaW = ctx.measureText(ctaText).width + 36*S;
+  const ctaH = 42*S;
+  roundRect(ctx, W/2-ctaW/2, cy, ctaW, ctaH, ctaH/2);
   ctx.fillStyle = '#BF8B3D'; ctx.fill();
-  ctx.fillStyle = '#FFFFFF'; ctx.fillText(ctaText, W/2, ctaY+4);
-  ctx.font = '400 10.5px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B6356';
-  ctx.fillText('時段皆可微調，歡迎私訊　劃掉＝已約滿', W/2, ctaY+34);
+  ctx.fillStyle = '#FFFFFF'; ctx.fillText(ctaText, W/2, cy+ctaH/2+4*S);
+  cy += ctaH + 12*S;
+
+  ctx.font = '400 '+(9.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B6356';
+  ctx.fillText('時段皆可微調，歡迎私訊　劃掉＝已約滿', W/2, cy);
+  cy += 16*S + 16*S;
+
+  // QR code（原本沒有畫出來），靠右對齊跟預覽一致
+  if(qrImg){
+    const qrSize = 56*S;
+    ctx.drawImage(qrImg, W-padX-qrSize, cy, qrSize, qrSize);
+  }
 
   downloadCanvasImage(canvas, (BUSINESS.name||'booking') + '-可約月曆圖.png');
 }

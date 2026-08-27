@@ -405,6 +405,27 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 }
 .login-wrap h2{ font-family:'Noto Serif TC',serif; text-align:center; margin:0 0 6px; font-size:20px; }
 .login-wrap p{ text-align:center; color:var(--ink-soft); font-size:13px; margin:0 0 26px; line-height:1.6; }
+
+/* ---- 結帳彈出視窗（原本缺少這段樣式，導致「確認訂單」直接顯示在每個畫面最下方、
+   且「前往結帳」按鈕點擊後只是切換一個沒有作用的 class，畫面完全沒有反應） ---- */
+.sheet-backdrop{
+  position:fixed; inset:0; background:rgba(38,34,27,.45); z-index:80; display:none;
+  align-items:flex-end; justify-content:center; overscroll-behavior:contain;
+}
+.sheet-backdrop.show{ display:flex; }
+.sheet{
+  width:100%; max-width:430px; background:var(--paper); border-radius:20px 20px 0 0;
+  padding:20px 20px calc(24px + env(safe-area-inset-bottom)); max-height:86vh; overflow-y:auto;
+  overflow-x:hidden; overflow-wrap:break-word; word-break:break-word;
+  animation:sheetUp .25s ease;
+}
+@keyframes sheetUp{ from{ transform:translateY(24px); opacity:.4; } to{ transform:none; opacity:1; } }
+.sheet-handle{ width:36px; height:4px; background:var(--line); border-radius:99px; margin:0 auto 16px; }
+.sheet h3{ font-family:'Noto Serif TC',serif; font-size:17px; margin:0 0 14px; }
+.sheet-close{ position:absolute; top:16px; right:18px; width:30px; height:30px; border-radius:50%; background:var(--paper-2); display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.bkt-total{ display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:var(--paper-2); border-radius:10px; }
+.bkt-total .lbl{ font-size:13px; color:var(--ink-soft); font-weight:700; }
+.bkt-total .amt{ font-family:'Space Mono',monospace; font-size:18px; font-weight:700; color:var(--stamp-dark); }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
