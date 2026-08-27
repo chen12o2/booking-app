@@ -186,6 +186,35 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
   width:44px; height:44px; border-radius:10px; background:var(--paper-2);
   display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; overflow:hidden;
 }
+.prod-tab-pair{ display:flex; background:var(--paper-2); border-radius:99px; padding:4px; gap:2px; margin-bottom:16px; }
+.prod-tab{ flex:1; border:none; background:transparent; padding:11px 6px; border-radius:99px; font-size:13px; font-weight:700; color:var(--ink-soft); cursor:pointer; font-family:inherit; }
+.prod-tab.active{ background:var(--white); color:var(--ink); box-shadow:0 1px 3px rgba(38,34,27,.12); }
+.prod-qty-row{ display:flex; align-items:center; gap:10px; margin-top:10px; }
+.prod-qty-stepper{ display:flex; align-items:center; border:1.5px solid var(--line); border-radius:99px; overflow:hidden; }
+.prod-qty-stepper button{ width:30px; height:30px; border:none; background:var(--paper-2); font-size:15px; font-weight:700; color:var(--ink); cursor:pointer; }
+.prod-qty-stepper .qv{ width:28px; text-align:center; font-size:13px; font-weight:700; }
+.prod-add-btn{
+  flex:1; background:var(--gold); color:var(--white); border:none; border-radius:99px;
+  padding:9px 14px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit;
+}
+.prod-add-btn:disabled{ background:var(--paper-2); color:var(--ink-soft); cursor:not-allowed; }
+.cart-bar{
+  position:fixed; left:50%; transform:translateX(-50%); bottom:calc(var(--nav-h) + 10px);
+  width:calc(100% - 32px); max-width:398px; background:var(--stamp); color:var(--white);
+  border-radius:14px; padding:13px 18px; display:flex; align-items:center; justify-content:space-between;
+  box-shadow:0 6px 18px rgba(38,34,27,.25); z-index:25; cursor:pointer;
+}
+.cart-bar-info{ font-size:13px; font-weight:700; }
+.cart-count{ background:rgba(255,255,255,.25); border-radius:99px; padding:2px 8px; margin-right:6px; }
+.cart-total{ margin-left:8px; font-family:'Space Mono',monospace; }
+.cart-bar-cta{ font-size:13px; font-weight:700; }
+.order-card{ background:var(--white); border:1.5px solid var(--line); border-radius:14px; padding:15px 16px; margin-bottom:12px; }
+.order-card .hd{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.order-card .code{ font-family:'Space Mono',monospace; font-size:12px; color:var(--ink-soft); }
+.order-card .items{ font-size:13px; color:var(--ink); margin-bottom:8px; line-height:1.7; }
+.order-card .foot{ display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--line); padding-top:10px; }
+.order-card .total{ font-weight:700; font-family:'Space Mono',monospace; }
+.ck-item-row{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--paper-2); font-size:13.5px; }
 .svc-body{ flex:1; min-width:0; }
 .svc-body h3{ margin:0 0 4px; font-size:15px; font-weight:700; }
 .svc-body p{ margin:0 0 8px; font-size:12.5px; color:var(--ink-soft); line-height:1.5; }
@@ -568,8 +597,28 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
     <!-- ============ PRODUCTS ============ -->
     <section class="screen" id="screen-products">
       <div class="section-title" style="margin-bottom:14px;"><span class="num">🛍️</span>商品</div>
-      <div id="myProductsList"></div>
+      <div class="prod-tab-pair">
+        <button class="prod-tab active" id="prodTabShop" onclick="setProductsTab('shop')">商品</button>
+        <button class="prod-tab" id="prodTabOrders" onclick="setProductsTab('orders')">訂單</button>
+      </div>
+
+      <div id="prodShopView">
+        <div id="myProductsList"></div>
+      </div>
+
+      <div id="prodOrdersView" style="display:none;">
+        <div id="myOrdersList"></div>
+      </div>
     </section>
+
+    <!-- ============ CART BAR (商品分頁專用，固定在導覽列上方) ============ -->
+    <div class="cart-bar" id="cartBar" style="display:none;" onclick="openCheckout()">
+      <div class="cart-bar-info">
+        <span class="cart-count" id="cartCount">0</span> 件商品
+        <span class="cart-total" id="cartTotalLabel">$0</span>
+      </div>
+      <div class="cart-bar-cta">前往結帳 →</div>
+    </div>
 
     <!-- ============ ABOUT ============ -->
     <section class="screen" id="screen-about">
@@ -609,6 +658,33 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
     </div>
   </div>
 
+  </div>
+
+  <!-- ============ CHECKOUT SHEET ============ -->
+  <div class="sheet-backdrop" id="checkoutBackdrop" onclick="if(event.target===this)closeCheckout()">
+    <div class="sheet" style="position:relative; max-height:88vh;">
+      <div class="sheet-close" onclick="closeCheckout()">✕</div>
+      <div class="sheet-handle"></div>
+      <h3>確認訂單</h3>
+      <div id="checkoutItemsList" style="margin-bottom:14px;"></div>
+      <div class="bkt-total" style="margin-bottom:18px;">
+        <span class="lbl">總計</span>
+        <span class="amt" id="checkoutTotal">$0</span>
+      </div>
+      <div class="field">
+        <label for="ckName">姓名</label>
+        <input type="text" id="ckName" placeholder="您的姓名">
+      </div>
+      <div class="field">
+        <label for="ckPhone">手機號碼</label>
+        <input type="tel" id="ckPhone" placeholder="0912-345-678">
+      </div>
+      <div class="field">
+        <label for="ckNote">備註（選填）</label>
+        <textarea id="ckNote" placeholder="有其他需求嗎？告訴我們吧"></textarea>
+      </div>
+      <button class="btn btn-primary" style="width:100%;" onclick="submitOrder()">送出訂單</button>
+    </div>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -815,6 +891,12 @@ function startCustomerListeners(uid){
       }
     }, err=>console.error('my bookings listener', err))
   );
+  unsubscribers.push(
+    db.collection('orders').where('customerId','==',uid).onSnapshot(snap=>{
+      MY_ORDERS = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=> new Date(b.createdAt||0) - new Date(a.createdAt||0));
+      if(productsTab==='orders') renderMyOrders();
+    }, err=>console.error('my orders listener', err))
+  );
 }
 function rerenderActiveScreen(){
   const active = document.querySelector('#custMainApp .screen.active');
@@ -825,7 +907,8 @@ function rerenderActiveScreen(){
   if(id==='staff') renderStaffGrid();
   if(id==='datetime'){ renderDateStrip(); renderTimeGrid(); }
   if(id==='mybookings') renderMyBookings();
-  if(id==='products') renderMyProducts();
+  if(id==='products'){ renderMyProducts(); setProductsTab(productsTab); }
+  if(id!=='products'){ const bar=document.getElementById('cartBar'); if(bar) bar.style.display='none'; }
   if(id==='about') renderAbout();
 }
 
@@ -1054,7 +1137,8 @@ function goScreen(id, opts={}){
   if(id==='datetime') { renderDateStrip(); renderTimeGrid(); }
   if(id==='info') renderInfoSummary();
   if(id==='mybookings') renderMyBookings();
-  if(id==='products') renderMyProducts();
+  if(id==='products'){ renderMyProducts(); setProductsTab(productsTab); }
+  if(id!=='products'){ const bar=document.getElementById('cartBar'); if(bar) bar.style.display='none'; }
   if(id==='about') renderAbout();
 }
 function goStep(id){ goScreen(id); }
@@ -1545,6 +1629,49 @@ async function cancelBooking(id){
 /* ============================================================
    商品：與商家後台共用 Firestore products 集合（PRODUCTS 由 onSnapshot 同步）
    ============================================================ */
+/* ============================================================
+   商品購買（購物車 + 訂單）
+   ============================================================ */
+let cart = {}; // { productId: qty }
+let productsTab = 'shop';
+function setProductsTab(tab){
+  productsTab = tab;
+  document.getElementById('prodTabShop').classList.toggle('active', tab==='shop');
+  document.getElementById('prodTabOrders').classList.toggle('active', tab==='orders');
+  document.getElementById('prodShopView').style.display = tab==='shop' ? 'block' : 'none';
+  document.getElementById('prodOrdersView').style.display = tab==='orders' ? 'block' : 'none';
+  updateCartBarVisibility();
+  if(tab==='orders') renderMyOrders();
+}
+function updateCartBarVisibility(){
+  const bar = document.getElementById('cartBar');
+  if(!bar) return;
+  const totalQty = Object.values(cart).reduce((a,b)=>a+b,0);
+  bar.style.display = (productsTab==='shop' && totalQty>0) ? 'flex' : 'none';
+  if(totalQty>0){
+    document.getElementById('cartCount').textContent = totalQty;
+    document.getElementById('cartTotalLabel').textContent = '$'+cartTotal();
+  }
+}
+function cartTotal(){
+  return Object.entries(cart).reduce((sum,[pid,qty])=>{
+    const p = PRODUCTS.find(x=>x.id===pid);
+    return sum + (p ? p.price*qty : 0);
+  }, 0);
+}
+function prodQty(pid){ return cart[pid] || 0; }
+function stepProdQty(pid, delta){
+  const p = PRODUCTS.find(x=>x.id===pid);
+  if(!p) return;
+  const cur = cart[pid] || 0;
+  let next = cur + delta;
+  if(next < 0) next = 0;
+  const maxStock = (p.stock!==null && p.stock!==undefined && p.stock!=='') ? p.stock : null;
+  if(maxStock!==null && next > maxStock){ showToast('已達庫存上限'); return; }
+  if(next===0){ delete cart[pid]; } else { cart[pid] = next; }
+  renderMyProducts();
+  updateCartBarVisibility();
+}
 function renderMyProducts(){
   const wrap = document.getElementById('myProductsList');
   const products = PRODUCTS;
@@ -1552,15 +1679,103 @@ function renderMyProducts(){
     wrap.innerHTML = `<div class="empty-state"><div class="ic">🛍️</div><h3>目前尚無商品</h3><p>商家上架商品後會顯示在這裡</p></div>`;
     return;
   }
-  wrap.innerHTML = products.map(p=>`
-    <div class="svc-card">
+  wrap.innerHTML = products.map(p=>{
+    const hasStock = !(p.stock!==null && p.stock!==undefined && p.stock!=='' && p.stock<=0);
+    const qty = prodQty(p.id);
+    return `
+    <div class="svc-card" style="align-items:flex-start;">
       <div class="svc-ic">${p.image ? `<img src="${p.image}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover; border-radius:inherit;">` : p.icon}</div>
       <div class="svc-body">
         <h3>${p.name}</h3>
         <p>${p.desc||''}</p>
         ${(p.stock!==null && p.stock!==undefined && p.stock!=='') ? `<div class="svc-meta"><span>庫存 ${p.stock}</span></div>` : ''}
+        <div class="prod-qty-row">
+          ${hasStock ? `
+          <div class="prod-qty-stepper">
+            <button onclick="stepProdQty('${p.id}', -1)">－</button>
+            <span class="qv">${qty}</span>
+            <button onclick="stepProdQty('${p.id}', 1)">＋</button>
+          </div>
+          <button class="prod-add-btn" ${qty>0?'':'disabled'} onclick="if(${qty}===0){stepProdQty('${p.id}',1);}">${qty>0?'已加入':'加入購物車'}</button>
+          ` : `<button class="prod-add-btn" disabled>已售完</button>`}
+        </div>
       </div>
       <div class="svc-price">$${p.price}</div>
+    </div>`;
+  }).join('');
+  updateCartBarVisibility();
+}
+function openCheckout(){
+  const totalQty = Object.values(cart).reduce((a,b)=>a+b,0);
+  if(totalQty===0){ showToast('購物車是空的'); return; }
+  const items = Object.entries(cart).map(([pid,qty])=>{
+    const p = PRODUCTS.find(x=>x.id===pid);
+    return p ? { name:p.name, price:p.price, qty, subtotal:p.price*qty } : null;
+  }).filter(Boolean);
+  document.getElementById('checkoutItemsList').innerHTML = items.map(it=>`
+    <div class="ck-item-row"><span>${it.name} ×${it.qty}</span><span>$${it.subtotal}</span></div>
+  `).join('');
+  document.getElementById('checkoutTotal').textContent = '$'+cartTotal();
+  const cp = currentCustomer();
+  document.getElementById('ckName').value = (cp && cp.name) || '';
+  document.getElementById('ckPhone').value = (cp && cp.phone) || '';
+  document.getElementById('ckNote').value = '';
+  document.getElementById('checkoutBackdrop').classList.add('show');
+}
+function closeCheckout(){ document.getElementById('checkoutBackdrop').classList.remove('show'); }
+function genOrderCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for(let i=0;i<6;i++){ s += chars[Math.floor(Math.random()*chars.length)]; }
+  return 'ORD-'+s;
+}
+async function submitOrder(){
+  const name = document.getElementById('ckName').value.trim();
+  const phone = document.getElementById('ckPhone').value.trim();
+  if(!name){ showToast('請輸入姓名'); return; }
+  if(!phone){ showToast('請輸入手機號碼'); return; }
+  const items = Object.entries(cart).map(([pid,qty])=>{
+    const p = PRODUCTS.find(x=>x.id===pid);
+    return p ? { productId:pid, name:p.name, price:p.price, qty, subtotal:p.price*qty } : null;
+  }).filter(Boolean);
+  if(items.length===0){ showToast('購物車是空的'); return; }
+  const order = {
+    code: genOrderCode(),
+    customerId: currentCustomerId() || null,
+    customer: { name, phone, email: (currentCustomer()&&currentCustomer().email) || '', note: document.getElementById('ckNote').value.trim() },
+    items,
+    totalAmount: items.reduce((s,it)=>s+it.subtotal,0),
+    status: 'pending',
+    createdAt: new Date().toISOString()
+  };
+  try{
+    await db.collection('orders').add(order);
+    cart = {};
+    closeCheckout();
+    renderMyProducts();
+    updateCartBarVisibility();
+    setProductsTab('orders');
+    showToast('訂單已送出');
+  }catch(err){ showToast('送出失敗，請檢查網路連線後再試'); console.error(err); }
+}
+let MY_ORDERS = [];
+function renderMyOrders(){
+  const wrap = document.getElementById('myOrdersList');
+  if(!wrap) return;
+  if(!currentCustomerId()){
+    wrap.innerHTML = `<div class="empty-state"><div class="ic">🧾</div><h3>登入後查看訂單</h3><p>請先登入會員帳號才能查看你的購買紀錄</p></div>`;
+    return;
+  }
+  if(MY_ORDERS.length===0){
+    wrap.innerHTML = `<div class="empty-state"><div class="ic">🧾</div><h3>尚無訂單</h3><p>購買商品後，訂單紀錄會顯示在這裡</p></div>`;
+    return;
+  }
+  const statusLabels = { pending:'已送出', done:'已完成', cancelled:'已取消' };
+  wrap.innerHTML = MY_ORDERS.map(o=>`
+    <div class="order-card">
+      <div class="hd"><span class="code">${o.code}</span><span class="status-pill status-pending">${statusLabels[o.status]||o.status}</span></div>
+      <div class="items">${o.items.map(it=>`${it.name} ×${it.qty}`).join('、')}</div>
+      <div class="foot"><span class="field-hint" style="margin:0;">${(o.createdAt||'').slice(0,10)}</span><span class="total">$${o.totalAmount}</span></div>
     </div>
   `).join('');
 }
