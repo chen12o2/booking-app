@@ -2669,10 +2669,50 @@ function renderOrdersList(){
   `).join('');
 }
 async function updateOrderStatus(id, status){
+  const order = ALL_ORDERS.find(o=>o.id===id);
+  if(!order){ showToast('找不到這筆訂單'); return; }
+  const orderRef = db.collection('orders').doc(id);
   try{
-    await db.collection('orders').doc(id).update({ status });
+    // 取消訂單 → 把庫存還回去；從「已取消」恢復成「待處理」→ 重新扣庫存（要重新檢查夠不夠）
+    if(status==='cancelled' && order.status!=='cancelled'){
+      await db.runTransaction(async (tx)=>{
+        const refs = order.items.map(it=>db.collection('products').doc(it.productId));
+        const snaps = await Promise.all(refs.map(r=>tx.get(r)));
+        for(let i=0;i<order.items.length;i++){
+          const data = snaps[i].data();
+          const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
+          if(hasStock){ tx.update(refs[i], { stock: data.stock + order.items[i].qty }); }
+        }
+        tx.update(orderRef, { status });
+      });
+    } else if(status==='pending' && order.status==='cancelled'){
+      await db.runTransaction(async (tx)=>{
+        const refs = order.items.map(it=>db.collection('products').doc(it.productId));
+        const snaps = await Promise.all(refs.map(r=>tx.get(r)));
+        for(let i=0;i<order.items.length;i++){
+          const data = snaps[i].data();
+          const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
+          if(hasStock && data.stock < order.items[i].qty){ throw new Error('STOCK_SHORT:'+order.items[i].name); }
+        }
+        for(let i=0;i<order.items.length;i++){
+          const data = snaps[i].data();
+          const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
+          if(hasStock){ tx.update(refs[i], { stock: data.stock - order.items[i].qty }); }
+        }
+        tx.update(orderRef, { status });
+      });
+    } else {
+      await orderRef.update({ status });
+    }
     showToast('訂單狀態已更新');
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){
+    const msg = String(err && err.message || '');
+    if(msg.startsWith('STOCK_SHORT:')){
+      showToast(`「${msg.slice(12)}」目前庫存不足，無法恢復成待處理`);
+    } else {
+      showToast('更新失敗，請檢查網路連線後再試');
+    }
+  }
 }
 function openProductForm(id){
   const isEdit = !!id;

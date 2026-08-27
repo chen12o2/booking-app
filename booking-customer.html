@@ -1748,15 +1748,41 @@ async function submitOrder(){
     status: 'pending',
     createdAt: new Date().toISOString()
   };
+  const orderRef = db.collection('orders').doc();
   try{
-    await db.collection('orders').add(order);
+    await db.runTransaction(async (tx)=>{
+      // 交易內：先讀取每個商品目前的庫存，確認夠了才真正扣，避免跟其他顧客同時搶購時超賣
+      const productRefs = items.map(it=>db.collection('products').doc(it.productId));
+      const snaps = await Promise.all(productRefs.map(ref=>tx.get(ref)));
+      for(let i=0;i<items.length;i++){
+        const data = snaps[i].data();
+        const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
+        if(hasStock && data.stock < items[i].qty){
+          throw new Error('STOCK_SHORT:'+items[i].name);
+        }
+      }
+      for(let i=0;i<items.length;i++){
+        const data = snaps[i].data();
+        const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
+        if(hasStock){ tx.update(productRefs[i], { stock: data.stock - items[i].qty }); }
+      }
+      tx.set(orderRef, order);
+    });
     cart = {};
     closeCheckout();
     renderMyProducts();
     updateCartBarVisibility();
     setProductsTab('orders');
     showToast('訂單已送出');
-  }catch(err){ showToast('送出失敗，請檢查網路連線後再試'); console.error(err); }
+  }catch(err){
+    const msg = String(err && err.message || '');
+    if(msg.startsWith('STOCK_SHORT:')){
+      showToast(`「${msg.slice(12)}」庫存不足，請調整數量再試一次`);
+    } else {
+      showToast('送出失敗，請檢查網路連線後再試');
+    }
+    console.error(err);
+  }
 }
 let MY_ORDERS = [];
 function renderMyOrders(){
