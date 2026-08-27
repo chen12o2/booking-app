@@ -72,10 +72,11 @@ body{
 
 /* ---- header ---- */
 .topbar{
-  position:sticky; top:0; z-index:20;
+  position:fixed; top:0; left:50%; transform:translateX(-50%); z-index:20;
+  width:100%; max-width:430px;
   background:var(--paper);
   border-bottom:1.5px solid var(--line);
-  padding:14px 18px 12px;
+  padding:calc(14px + env(safe-area-inset-top)) 18px 12px;
   display:flex; align-items:center; gap:10px;
 }
 .topbar h1{
@@ -94,7 +95,7 @@ body{
   font-family:'Space Mono', monospace; font-size:11px; color:var(--ink-soft);
 }
 
-main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px); }
+main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px); }
 .screen{ display:none; animation:fadeIn .28s ease; }
 .screen.active{ display:block; }
 @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
@@ -214,6 +215,9 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 }
 .date-chip.selected{ background:var(--ledger); border-color:var(--ledger); color:var(--white); }
 .date-chip.disabled{ opacity:.35; cursor:not-allowed; }
+.date-chip.break-day{ opacity:1; background:#FBF0EC; border-color:var(--stamp); }
+.date-chip.break-day .dow, .date-chip.break-day .dom{ color:var(--stamp-dark); }
+.date-chip.break-day .reason{ font-size:8.5px; color:var(--stamp-dark); font-weight:700; margin-top:1px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .date-chip .dow{ font-size:11px; opacity:.8; }
 .date-chip .dom{ font-family:'Noto Serif TC', serif; font-size:18px; font-weight:700; margin:2px 0; }
 .date-chip .mon{ font-size:9.5px; opacity:.75; font-family:'Space Mono', monospace; }
@@ -1166,6 +1170,19 @@ function pickStaff(id){
 function fmtDateKey(d){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
+/* 找出讓這一天整天休息的那筆 break 設定的標籤文字（沒有對應設定就回傳 null，
+   代表這天只是單純不在營業時段內，不是特別標記的休假原因） */
+function closedDayReason(dateKey){
+  const [y,m,d] = dateKey.split('-').map(Number);
+  const wd = new Date(y,m-1,d).getDay();
+  const hit = (BUSINESS.breaks||[]).find(b=>{
+    if(!breakAppliesToDate(b, dateKey, wd)) return false;
+    if(b.allDay===true) return true;
+    if(!b.ranges || b.ranges.length===0) return true;
+    return false;
+  });
+  return hit ? (hit.label || '休息') : null;
+}
 function renderDateStrip(){
   const wrap = document.getElementById('dateStrip');
   const dows = ['日','一','二','三','四','五','六'];
@@ -1175,12 +1192,14 @@ function renderDateStrip(){
   for(let i=0;i<14;i++){
     const d = new Date(today); d.setDate(today.getDate()+i);
     const key = fmtDateKey(d);
-    const closed = !isDateWithinOpenWindow(key);
+    const outOfWindow = !isDateWithinOpenWindow(key);
+    const breakReason = closedDayReason(key);
+    const closed = outOfWindow || !!breakReason;
     const sel = state.date===key ? 'selected' : '';
-    html += `<div class="date-chip ${sel} ${closed?'disabled':''}" ${closed?'':`onclick="pickDate('${key}')"`}>
+    html += `<div class="date-chip ${sel} ${closed?'disabled':''} ${breakReason?'break-day':''}" ${closed?'':`onclick="pickDate('${key}')"`}>
       <div class="dow">週${dows[d.getDay()]}</div>
       <div class="dom">${d.getDate()}</div>
-      <div class="mon">${String(d.getMonth()+1).padStart(2,'0')}月</div>
+      ${breakReason ? `<div class="reason">${breakReason}</div>` : `<div class="mon">${String(d.getMonth()+1).padStart(2,'0')}月</div>`}
     </div>`;
   }
   wrap.innerHTML = html;

@@ -821,7 +821,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
             </div>
             <div class="field-hint" id="calGridCount" style="text-align:center; margin:10px 0;">共 0 筆預約</div>
             <div class="cal-grid-wd">
-              <span>週一</span><span>週二</span><span>週三</span><span>週四</span><span>週五</span><span>週六</span><span>週日</span>
+              <span>週日</span><span>週一</span><span>週二</span><span>週三</span><span>週四</span><span>週五</span><span>週六</span>
             </div>
             <div class="cal-grid cal-grid-bookings" id="calGridDays"></div>
           </div>
@@ -3198,8 +3198,8 @@ function renderCalGrid(){
   const wrap = document.getElementById('calGridDays');
   if(!wrap) return;
   const y = calGridDate.getFullYear(), m = calGridDate.getMonth();
-  // 週一開頭
-  const firstDow = (new Date(y,m,1).getDay() + 6) % 7;
+  // 週日開頭
+  const firstDow = new Date(y,m,1).getDay();
   const daysInMonth = new Date(y,m+1,0).getDate();
   const now = new Date();
   const todayKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
