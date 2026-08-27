@@ -353,6 +353,19 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .crud-body h4{ margin:0 0 3px; font-size:14.5px; font-weight:700; }
 .crud-body p{ margin:0 0 6px; font-size:12px; color:var(--ink-soft); line-height:1.5; }
 .crud-meta{ font-family:'Space Mono', monospace; font-size:11.5px; color:var(--ledger-dark); display:flex; gap:10px; }
+.order-card{ background:var(--white); border:1.5px solid var(--line); border-radius:var(--radius); padding:15px 16px; margin-bottom:12px; }
+.order-card .hd{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.order-card .code{ font-family:'Space Mono',monospace; font-size:12px; color:var(--ink-soft); }
+.order-card .who{ font-size:13.5px; font-weight:700; margin-bottom:4px; }
+.order-card .contact{ font-size:12px; color:var(--ink-soft); margin-bottom:8px; }
+.order-card .items{ font-size:13px; color:var(--ink); margin-bottom:8px; line-height:1.7; }
+.order-card .note{ font-size:12px; color:var(--ink-soft); margin-bottom:8px; }
+.order-card .foot{ display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--line); padding-top:10px; margin-bottom:10px; }
+.order-card .total{ font-weight:700; font-family:'Space Mono',monospace; }
+.order-card .actions{ display:flex; gap:8px; }
+.order-card .actions button{ flex:1; padding:9px 10px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; border:1.5px solid var(--line); background:var(--white); color:var(--ink); }
+.order-card .actions button.primary{ background:var(--ledger); border-color:var(--ledger); color:var(--white); }
+.order-card .actions button.danger{ color:var(--stamp-dark); border-color:var(--stamp); }
 .crud-actions{ display:flex; gap:8px; flex-shrink:0; }
 .crud-actions .ic-btn{ width:28px; height:28px; border-radius:50%; border:1.5px solid var(--line); background:var(--white); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px; }
 
@@ -866,6 +879,15 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 
         <div class="section-title" style="margin-top:26px;"><span class="lead"><span class="num">2</span>商品項目</span><button class="add-btn" onclick="openProductForm()">＋ 新增商品</button></div>
         <div id="productsList"></div>
+
+        <div class="section-title" style="margin-top:26px;"><span class="lead"><span class="num">3</span>商品訂單</span></div>
+        <div class="filter-row" id="orderFilterRow" style="margin-bottom:14px;">
+          <div class="filter-chip active" data-status="all" onclick="setOrderFilter('all')">全部</div>
+          <div class="filter-chip" data-status="pending" onclick="setOrderFilter('pending')">待處理</div>
+          <div class="filter-chip" data-status="done" onclick="setOrderFilter('done')">已完成</div>
+          <div class="filter-chip" data-status="cancelled" onclick="setOrderFilter('cancelled')">已取消</div>
+        </div>
+        <div id="ordersList"></div>
       </section>
 
       <!-- ============ STAFF ============ -->
@@ -1340,6 +1362,8 @@ const DEFAULT_STAFF = [
 let BUSINESS = {...DEFAULT_BUSINESS};
 let SERVICES = [...DEFAULT_SERVICES];
 let PRODUCTS = [];
+let ALL_ORDERS = [];
+let orderFilter = 'all';
 let STAFF_LIST = [...DEFAULT_STAFF];
 let ALL_BOOKINGS = [];
 let ALL_CUSTOMERS = [];
@@ -1404,6 +1428,12 @@ function startListeners(){
     }, err=>console.error('products listener', err))
   );
   unsubscribers.push(
+    db.collection('orders').onSnapshot(snap=>{
+      ALL_ORDERS = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=> new Date(b.createdAt||0) - new Date(a.createdAt||0));
+      rerenderActiveScreen();
+    }, err=>console.error('orders listener', err))
+  );
+  unsubscribers.push(
     db.collection('bookings').onSnapshot(snap=>{
       ALL_BOOKINGS = snap.docs.map(d=>({ id:d.id, ...d.data() }));
       rerenderActiveScreen();
@@ -1424,7 +1454,7 @@ function rerenderActiveScreen(){
   if(id==='bookings'){ setCalView(calView); renderBookingsList(); }
   if(id==='calendar'){ renderCalLink(); renderSharePage(); }
   if(id==='customers') renderCustomersList();
-  if(id==='services'){ renderServicesList(); renderProductsList(); }
+  if(id==='services'){ renderServicesList(); renderProductsList(); renderOrdersList(); }
   if(id==='staff') renderStaffListView();
   if(id==='shopfront') renderShopfrontScreen();
   if(id==='customer-detail') renderCustomerDetailScreen();
@@ -1609,7 +1639,7 @@ function goScreen(id, opts={}){
   if(id==='bookings'){ setCalView(calView); renderBookingsList(); }
   if(id==='calendar'){ renderCalLink(); renderSharePage(); }
   if(id==='customers') renderCustomersList();
-  if(id==='services') { renderServicesList(); renderProductsList(); }
+  if(id==='services') { renderServicesList(); renderProductsList(); renderOrdersList(); }
   if(id==='staff') renderStaffListView();
   if(id==='shopfront') renderShopfrontScreen();
   if(id==='customer-detail') renderCustomerDetailScreen();
@@ -2601,6 +2631,48 @@ function renderProductsList(){
       </div>
     </div>
   `).join('');
+}
+/* ---- 商品訂單管理 ---- */
+function setOrderFilter(status){
+  orderFilter = status;
+  document.querySelectorAll('#orderFilterRow .filter-chip').forEach(el=>{
+    el.classList.toggle('active', el.dataset.status===status);
+  });
+  renderOrdersList();
+}
+function renderOrdersList(){
+  const wrap = document.getElementById('ordersList');
+  if(!wrap) return;
+  let list = orderFilter==='all' ? ALL_ORDERS : ALL_ORDERS.filter(o=>o.status===orderFilter);
+  if(list.length===0){
+    wrap.innerHTML = `<div class="empty-state"><div class="ic">🧾</div><h3>尚無訂單</h3><p>顧客在商品頁購買後，訂單會顯示在這裡。</p></div>`;
+    return;
+  }
+  const statusLabels = { pending:'待處理', done:'已完成', cancelled:'已取消' };
+  wrap.innerHTML = list.map(o=>`
+    <div class="order-card">
+      <div class="hd"><span class="code">${o.code}</span><span class="status-pill ${o.status==='done'?'status-done':o.status==='cancelled'?'status-cancelled':'status-pending'}">${statusLabels[o.status]||o.status}</span></div>
+      <div class="who">${o.customer.name}</div>
+      <div class="contact">📱 ${o.customer.phone}</div>
+      <div class="items">${o.items.map(it=>`${it.name} ×${it.qty}　$${it.subtotal}`).join('<br>')}</div>
+      ${o.customer.note ? `<div class="note">備註：${o.customer.note}</div>` : ''}
+      <div class="foot"><span class="field-hint" style="margin:0;">${(o.createdAt||'').slice(0,10)}</span><span class="total">$${o.totalAmount}</span></div>
+      ${o.status==='pending' ? `
+      <div class="actions">
+        <button class="primary" onclick="updateOrderStatus('${o.id}','done')">標記完成</button>
+        <button class="danger" onclick="updateOrderStatus('${o.id}','cancelled')">取消訂單</button>
+      </div>` : `
+      <div class="actions">
+        <button onclick="updateOrderStatus('${o.id}','pending')">恢復為待處理</button>
+      </div>`}
+    </div>
+  `).join('');
+}
+async function updateOrderStatus(id, status){
+  try{
+    await db.collection('orders').doc(id).update({ status });
+    showToast('訂單狀態已更新');
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
 function openProductForm(id){
   const isEdit = !!id;
