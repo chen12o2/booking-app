@@ -518,8 +518,8 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
         <label for="custPhone" id="custPhoneLabel">手機號碼</label>
         <input type="tel" id="custPhone" placeholder="0912-345-678">
       </div>
-      <div class="field">
-        <label for="custLineId">LINE ID（選填）</label>
+      <div class="field" id="custLineIdField">
+        <label for="custLineId" id="custLineIdLabel">LINE ID（選填）</label>
         <input type="text" id="custLineId" placeholder="您的 LINE ID">
       </div>
       <div class="field" id="custBirthdayField">
@@ -1331,6 +1331,7 @@ function renderInfoSummary(){
 function applyFieldPolicy(){
   const rules = [
     { key:'fieldPhone', mode: BUSINESS.fieldPhone || 'required', fieldId:'custPhoneField', labelId:'custPhoneLabel', base:'手機號碼' },
+    { key:'fieldLineId', mode: BUSINESS.fieldLineId || 'optional', fieldId:'custLineIdField', labelId:'custLineIdLabel', base:'LINE ID' },
     { key:'fieldBirthday', mode: BUSINESS.fieldBirthday || 'optional', fieldId:'custBirthdayField', labelId:'custBirthdayLabel', base:'生日（西元年月日）' },
     { key:'fieldGender', mode: BUSINESS.fieldGender || 'optional', fieldId:'custGenderField', labelId:'custGenderLabel', base:'性別' }
   ];
@@ -1354,6 +1355,8 @@ async function submitBooking(){
   if(!name){ showToast('請輸入姓名'); return; }
   const phoneMode = BUSINESS.fieldPhone || 'required';
   if(phoneMode==='required' && !phone){ showToast('請輸入手機號碼'); return; }
+  const lineIdMode = BUSINESS.fieldLineId || 'optional';
+  if(lineIdMode==='required' && !lineId){ showToast('請輸入 LINE ID'); return; }
   const birthdayMode = BUSINESS.fieldBirthday || 'optional';
   if(birthdayMode==='required' && !birthday){ showToast('請填寫生日'); return; }
   const genderMode = BUSINESS.fieldGender || 'optional';
@@ -1386,7 +1389,7 @@ async function submitBooking(){
     staff: state.staff,
     date: state.date,
     time: state.time,
-    customer: { name, phone: phoneMode==='off'?'':phone, lineId, birthday: birthdayMode==='off'?'':birthday, gender: genderMode==='off'?'':gender, email, note },
+    customer: { name, phone: phoneMode==='off'?'':phone, lineId: lineIdMode==='off'?'':lineId, birthday: birthdayMode==='off'?'':birthday, gender: genderMode==='off'?'':gender, email, note },
     status: (BUSINESS.requireConfirm === false) ? 'upcoming' : 'pending',
     createdAt: new Date().toISOString()
   };

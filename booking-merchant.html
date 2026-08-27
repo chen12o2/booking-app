@@ -189,7 +189,7 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
 /* ---- detail sheet (modal) ---- */
 .sheet-backdrop{
   position:fixed; inset:0; background:rgba(38,34,27,.45); z-index:80; display:none;
-  align-items:flex-end; justify-content:center;
+  align-items:flex-end; justify-content:center; overscroll-behavior:contain;
 }
 .sheet-backdrop.show{ display:flex; }
 .sheet{
@@ -456,7 +456,10 @@ main{ padding:18px 18px calc(var(--nav-h) + 28px); min-height:calc(100vh - 60px)
   margin-bottom:16px;
 }
 .poster-gen-head{ padding:20px 20px 0; flex-shrink:0; }
-.poster-gen-scroll{ flex:1; overflow-y:auto; padding:0 20px; min-height:0; }
+.poster-gen-scroll{
+  flex:1; overflow-y:auto; padding:0 20px; min-height:0;
+  overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
+}
 .poster-gen-foot{ padding:16px 20px calc(20px + env(safe-area-inset-bottom)); flex-shrink:0; border-top:1px solid var(--paper-2); }
 .slot-poster{
   background:linear-gradient(180deg,#F0E9D8,#E9E0C8); border-radius:16px; padding:20px 14px; text-align:center;
@@ -2861,8 +2864,12 @@ function openPosterGen(){
   posterMonthOffset = 0;
   setPosterMonth(0);
   document.getElementById('posterGenBackdrop').classList.add('show');
+  document.body.style.overflow = 'hidden';
 }
-function closePosterGen(){ document.getElementById('posterGenBackdrop').classList.remove('show'); }
+function closePosterGen(){
+  document.getElementById('posterGenBackdrop').classList.remove('show');
+  document.body.style.overflow = '';
+}
 function setPosterMonth(offset){
   posterMonthOffset = offset;
   document.getElementById('posterMonthCur').classList.toggle('active', offset===0);
@@ -3282,6 +3289,15 @@ function openSettingsSheet(kind){
         <div class="field-hint">顧客的聯絡電話。選填時顯示在預約頁但可不填；不用填時則不顯示、也不會蒐集。</div>
       </div>
       <div class="field" style="margin-bottom:16px;">
+        <label>LINE ID</label>
+        <div class="toggle-pair">
+          <button class="toggle-opt" id="fldLineIdReq" onclick="setFieldMode('LineId','required')">必填</button>
+          <button class="toggle-opt" id="fldLineIdOpt" onclick="setFieldMode('LineId','optional')">選填</button>
+          <button class="toggle-opt" id="fldLineIdOff" onclick="setFieldMode('LineId','off')">不用填</button>
+        </div>
+        <div class="field-hint">顧客的 LINE 帳號，方便你私訊聯絡。選填時顯示在預約頁但可不填；不用填時則不顯示、也不會蒐集。</div>
+      </div>
+      <div class="field" style="margin-bottom:16px;">
         <label>生日</label>
         <div class="toggle-pair">
           <button class="toggle-opt" id="fldBirthdayReq" onclick="setFieldMode('Birthday','required')">必填</button>
@@ -3314,6 +3330,7 @@ function openSettingsSheet(kind){
     document.getElementById('requireConfirmSwitch').classList.toggle('on', BUSINESS.requireConfirm !== false);
     document.getElementById('allowMultiServiceSwitch').classList.toggle('on', BUSINESS.allowMultiService === true);
     setFieldMode('Phone', BUSINESS.fieldPhone || 'required', true);
+    setFieldMode('LineId', BUSINESS.fieldLineId || 'optional', true);
     setFieldMode('Birthday', BUSINESS.fieldBirthday || 'optional', true);
     setFieldMode('Gender', BUSINESS.fieldGender || 'optional', true);
     document.getElementById('setCancelDeadline').value = BUSINESS.cancelDeadlineHours ?? 0;
