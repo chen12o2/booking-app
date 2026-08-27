@@ -668,7 +668,8 @@ function buildGoogleCalLink(booking){
     details: '預約編號：' + booking.code,
     location: BUSINESS.address || ''
   });
-  return 'https://calendar.google.com/calendar/render?' + params.toString();
+  // 網址裡的 & 對 HTML 屬性來說理論上該寫成 &amp;，保守起見自己先轉一次避免影響範本解析
+  return ('https://calendar.google.com/calendar/render?' + params.toString()).replace(/&/g, '&amp;');
 }
 /* 寄「顧客預約確認信」：只在這筆預約「正式成立」的那一刻呼叫這個函式，
    不要在還是待確認狀態時就寄，避免顧客誤以為已經確定 */
@@ -677,26 +678,28 @@ function sendCustomerConfirmEmail(booking){
   const toEmail = (booking.customer.email||'').trim();
   if(!toEmail) return; // 顧客沒填 Email，無法寄送
   const svcs = bookingServices(booking);
-  const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '';
+  const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '（無）';
   const totalDur = svcs.reduce((sum,s)=>sum+(s.duration||0),0);
   const [y,m,d] = booking.date.split('-').map(Number);
   const wd = ['日','一','二','三','四','五','六'][new Date(y,m-1,d).getDay()];
-  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_CUSTOMER_CONFIRM, {
-    to_email: toEmail,
-    business_name: BUSINESS.name || '',
-    booking_code: booking.code || '',
-    booking_date: booking.date || '',
-    booking_weekday: wd,
-    booking_time: booking.time || '',
-    service_name: svcLabel,
-    service_duration: totalDur,
-    service_price: '$' + bookingTotal(booking),
-    total_amount: '$' + bookingTotal(booking),
-    business_notice: BUSINESS.notice || '（無）',
-    google_cal_link: buildGoogleCalLink(booking),
-    cancel_link: BUSINESS.customerUrl || '',
-    booking_url: BUSINESS.customerUrl || ''
-  }).catch(err=>console.error('EmailJS 寄送失敗（顧客確認信）', err));
+  const params = {
+    to_email: String(toEmail),
+    business_name: String(BUSINESS.name || 'PaoPaoBeautyStudio'),
+    booking_code: String(booking.code || ''),
+    booking_date: String(booking.date || ''),
+    booking_weekday: String(wd),
+    booking_time: String(booking.time || ''),
+    service_name: String(svcLabel),
+    service_duration: String(totalDur),
+    service_price: '$' + String(bookingTotal(booking)),
+    total_amount: '$' + String(bookingTotal(booking)),
+    business_notice: String(BUSINESS.notice || '（無）'),
+    google_cal_link: String(buildGoogleCalLink(booking)),
+    cancel_link: String(BUSINESS.customerUrl || ''),
+    booking_url: String(BUSINESS.customerUrl || '')
+  };
+  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_CUSTOMER_CONFIRM, params)
+    .catch(err=>console.error('EmailJS 寄送失敗（顧客確認信）', err, params));
 }
 
 /* ============================================================
