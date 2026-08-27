@@ -1223,7 +1223,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
       <input type="hidden" id="custFormId">
       <div class="field"><label for="custFormName">姓名</label><input type="text" id="custFormName" placeholder="顧客姓名"></div>
       <div class="field"><label for="custFormPhone">手機號碼</label><input type="tel" id="custFormPhone" placeholder="0912-345-678"></div>
-      <div class="field"><label for="custFormLineId">LINE ID</label><input type="text" id="custFormLineId"></div>
+      <div class="field"><label for="custFormLineId">LINE ID（選填）</label><input type="text" id="custFormLineId"></div>
       <div class="field"><label for="custFormBirthday">生日（選填，西元年月日）</label><input type="date" id="custFormBirthday"></div>
       <div class="field"><label for="custFormGender">性別（選填）</label>
         <select id="custFormGender">
@@ -1903,7 +1903,6 @@ async function saveCustomer(){
   const lineId = document.getElementById('custFormLineId').value.trim();
   if(!name){ showToast('請輸入姓名'); return; }
   if(!phone){ showToast('請輸入手機號碼'); return; }
-  if(!lineId){ showToast('請輸入 LINE ID'); return; }
   const data = {
     name, phone, lineId,
     birthday: document.getElementById('custFormBirthday').value,
