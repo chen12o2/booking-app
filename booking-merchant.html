@@ -185,6 +185,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .status-cancelled{ background:#F7E5E1; color:var(--stamp-dark); }
 .status-noshow{ background:#F7E5E1; color:var(--stamp-dark); }
 .status-pending{ background:#FBF3E1; color:#8A6A1E; }
+.status-partial{ background:#E8EEF5; color:#3E6A96; }
 
 .empty-state{ text-align:center; padding:60px 20px; color:var(--ink-soft); }
 .empty-state .ic{ font-size:38px; margin-bottom:10px; }
@@ -365,6 +366,24 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .order-card .who{ font-size:13.5px; font-weight:700; margin-bottom:4px; }
 .order-card .contact{ font-size:12px; color:var(--ink-soft); margin-bottom:8px; }
 .order-card .items{ font-size:13px; color:var(--ink); margin-bottom:8px; line-height:1.7; }
+.ship-items{ margin-bottom:8px; }
+.ship-item-row{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:8px 0; border-bottom:1px solid var(--paper-2);
+}
+.ship-item-row:last-child{ border-bottom:none; }
+.ship-item-row .si-info{ min-width:0; flex:1; }
+.ship-item-row .si-name{ font-size:13px; color:var(--ink); margin-bottom:2px; }
+.ship-item-row .si-progress{ font-size:11px; color:var(--ink-soft); font-family:'Space Mono',monospace; }
+.ship-item-row .si-progress.partial{ color:#3E6A96; font-weight:700; }
+.ship-item-row .si-progress.full{ color:var(--ledger-dark); font-weight:700; }
+.ship-item-row .si-stepper{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.ship-item-row .si-stepper button{
+  width:26px; height:26px; border-radius:8px; border:1.5px solid var(--line); background:var(--white);
+  color:var(--ink); font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; line-height:1;
+}
+.ship-item-row .si-stepper button:disabled{ opacity:.35; cursor:default; }
+.ship-item-row .si-stepper span{ font-family:'Space Mono',monospace; font-size:13px; font-weight:700; min-width:14px; text-align:center; }
 .order-card .note{ font-size:12px; color:var(--ink-soft); margin-bottom:8px; }
 .order-card .foot{ display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--line); padding-top:10px; margin-bottom:10px; }
 .order-card .total{ font-weight:700; font-family:'Space Mono',monospace; }
@@ -526,29 +545,38 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 }
 .poster-gen-foot{ padding:16px 20px calc(20px + env(safe-area-inset-bottom)); flex-shrink:0; border-top:1px solid var(--paper-2); }
 .slot-poster{
-  background:linear-gradient(180deg,#F0E9D8,#E9E0C8); border-radius:16px; padding:20px 14px; text-align:center;
+  background:radial-gradient(120% 55% at 50% 0%, #FCF5EC 0%, #F4E6D2 65%, #EDDBC0 100%);
+  border-radius:20px; padding:26px 16px 18px; text-align:center;
 }
-.slot-poster .logo{ width:52px; height:52px; border-radius:50%; margin:0 auto 8px; overflow:hidden; background:var(--paper); display:flex; align-items:center; justify-content:center; font-size:22px; }
+.slot-poster .logo{
+  width:64px; height:64px; border-radius:50%; margin:0 auto 10px; overflow:hidden; background:var(--paper);
+  display:flex; align-items:center; justify-content:center; font-size:26px;
+  box-shadow:0 0 0 3px var(--white), 0 2px 8px rgba(38,34,27,0.12);
+}
 .slot-poster .logo img{ width:100%; height:100%; object-fit:cover; }
-.slot-poster .en-month{ font-family:'Noto Serif TC',serif; font-size:32px; font-weight:900; color:var(--ink); margin:2px 0; }
-.slot-poster .sub{ font-size:11px; color:var(--ink-soft); margin-bottom:8px; }
-.slot-poster .biz{ font-size:13px; font-weight:700; }
-.slot-poster .handle{ font-size:11px; color:var(--ink-soft); margin-bottom:12px; }
-.slot-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; background:var(--white); border-radius:10px; padding:8px 4px; }
-.slot-grid .wd{ font-size:10px; color:var(--ink-soft); text-align:center; padding-bottom:4px; }
+.slot-poster .en-month{ font-family:'Noto Sans TC',sans-serif; font-size:38px; font-weight:900; color:var(--stamp-dark); margin:4px 0 2px; letter-spacing:.5px; }
+.slot-poster .sub{ font-size:10.5px; letter-spacing:1.5px; color:var(--ink-soft); margin-bottom:12px; }
+.slot-poster .biz{ font-size:14px; font-weight:700; color:var(--ink); }
+.slot-poster .handle{ font-size:11px; font-weight:700; color:var(--stamp); margin-bottom:10px; }
+.slot-poster .divider{ border-top:1px solid rgba(38,34,27,0.14); margin:6px 0 12px; }
+.slot-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; background:transparent; padding:0; }
+.slot-grid .wd{ font-size:10px; color:var(--ink-soft); text-align:center; padding-bottom:6px; font-weight:700; }
+.slot-grid .wd.weekend{ color:var(--stamp); }
 .slot-grid .day{ font-size:10px; text-align:center; padding:2px 0; min-height:56px; }
 .slot-grid .day.blank{ visibility:hidden; }
-.slot-grid .day .dnum{ font-weight:700; font-size:11px; margin-bottom:2px; }
-.slot-grid .day .tm{ font-family:'Space Mono',monospace; font-size:8.5px; color:var(--ink-soft); line-height:1.5; }
-.slot-grid .day.full .tm{ text-decoration:line-through; opacity:.5; }
+.slot-grid .day .dnum{ font-weight:700; font-size:11px; margin-bottom:2px; color:var(--ink); }
+.slot-grid .day .tm{ font-family:'Space Mono',monospace; font-weight:700; font-size:8.5px; color:var(--stamp-dark); line-height:1.55; }
+.slot-grid .day.weekend .tm{ color:var(--stamp); }
+.slot-grid .day.full .tm{ text-decoration:line-through; opacity:.5; font-weight:400; color:var(--ink-soft); }
 .slot-grid .day.closed .tm{ color:var(--stamp-dark); font-weight:700; }
 .slot-poster .cta{
-  display:inline-block; background:var(--stamp); color:var(--white); font-size:12px; font-weight:700;
-  padding:10px 18px; border-radius:99px; margin:14px 0 6px;
+  display:inline-block; background:var(--stamp); color:var(--white); font-size:12.5px; font-weight:700;
+  padding:11px 20px; border-radius:99px; margin:16px 0 6px;
 }
-.slot-poster .microtext{ font-size:9.5px; color:var(--ink-soft); margin-bottom:10px; }
-.slot-poster .qr-row{ display:flex; justify-content:flex-end; }
-.slot-poster .qr-row img{ width:56px; height:56px; border-radius:6px; }
+.slot-poster .microtext{ font-size:9.5px; color:var(--ink-soft); margin-bottom:12px; }
+.slot-poster .bottom-row{ display:flex; align-items:flex-end; justify-content:space-between; }
+.slot-poster .qr-cap{ font-size:9px; color:var(--ink-soft); }
+.slot-poster .qr-row img{ width:56px; height:56px; border-radius:6px; background:var(--white); padding:3px; }
 .avail-poster{
   border-radius:14px; overflow:hidden; border:1.5px solid var(--line);
 }
@@ -897,6 +925,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
           <div class="filter-row" id="orderFilterRow" style="margin-bottom:14px;">
             <div class="filter-chip active" data-status="all" onclick="setOrderFilter('all')">全部</div>
             <div class="filter-chip" data-status="pending" onclick="setOrderFilter('pending')">待處理</div>
+            <div class="filter-chip" data-status="partial" onclick="setOrderFilter('partial')">部分出貨</div>
             <div class="filter-chip" data-status="done" onclick="setOrderFilter('done')">已完成</div>
             <div class="filter-chip" data-status="cancelled" onclick="setOrderFilter('cancelled')">已取消</div>
           </div>
@@ -2652,6 +2681,15 @@ function setOrderFilter(status){
   });
   renderOrdersList();
 }
+/* 依每個品項的已出貨數量，推算訂單整體狀態：
+   完全沒出貨＝待處理、全部出貨完＝已完成、出了一部分＝部分出貨 */
+function computeOrderStatus(items){
+  const totalQty = items.reduce((s,it)=>s+it.qty, 0);
+  const shippedQty = items.reduce((s,it)=>s+(it.shippedQty||0), 0);
+  if(shippedQty<=0) return 'pending';
+  if(shippedQty>=totalQty) return 'done';
+  return 'partial';
+}
 function renderOrdersList(){
   const wrap = document.getElementById('ordersList');
   if(!wrap) return;
@@ -2660,32 +2698,72 @@ function renderOrdersList(){
     wrap.innerHTML = `<div class="empty-state"><div class="ic">🧾</div><h3>尚無訂單</h3><p>顧客在商品頁購買後，訂單會顯示在這裡。</p></div>`;
     return;
   }
-  const statusLabels = { pending:'待處理', done:'已完成', cancelled:'已取消' };
-  wrap.innerHTML = list.map(o=>`
+  const statusLabels = { pending:'待處理', partial:'部分出貨', done:'已完成', cancelled:'已取消' };
+  const statusClassMap = { pending:'status-pending', partial:'status-partial', done:'status-done', cancelled:'status-cancelled' };
+  wrap.innerHTML = list.map(o=>{
+    const editable = o.status!=='cancelled';
+    return `
     <div class="order-card">
-      <div class="hd"><span class="code">${o.code}</span><span class="status-pill ${o.status==='done'?'status-done':o.status==='cancelled'?'status-cancelled':'status-pending'}">${statusLabels[o.status]||o.status}</span></div>
+      <div class="hd"><span class="code">${o.code}</span><span class="status-pill ${statusClassMap[o.status]||'status-pending'}">${statusLabels[o.status]||o.status}</span></div>
       <div class="who">${o.customer.name}</div>
       <div class="contact">📱 ${o.customer.phone}</div>
-      <div class="items">${o.items.map(it=>`${it.name} ×${it.qty}　$${it.subtotal}`).join('<br>')}</div>
+      <div class="ship-items">
+        ${o.items.map((it,i)=>{
+          const shipped = it.shippedQty||0;
+          const full = shipped>=it.qty;
+          const progressCls = full ? 'full' : (shipped>0 ? 'partial' : '');
+          return `
+          <div class="ship-item-row">
+            <div class="si-info">
+              <div class="si-name">${it.name} ×${it.qty}　$${it.subtotal}</div>
+              <div class="si-progress ${progressCls}">已出貨 ${shipped}/${it.qty}</div>
+            </div>
+            ${editable ? `
+            <div class="si-stepper">
+              <button ${shipped<=0?'disabled':''} onclick="updateOrderItemShipped('${o.id}',${i},-1)">－</button>
+              <span>${shipped}</span>
+              <button ${full?'disabled':''} onclick="updateOrderItemShipped('${o.id}',${i},1)">＋</button>
+            </div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
       ${o.customer.note ? `<div class="note">備註：${o.customer.note}</div>` : ''}
       <div class="foot"><span class="field-hint" style="margin:0;">${(o.createdAt||'').slice(0,10)}</span><span class="total">$${o.totalAmount}</span></div>
-      ${o.status==='pending' ? `
-      <div class="actions">
-        <button class="primary" onclick="updateOrderStatus('${o.id}','done')">標記完成</button>
-        <button class="danger" onclick="updateOrderStatus('${o.id}','cancelled')">取消訂單</button>
-      </div>` : `
+      ${o.status==='cancelled' ? `
       <div class="actions">
         <button onclick="updateOrderStatus('${o.id}','pending')">恢復為待處理</button>
+      </div>` : `
+      <div class="actions">
+        ${o.status!=='done' ? `<button class="primary" onclick="updateOrderStatus('${o.id}','done')">標記全部出貨</button>` : ''}
+        <button class="danger" onclick="updateOrderStatus('${o.id}','cancelled')">取消訂單</button>
       </div>`}
     </div>
-  `).join('');
+  `;
+  }).join('');
+}
+/* 調整單一品項的已出貨數量（±1，夾在 0～訂購數量之間），並依最新出貨進度自動更新訂單整體狀態 */
+async function updateOrderItemShipped(orderId, itemIndex, delta){
+  const order = ALL_ORDERS.find(o=>o.id===orderId);
+  if(!order){ showToast('找不到這筆訂單'); return; }
+  if(order.status==='cancelled'){ showToast('訂單已取消，無法調整出貨數量'); return; }
+  const items = order.items.map((it,i)=> i===itemIndex
+    ? { ...it, shippedQty: Math.max(0, Math.min(it.qty, (it.shippedQty||0)+delta)) }
+    : it);
+  const newStatus = computeOrderStatus(items);
+  try{
+    await db.collection('orders').doc(orderId).update({ items, status: newStatus });
+  }catch(err){
+    showToast('更新出貨進度失敗，請檢查網路連線後再試');
+  }
 }
 async function updateOrderStatus(id, status){
   const order = ALL_ORDERS.find(o=>o.id===id);
   if(!order){ showToast('找不到這筆訂單'); return; }
   const orderRef = db.collection('orders').doc(id);
   try{
-    // 取消訂單 → 把庫存還回去；從「已取消」恢復成「待處理」→ 重新扣庫存（要重新檢查夠不夠）
+    // 取消訂單 → 只把「還沒出貨」的部分還回庫存，已經出貨的商品不會憑空變回庫存；
+    // 從「已取消」恢復成「待處理」→ 也只針對還沒出貨的部分重新扣庫存（要重新檢查夠不夠），
+    // 已出貨的數量維持原樣，訂單狀態依出貨進度重新計算
     if(status==='cancelled' && order.status!=='cancelled'){
       await db.runTransaction(async (tx)=>{
         const refs = order.items.map(it=>db.collection('products').doc(it.productId));
@@ -2693,7 +2771,8 @@ async function updateOrderStatus(id, status){
         for(let i=0;i<order.items.length;i++){
           const data = snaps[i].data();
           const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
-          if(hasStock){ tx.update(refs[i], { stock: data.stock + order.items[i].qty }); }
+          const remain = order.items[i].qty - (order.items[i].shippedQty||0);
+          if(hasStock && remain>0){ tx.update(refs[i], { stock: data.stock + remain }); }
         }
         tx.update(orderRef, { status });
       });
@@ -2704,15 +2783,21 @@ async function updateOrderStatus(id, status){
         for(let i=0;i<order.items.length;i++){
           const data = snaps[i].data();
           const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
-          if(hasStock && data.stock < order.items[i].qty){ throw new Error('STOCK_SHORT:'+order.items[i].name); }
+          const remain = order.items[i].qty - (order.items[i].shippedQty||0);
+          if(hasStock && remain>0 && data.stock < remain){ throw new Error('STOCK_SHORT:'+order.items[i].name); }
         }
         for(let i=0;i<order.items.length;i++){
           const data = snaps[i].data();
           const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
-          if(hasStock){ tx.update(refs[i], { stock: data.stock - order.items[i].qty }); }
+          const remain = order.items[i].qty - (order.items[i].shippedQty||0);
+          if(hasStock && remain>0){ tx.update(refs[i], { stock: data.stock - remain }); }
         }
-        tx.update(orderRef, { status });
+        tx.update(orderRef, { status: computeOrderStatus(order.items) });
       });
+    } else if(status==='done'){
+      // 「標記全部出貨」快捷：把每個品項的已出貨數量都補到等於訂購數量
+      const items = order.items.map(it=>({ ...it, shippedQty: it.qty }));
+      await orderRef.update({ items, status:'done' });
     } else {
       await orderRef.update({ status });
     }
@@ -3155,14 +3240,17 @@ function renderSlotPosterPreview(){
   let cells = '';
   for(let i=0;i<firstDow;i++){ cells += `<div class="day blank"></div>`; }
   for(let d=1; d<=daysInMonth; d++){
+    const idx = firstDow + d - 1;
+    const col = idx % 7;
+    const weekendCls = col>=5 ? ' weekend' : '';
     const dateKey = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const info = availableSlotsForDate(dateKey);
     if(info.closed){
-      cells += `<div class="day closed"><div class="dnum">${d}</div><div class="tm">${info.label||''}</div></div>`;
+      cells += `<div class="day closed${weekendCls}"><div class="dnum">${d}</div><div class="tm">${info.label||''}</div></div>`;
     } else if(info.full){
-      cells += `<div class="day full"><div class="dnum">${d}</div><div class="tm">${info.label||'已約滿'}</div></div>`;
+      cells += `<div class="day full${weekendCls}"><div class="dnum">${d}</div><div class="tm">${info.label||'已約滿'}</div></div>`;
     } else {
-      cells += `<div class="day"><div class="dnum">${d}</div><div class="tm">${info.slots.join('<br>')}</div></div>`;
+      cells += `<div class="day${weekendCls}"><div class="dnum">${d}</div><div class="tm">${info.slots.join('<br>')}</div></div>`;
     }
   }
   const handle = (BUSINESS.customerUrl||'').replace(/^https?:\/\//,'');
@@ -3173,13 +3261,17 @@ function renderSlotPosterPreview(){
       <div class="sub">${y} ・ ${m+1}月可約時段</div>
       <div class="biz">${BUSINESS.name||''}</div>
       <div class="handle">${handle}</div>
+      <div class="divider"></div>
       <div class="slot-grid">
-        ${wdNames.map(wd=>`<div class="wd">${wd}</div>`).join('')}
+        ${wdNames.map((wd,i)=>`<div class="wd${i>=5?' weekend':''}">${wd}</div>`).join('')}
         ${cells}
       </div>
       <div class="cta">→ 立即線上預約 ・ ${handle}</div>
       <div class="microtext">時段皆可微調，歡迎私訊　劃掉＝已約滿</div>
-      <div class="qr-row"><img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(BUSINESS.customerUrl||'')}"></div>
+      <div class="bottom-row">
+        <div class="qr-cap">掃碼預約</div>
+        <div class="qr-row"><img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(BUSINESS.customerUrl||'')}"></div>
+      </div>
     </div>
   `;
 }
@@ -3211,10 +3303,10 @@ async function downloadSlotPoster(){
   const padX = 14*S;
   const innerW = W - padX*2;
   const cellH = 58*S;
-  const gridPadY = 10*S, wdRowH = 20*S;
-  const gridH = gridPadY*2 + wdRowH + rows*cellH;
-  const headH = 24*S + 52*S + 10*S + 36*S + 6*S + 16*S + 10*S + 18*S + 4*S + 16*S + 14*S;
-  const footH = 26*S + 42*S + 12*S + 16*S + 16*S + 56*S + 20*S;
+  const wdRowH = 20*S;
+  const gridH = wdRowH + rows*cellH;
+  const headH = 26*S + 64*S + 10*S + 44*S + 4*S + 21*S + 12*S + 20*S + 4*S + 17*S + 10*S + 1*S + 12*S;
+  const footH = 16*S + 44*S + 12*S + 16*S + 12*S + 56*S + 20*S;
   const H = headH + gridH + footH;
 
   const [logoImg, qrImg] = await Promise.all([
@@ -3227,14 +3319,19 @@ async function downloadSlotPoster(){
   const ctx = canvas.getContext('2d');
   ctx.textAlign = 'center';
 
-  // 背景漸層，跟預覽卡片一致（原本是純色，跟預覽對不起來）
-  const grad = ctx.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,'#F0E9D8'); grad.addColorStop(1,'#E9E0C8');
+  // 背景：柔和米杏色放射狀漸層，跟預覽卡片一致
+  const grad = ctx.createRadialGradient(W/2, 0, 0, W/2, 0, H*0.9);
+  grad.addColorStop(0, '#FCF5EC'); grad.addColorStop(0.65, '#F4E6D2'); grad.addColorStop(1, '#EDDBC0');
   ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
 
-  let cy = 24*S;
-  // logo（原本只畫一個空白圓圈，沒有真的放上 logo）
-  const logoR = 26*S;
+  let cy = 26*S;
+  // logo（帶白色圓環，跟預覽的 box-shadow 效果一致）
+  const logoR = 32*S;
+  ctx.save();
+  ctx.shadowColor = 'rgba(38,34,27,0.15)'; ctx.shadowBlur = 6*S; ctx.shadowOffsetY = 1*S;
+  ctx.beginPath(); ctx.arc(W/2, cy+logoR, logoR+3*S, 0, Math.PI*2);
+  ctx.fillStyle = '#FFFDF8'; ctx.fill();
+  ctx.restore();
   ctx.beginPath(); ctx.arc(W/2, cy+logoR, logoR, 0, Math.PI*2);
   ctx.fillStyle = '#F7F2E6'; ctx.fill();
   if(logoImg){
@@ -3242,36 +3339,42 @@ async function downloadSlotPoster(){
     ctx.drawImage(logoImg, W/2-logoR, cy, logoR*2, logoR*2);
     ctx.restore();
   } else {
-    ctx.font = (22*S)+'px sans-serif'; ctx.fillText('🏷️', W/2, cy+logoR+8*S);
+    ctx.font = (26*S)+'px sans-serif'; ctx.fillText('🏷️', W/2, cy+logoR+9*S);
   }
   cy += logoR*2 + 10*S;
 
-  ctx.fillStyle = '#26221B'; ctx.font = '900 '+(32*S)+'px "Noto Serif TC", serif';
-  cy += 30*S;
+  ctx.fillStyle = '#8F6420'; ctx.font = '900 '+(38*S)+'px "Noto Sans TC", sans-serif';
+  cy += 34*S;
   ctx.fillText(EN_MONTHS[m], W/2, cy);
-  cy += 6*S + 12*S;
-  ctx.fillStyle = '#6B6356'; ctx.font = '400 '+(11*S)+'px "Noto Sans TC", sans-serif';
+  cy += 4*S + 11*S;
+  ctx.fillStyle = '#6B6356'; ctx.font = '400 '+(10.5*S)+'px "Noto Sans TC", sans-serif';
   ctx.fillText(y+' ・ '+(m+1)+'月可約時段', W/2, cy);
-  cy += 10*S + 13*S;
-  ctx.fillStyle = '#26221B'; ctx.font = '700 '+(13*S)+'px "Noto Sans TC", sans-serif';
+  cy += 12*S + 14*S;
+  ctx.fillStyle = '#26221B'; ctx.font = '700 '+(14*S)+'px "Noto Sans TC", sans-serif';
   ctx.fillText(BUSINESS.name||'', W/2, cy);
-  cy += 4*S + 12*S;
-  ctx.fillStyle = '#6B6356'; ctx.font = '400 '+(11*S)+'px "Space Mono", monospace';
+  cy += 4*S + 11*S;
+  ctx.fillStyle = '#BF8B3D'; ctx.font = '700 '+(11*S)+'px "Space Mono", monospace';
   ctx.fillText(handle, W/2, cy);
-  cy += 14*S;
+  cy += 10*S;
+  // 分隔線
+  ctx.strokeStyle = 'rgba(38,34,27,0.14)'; ctx.lineWidth = 1*S;
+  ctx.beginPath(); ctx.moveTo(padX, cy); ctx.lineTo(W-padX, cy); ctx.stroke();
+  cy += 12*S;
 
-  // 可約時段格線
+  // 可約時段格線（不畫白色卡片底，直接鋪在漸層背景上，跟預覽一致）
   const gridTop = cy;
-  ctx.fillStyle = '#FFFFFF';
-  roundRect(ctx, padX, gridTop, innerW, gridH, 10*S); ctx.fill();
   const cellW = innerW / 7;
-  ctx.font = '700 '+(10*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B6356';
-  wdNames.forEach((wd,i)=>{ ctx.fillText(wd, padX+cellW*i+cellW/2, gridTop+gridPadY+10*S); });
+  ctx.font = '700 '+(10*S)+'px "Noto Sans TC", sans-serif';
+  wdNames.forEach((wd,i)=>{
+    ctx.fillStyle = i>=5 ? '#BF8B3D' : '#6B6356';
+    ctx.fillText(wd, padX+cellW*i+cellW/2, gridTop+wdRowH-6*S);
+  });
 
-  const cellsTop = gridTop + gridPadY + wdRowH;
+  const cellsTop = gridTop + wdRowH;
   for(let d=1; d<=daysInMonth; d++){
     const idx = firstDow + d - 1;
     const col = idx % 7, row = Math.floor(idx/7);
+    const isWeekend = col>=5;
     const cx = padX + cellW*col + cellW/2, cyTop = cellsTop + row*cellH + 12*S;
     const dateKey = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const info = availableSlotsForDate(dateKey);
@@ -3284,17 +3387,17 @@ async function downloadSlotPoster(){
       ctx.font = '400 '+(8.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(107,99,86,0.55)';
       ctx.fillText(info.label||'已約滿', cx, cyTop+14*S);
     } else {
-      ctx.font = '400 '+(8.5*S)+'px "Space Mono", monospace'; ctx.fillStyle = '#6B6356';
+      ctx.font = '700 '+(8.5*S)+'px "Space Mono", monospace'; ctx.fillStyle = isWeekend ? '#BF8B3D' : '#8F6420';
       info.slots.slice(0,3).forEach((t,i)=>{ ctx.fillText(t, cx, cyTop+14*S+i*11*S); });
     }
   }
 
-  cy = gridTop + gridH + 26*S;
+  cy = gridTop + gridH + 16*S;
   // CTA 按鈕
   const ctaText = '→ 立即線上預約 ・ '+handle;
-  ctx.font = '700 '+(12*S)+'px "Noto Sans TC", sans-serif';
-  const ctaW = ctx.measureText(ctaText).width + 36*S;
-  const ctaH = 42*S;
+  ctx.font = '700 '+(12.5*S)+'px "Noto Sans TC", sans-serif';
+  const ctaW = ctx.measureText(ctaText).width + 40*S;
+  const ctaH = 44*S;
   roundRect(ctx, W/2-ctaW/2, cy, ctaW, ctaH, ctaH/2);
   ctx.fillStyle = '#BF8B3D'; ctx.fill();
   ctx.fillStyle = '#FFFFFF'; ctx.fillText(ctaText, W/2, cy+ctaH/2+4*S);
@@ -3302,13 +3405,13 @@ async function downloadSlotPoster(){
 
   ctx.font = '400 '+(9.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B6356';
   ctx.fillText('時段皆可微調，歡迎私訊　劃掉＝已約滿', W/2, cy);
-  cy += 16*S + 16*S;
+  cy += 16*S + 12*S;
 
-  // QR code（原本沒有畫出來），靠右對齊跟預覽一致
-  if(qrImg){
-    const qrSize = 56*S;
-    ctx.drawImage(qrImg, W-padX-qrSize, cy, qrSize, qrSize);
-  }
+  // 底部：QR code（靠右）＋ 說明文字，跟預覽的 bottom-row 一致
+  const qrSize = 56*S;
+  ctx.textAlign = 'left'; ctx.font = '400 '+(9*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B6356';
+  ctx.fillText('掃碼預約', padX, cy+qrSize-6*S);
+  if(qrImg){ ctx.drawImage(qrImg, W-padX-qrSize, cy, qrSize, qrSize); }
 
   downloadCanvasImage(canvas, (BUSINESS.name||'booking') + '-可約月曆圖.png');
 }

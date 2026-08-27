@@ -347,6 +347,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .status-done{ background:#EFEAE0; color:var(--ink-soft); }
 .status-cancelled{ background:#F7E5E1; color:var(--stamp-dark); }
 .status-pending{ background:#FBF3E1; color:#8A6A1E; }
+.status-partial{ background:#E8EEF5; color:#3E6A96; }
 
 .ticket-actions{ display:flex; gap:10px; margin-top:16px; }
 .ticket-actions .btn{ flex:1; padding:12px 8px; font-size:13.5px; }
@@ -1757,7 +1758,7 @@ async function submitOrder(){
   if(!phone){ showToast('請輸入手機號碼'); return; }
   const items = Object.entries(cart).map(([pid,qty])=>{
     const p = PRODUCTS.find(x=>x.id===pid);
-    return p ? { productId:pid, name:p.name, price:p.price, qty, subtotal:p.price*qty } : null;
+    return p ? { productId:pid, name:p.name, price:p.price, qty, subtotal:p.price*qty, shippedQty:0 } : null;
   }).filter(Boolean);
   if(items.length===0){ showToast('購物車是空的'); return; }
   const order = {
@@ -1817,11 +1818,12 @@ function renderMyOrders(){
     wrap.innerHTML = `<div class="empty-state"><div class="ic">🧾</div><h3>尚無訂單</h3><p>購買商品後，訂單紀錄會顯示在這裡</p></div>`;
     return;
   }
-  const statusLabels = { pending:'已送出', done:'已完成', cancelled:'已取消' };
+  const statusLabels = { pending:'已送出', partial:'部分出貨', done:'已完成', cancelled:'已取消' };
+  const statusClassMap = { pending:'status-pending', partial:'status-partial', done:'status-done', cancelled:'status-cancelled' };
   wrap.innerHTML = MY_ORDERS.map(o=>`
     <div class="order-card">
-      <div class="hd"><span class="code">${o.code}</span><span class="status-pill status-pending">${statusLabels[o.status]||o.status}</span></div>
-      <div class="items">${o.items.map(it=>`${it.name} ×${it.qty}`).join('、')}</div>
+      <div class="hd"><span class="code">${o.code}</span><span class="status-pill ${statusClassMap[o.status]||'status-pending'}">${statusLabels[o.status]||o.status}</span></div>
+      <div class="items">${o.items.map(it=>`${it.name} ×${it.qty}${(it.shippedQty>0 && it.shippedQty<it.qty) ? `（已出貨 ${it.shippedQty}/${it.qty}）` : ''}`).join('、')}</div>
       <div class="foot"><span class="field-hint" style="margin:0;">${(o.createdAt||'').slice(0,10)}</span><span class="total">$${o.totalAmount}</span></div>
     </div>
   `).join('');
