@@ -301,6 +301,8 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
   color:var(--ink); font-size:12.5px; font-weight:700; padding:7px 14px; border-radius:99px;
   cursor:pointer; margin-bottom:12px;
 }
+.cal-add-row{ display:flex; gap:8px; margin-bottom:14px; }
+.cal-add-row .btn{ flex:1; font-size:12px; padding:10px 8px; }
 .action-pill-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
 .pill-btn{
   border-radius:99px; padding:9px 16px; font-size:12.5px; font-weight:700; cursor:pointer;
@@ -2183,6 +2185,10 @@ function openBookingSheet(id){
       </div>
     </div>
     <button class="btn-edit-compact" onclick="openEditItems('${b.id}')">✎ 編輯項目</button>
+    <div class="cal-add-row">
+      <button class="btn btn-outline" onclick="addBookingToGoogleCalendar('${b.id}')">📅 加入 Google 日曆</button>
+      <button class="btn btn-outline" onclick="addBookingToIosCalendar('${b.id}')">📆 加入 iOS 行事曆</button>
+    </div>
     <div id="rescheduleBox"></div>
   `;
 
@@ -3763,27 +3769,14 @@ function openSettingsSheet(kind){
     setDepositCalcMode(BUSINESS.depositMultiServiceCalc === 'max' ? 'max' : 'sum', true);
   } else if(kind==='notify'){
     body.innerHTML = `
-      <div class="field-hint" style="margin-bottom:14px;">新預約與顧客取消的即時通知管道；每日摘要仍走 email。</div>
-      <div class="section-title" style="margin-bottom:2px;"><span class="lead">LINE 通知</span><span class="need-save-badge">變更需確認</span></div>
-      <div class="about-card" style="margin-bottom:20px;">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-          <span style="font-weight:700; font-size:14px;">🔔 LINE 即時通知</span>
-          <span class="status-pill status-cancelled">未連結</span>
-        </div>
-        <div class="field-hint" style="margin-bottom:12px;">連結後，新預約與顧客取消都會即時推送到你的 LINE。</div>
-        <button class="btn btn-outline" style="width:100%;" onclick="explainLineNotConnected()">連結 LINE</button>
-        <div class="field-hint" style="margin-top:10px;">這需要串接 LINE Messaging API，並由後端伺服器保管你的 LINE 識別碼、負責實際推送——這個 App 目前是純前端＋Firebase 資料庫，沒有這樣的後端，所以還無法真的連上。</div>
-      </div>
-
-      <div class="section-title" style="margin-bottom:2px;"><span class="lead">行事曆</span><span class="need-save-badge">變更需確認</span></div>
+      <div class="field-hint" style="margin-bottom:14px;">預約相關的行事曆整合方式。</div>
+      <div class="section-title" style="margin-bottom:2px;"><span class="lead">行事曆</span></div>
       <div class="about-card">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-          <span style="font-weight:700; font-size:14px;">📅 Google 日曆同步</span>
-          <span class="status-pill status-cancelled">未連結</span>
+          <span style="font-weight:700; font-size:14px;">📅 加入行事曆</span>
+          <span class="status-pill status-upcoming">可使用</span>
         </div>
-        <div class="field-hint" style="margin-bottom:12px;">連結後，顧客的預約會自動出現在你的 Google 日曆——待確認與已確認都會建立行程，改期、取消也會自動更新，不用手動一筆一筆加。</div>
-        <button class="btn btn-outline" style="width:100%;" onclick="explainCalendarNotConnected()">連結 Google 日曆</button>
-        <div class="field-hint" style="margin-top:10px;">這需要 Google OAuth 授權流程與後端伺服器保管授權金鑰、呼叫 Google Calendar API——目前這個 App 沒有後端，所以還無法真的連上；之後若要做，需要另外架設伺服器端服務。</div>
+        <div class="field-hint">在每筆預約詳情裡，可以按「加入 Google 日曆」或「加入 iOS 行事曆」，手動把這筆預約加進你自己的行事曆——這是每筆各別加入，不是自動同步；顧客改期或取消不會自動更新你已加入的行程，需要的話請自行到行事曆調整。</div>
       </div>
     `;
   } else if(kind==='account'){
@@ -4290,12 +4283,49 @@ async function saveDepositPolicy(){
   }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
 }
 
-/* ---- 通知（LINE / Google 日曆）---- */
-function explainLineNotConnected(){
-  alert('這個功能需要串接 LINE Messaging API，並由一台後端伺服器保管你的 LINE 識別碼、負責實際推送訊息。目前這個 App 是純前端網頁＋Firebase 資料庫，沒有這樣的後端伺服器，所以還沒辦法真的連上 LINE。若要做，需要另外架設一套伺服器端服務。');
+/* ---- 加入行事曆（各別手動加入，不是自動同步）---- */
+function buildIcsForBooking(booking){
+  const svcs = bookingServices(booking);
+  const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '';
+  const totalDur = svcs.reduce((sum,s)=>sum+(s.duration||30),0) || 30;
+  const [y,m,d] = booking.date.split('-').map(Number);
+  const [hh,mm] = booking.time.split(':').map(Number);
+  const start = new Date(y,m-1,d,hh,mm);
+  const end = new Date(start.getTime() + totalDur*60000);
+  const fmt = dt => dt.getFullYear()+String(dt.getMonth()+1).padStart(2,'0')+String(dt.getDate()).padStart(2,'0')+'T'+String(dt.getHours()).padStart(2,'0')+String(dt.getMinutes()).padStart(2,'0')+'00';
+  const esc = s => String(s||'').replace(/[\n\r]/g,' ').replace(/([,;])/g,'\\$1');
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//' + esc(BUSINESS.name||'booking') + '//預約//TW',
+    'BEGIN:VEVENT',
+    'UID:' + booking.id + '@' + (BUSINESS.name||'booking').replace(/\s/g,''),
+    'DTSTART:' + fmt(start),
+    'DTEND:' + fmt(end),
+    'SUMMARY:' + esc(svcLabel + '（' + (booking.customer.name||'') + '）'),
+    'DESCRIPTION:' + esc('預約編號：' + booking.code + '　顧客：' + (booking.customer.name||'') + '　電話：' + (booking.customer.phone||'')),
+    'LOCATION:' + esc(BUSINESS.address||''),
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
 }
-function explainCalendarNotConnected(){
-  alert('這個功能需要 Google OAuth 授權流程，並由一台後端伺服器保管授權金鑰、呼叫 Google Calendar API 寫入行程。目前這個 App 是純前端網頁＋Firebase 資料庫，沒有這樣的後端伺服器，所以還沒辦法真的連上 Google 日曆。若要做，需要另外架設一套伺服器端服務。');
+function addBookingToIosCalendar(id){
+  const b = loadBookings().find(x=>x.id===id);
+  if(!b) return;
+  const ics = buildIcsForBooking(b);
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (b.code||'booking') + '.ics';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 3000);
+  showToast('已產生行事曆檔案，請依提示加入');
+}
+function addBookingToGoogleCalendar(id){
+  const b = loadBookings().find(x=>x.id===id);
+  if(!b) return;
+  window.open(buildGoogleCalLink(b).replace(/&amp;/g,'&'), '_blank');
 }
 
 async function saveCustomerLink(){
