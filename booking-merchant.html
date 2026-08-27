@@ -405,6 +405,35 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .cal-body .rowline{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .cal-body .rng{ font-size:12px; color:var(--ink-soft); font-family:'Space Mono',monospace; }
 .cal-empty{ text-align:center; padding:50px 20px; color:var(--ink-soft); }
+.cal-view-tabs{ display:flex; background:var(--paper-2); border-radius:99px; padding:4px; gap:2px; margin-bottom:16px; }
+.cal-view-tab{ flex:1; border:none; background:transparent; padding:11px 6px; border-radius:99px; font-size:13px; font-weight:700; color:var(--ink-soft); cursor:pointer; font-family:inherit; }
+.cal-view-tab.active{ background:var(--white); color:var(--ink); box-shadow:0 1px 3px rgba(38,34,27,.12); }
+.cal-month-pills{ display:flex; gap:8px; overflow-x:auto; margin-bottom:14px; scrollbar-width:none; padding-bottom:2px; }
+.cal-month-pills::-webkit-scrollbar{ display:none; }
+.cal-month-pill{
+  flex-shrink:0; border:1.5px solid var(--line); background:var(--white); color:var(--ink);
+  border-radius:99px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;
+}
+.cal-month-pill.active{ background:var(--gold); border-color:var(--gold); color:var(--white); }
+.cal-legend-row{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:8px; }
+.cal-legend-chip{ display:flex; align-items:center; gap:5px; font-size:11px; color:var(--ink-soft); }
+.cal-legend-chip::before{ content:''; width:10px; height:10px; border-radius:3px; flex-shrink:0; background:var(--line); }
+.cal-legend-chip.cal-legend-confirmed::before{ background:var(--ledger); }
+.cal-legend-chip.cal-legend-pending::before{ background:var(--gold); }
+.cal-legend-chip.cal-legend-off::before{ background:var(--paper-2); border:1.5px solid var(--line); }
+.cal-legend-chip.cal-legend-break::before{ background:var(--stamp); }
+.cal-legend-chip input{ display:none; }
+.cal-off-card{
+  background:repeating-linear-gradient(-45deg, var(--paper-2), var(--paper-2) 8px, var(--paper) 8px, var(--paper) 16px);
+  border:1.5px solid var(--line); border-radius:14px; padding:20px 16px; margin-bottom:10px; text-align:center;
+}
+.cal-off-card .badge{
+  display:inline-block; background:var(--gold); color:var(--white); font-size:11.5px; font-weight:700;
+  padding:5px 14px; border-radius:99px; margin-bottom:10px;
+}
+.cal-off-card .badge .rep{ font-size:10px; opacity:.85; margin-left:4px; }
+.cal-off-card .ttl{ font-size:14px; font-weight:700; margin-bottom:4px; }
+.cal-off-card .sub{ font-size:12px; color:var(--ink-soft); }
 .cal-fab{
   position:fixed; bottom:calc(var(--nav-h) + 20px); right:calc(50% - 195px);
   width:52px; height:52px; border-radius:50%; background:var(--stamp); color:var(--white);
@@ -431,6 +460,21 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .cal-grid .day-cell .dot{ width:5px; height:5px; border-radius:50%; background:var(--stamp); margin-top:2px; }
 .cal-grid .day-cell.selected{ background:var(--stamp); color:var(--white); }
 .cal-grid .day-cell.selected .dot{ background:var(--white); }
+.cal-grid-bookings.cal-grid{ gap:6px; }
+.cal-grid-bookings .day-cell{
+  aspect-ratio:auto; min-height:64px; flex-direction:column; align-items:center; justify-content:flex-start;
+  padding:6px 3px; border:1px solid var(--paper-2); border-radius:8px; gap:3px;
+}
+.cal-grid-bookings .day-cell.off-day{
+  background:repeating-linear-gradient(-45deg, var(--paper-2), var(--paper-2) 5px, var(--paper) 5px, var(--paper) 10px);
+}
+.cal-grid-bookings .day-cell .badge-pill{
+  font-size:8.5px; font-weight:700; padding:2px 6px; border-radius:99px; color:var(--white);
+  white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis;
+}
+.cal-grid-bookings .day-cell .badge-pill.b-off{ background:var(--gold); }
+.cal-grid-bookings .day-cell .badge-pill.b-confirmed{ background:var(--ledger); }
+.cal-grid-bookings .day-cell .badge-pill.b-pending{ background:var(--gold); }
 
 /* ---- share page: QR + availability poster ---- */
 #qrCodeWrap img{ width:200px; height:200px; border-radius:12px; }
@@ -742,18 +786,50 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 
       <section class="screen" id="screen-bookings">
         <div class="section-title"><span class="lead">預約管理</span></div>
-        <div class="about-card" style="margin-bottom:16px;">
-          <div class="cal-grid-toolbar">
-            <button class="btn-caret" onclick="calGridShiftMonth(-1)">‹</button>
-            <div class="cal-month" id="calGridMonthLabel">—</div>
-            <button class="btn-caret" onclick="calGridShiftMonth(1)">›</button>
-          </div>
-          <div class="field-hint" id="calGridCount" style="text-align:center; margin-bottom:10px;">共 0 筆預約</div>
-          <div class="cal-grid-wd">
-            <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
-          </div>
-          <div class="cal-grid" id="calGridDays"></div>
+
+        <div class="cal-view-tabs">
+          <button class="cal-view-tab active" id="calViewTabTimeline" onclick="setCalView('timeline')">行程</button>
+          <button class="cal-view-tab" id="calViewTabMonth" onclick="setCalView('month')">月</button>
         </div>
+
+        <!-- 行程：依日期分組的時間軸 -->
+        <div id="calTimelineView">
+          <div class="cal-toolbar">
+            <div class="cal-month" id="calTlMonthLabel">—</div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn-today" onclick="calGoToday()">今天</button>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:14px;">
+            <input type="text" id="tlSearch" placeholder="搜尋姓名或手機號碼" oninput="renderCalendarTimeline()">
+          </div>
+          <div id="calTimeline"></div>
+        </div>
+
+        <!-- 月：整月網格 -->
+        <div id="calMonthView" style="display:none;">
+          <div class="about-card" style="margin-bottom:16px;">
+            <div class="cal-month-pills" id="calMonthPills"></div>
+            <div class="cal-legend-row">
+              <span class="cal-legend-chip cal-legend-confirmed">已確認</span>
+              <span class="cal-legend-chip cal-legend-pending">待確認</span>
+              <span class="cal-legend-chip cal-legend-off"><input type="checkbox" disabled> 不營業・公休</span>
+            </div>
+            <div class="cal-legend-row">
+              <span class="cal-legend-chip cal-legend-break">休息</span>
+              <span class="cal-legend-chip cal-legend-break">特別休息</span>
+            </div>
+            <div class="field-hint" id="calGridCount" style="text-align:center; margin:10px 0;">共 0 筆預約</div>
+            <div class="cal-grid-wd">
+              <span>週一</span><span>週二</span><span>週三</span><span>週四</span><span>週五</span><span>週六</span><span>週日</span>
+            </div>
+            <div class="cal-grid cal-grid-bookings" id="calGridDays"></div>
+          </div>
+        </div>
+
+        <button class="cal-fab" onclick="openManualBookingForm()">＋</button>
+
+        <div class="section-title" style="margin-top:26px;"><span class="lead">所有預約</span></div>
         <button class="btn btn-outline" style="width:100%; margin-bottom:14px;" onclick="openManualBookingForm()">＋ 手動新增預約</button>
         <div class="filter-row" id="statusFilterRow">
           <div class="filter-chip active" data-status="all" onclick="setStatusFilter('all')">全部</div>
@@ -1345,7 +1421,7 @@ function rerenderActiveScreen(){
   if(!active) return;
   const id = active.id.replace('screen-','');
   if(id==='dashboard') renderDashboard();
-  if(id==='bookings'){ renderCalGrid(); renderBookingsList(); }
+  if(id==='bookings'){ setCalView(calView); renderBookingsList(); }
   if(id==='calendar'){ renderCalLink(); renderSharePage(); }
   if(id==='customers') renderCustomersList();
   if(id==='services'){ renderServicesList(); renderProductsList(); }
@@ -1530,7 +1606,7 @@ function goScreen(id, opts={}){
   window.scrollTo(0,0);
 
   if(id==='dashboard') renderDashboard();
-  if(id==='bookings'){ renderCalGrid(); renderBookingsList(); }
+  if(id==='bookings'){ setCalView(calView); renderBookingsList(); }
   if(id==='calendar'){ renderCalLink(); renderSharePage(); }
   if(id==='customers') renderCustomersList();
   if(id==='services') { renderServicesList(); renderProductsList(); }
@@ -1660,6 +1736,10 @@ function calcAge(birthday){
 function customerBookingCount(customerId){
   return loadBookings().filter(b=>b.customerId===customerId).length;
 }
+/* 「來過幾次」只算商家已標記「完成」的預約，待確認／即將到來／已取消都不算真的來過 */
+function customerVisitCount(customerId){
+  return loadBookings().filter(b=>b.customerId===customerId && b.status==='done').length;
+}
 function customerLastDoneDate(c){
   const done = loadBookings().filter(b=> b.status==='done' && (c.id ? b.customerId===c.id : b.customer.phone===c.phone));
   if(done.length===0) return null;
@@ -1717,7 +1797,7 @@ function renderCustomerDetailScreen(){
   const body = document.getElementById('customerDetailBody');
   if(!c){ body.innerHTML = `<div class="empty-state"><p>找不到這位顧客，可能已被刪除。</p></div>`; return; }
   const age = calcAge(c.birthday);
-  const count = customerBookingCount(c.id);
+  const count = customerVisitCount(c.id);
   const history = customerHistoryBookings(c);
   body.innerHTML = `
     <div class="cust-detail-header">
@@ -3076,9 +3156,38 @@ function roundRect(ctx,x,y,w,h,r){
 /* ---- 預約管理：月曆網格 ---- */
 let calGridDate = new Date();
 let calGridSelectedDate = null;
+let calView = 'timeline';
+function setCalView(view){
+  calView = view;
+  document.getElementById('calViewTabTimeline').classList.toggle('active', view==='timeline');
+  document.getElementById('calViewTabMonth').classList.toggle('active', view==='month');
+  document.getElementById('calTimelineView').style.display = view==='timeline' ? 'block' : 'none';
+  document.getElementById('calMonthView').style.display = view==='month' ? 'block' : 'none';
+  if(view==='timeline') renderCalendarTimeline();
+  else { renderCalMonthPills(); renderCalGrid(); }
+}
 function calGridShiftMonth(dir){
   calGridDate = new Date(calGridDate.getFullYear(), calGridDate.getMonth()+dir, 1);
+  renderCalMonthPills();
   renderCalGrid();
+}
+function calGridPickMonth(offset){
+  const now = new Date();
+  calGridDate = new Date(now.getFullYear(), now.getMonth()+offset, 1);
+  renderCalMonthPills();
+  renderCalGrid();
+}
+function renderCalMonthPills(){
+  const wrap = document.getElementById('calMonthPills');
+  if(!wrap) return;
+  const now = new Date();
+  let html = '';
+  for(let i=-2; i<=6; i++){
+    const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
+    const active = (d.getFullYear()===calGridDate.getFullYear() && d.getMonth()===calGridDate.getMonth());
+    html += `<button class="cal-month-pill ${active?'active':''}" onclick="calGridPickMonth(${i})">${d.getMonth()+1}月</button>`;
+  }
+  wrap.innerHTML = html;
 }
 function calGridPickDay(dateKey){
   calGridSelectedDate = (calGridSelectedDate===dateKey) ? null : dateKey;
@@ -3089,24 +3198,143 @@ function renderCalGrid(){
   const wrap = document.getElementById('calGridDays');
   if(!wrap) return;
   const y = calGridDate.getFullYear(), m = calGridDate.getMonth();
-  document.getElementById('calGridMonthLabel').textContent = y+' 年 '+(m+1)+' 月';
-  const firstDow = new Date(y,m,1).getDay();
+  // 週一開頭
+  const firstDow = (new Date(y,m,1).getDay() + 6) % 7;
   const daysInMonth = new Date(y,m+1,0).getDate();
   const now = new Date();
   const todayKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
   const bookingsByDate = {};
-  loadBookings().filter(b=>b.status!=='cancelled').forEach(b=>{ bookingsByDate[b.date] = (bookingsByDate[b.date]||0)+1; });
+  loadBookings().filter(b=>b.status!=='cancelled').forEach(b=>{
+    (bookingsByDate[b.date] = bookingsByDate[b.date] || []).push(b);
+  });
+  let totalCount = 0;
   let html = '';
   for(let i=0;i<firstDow;i++){ html += `<div class="day-cell empty"></div>`; }
   for(let d=1; d<=daysInMonth; d++){
     const dateKey = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    const has = bookingsByDate[dateKey] > 0;
+    const dayBookings = (bookingsByDate[dateKey]||[]).sort((a,b)=>a.time.localeCompare(b.time));
+    totalCount += dayBookings.length;
+    const closedLabel = isDateFullyClosedByBreak(dateKey) ? closedDayLabel(dateKey) : null;
     const cls = ['day-cell'];
     if(dateKey===todayKey) cls.push('today');
-    if(has) cls.push('has-bookings');
+    if(closedLabel) cls.push('off-day');
     if(dateKey===calGridSelectedDate) cls.push('selected');
-    html += `<div class="${cls.join(' ')}" onclick="calGridPickDay('${dateKey}')">${d}${has?'<div class="dot"></div>':''}</div>`;
+    let inner = `<div class="dnum" style="font-size:12px; font-weight:700;">${d}</div>`;
+    if(closedLabel){
+      inner += `<span class="badge-pill b-off">${closedLabel}</span>`;
+    } else if(dayBookings.length){
+      dayBookings.slice(0,2).forEach(b=>{
+        const isPending = b.status==='pending';
+        inner += `<span class="badge-pill ${isPending?'b-pending':'b-confirmed'}">${b.time}</span>`;
+      });
+      if(dayBookings.length>2){ inner += `<span class="badge-pill b-confirmed">+${dayBookings.length-2}</span>`; }
+    }
+    html += `<div class="${cls.join(' ')}" onclick="calGridPickDay('${dateKey}')">${inner}</div>`;
   }
+  wrap.innerHTML = html;
+  const countEl = document.getElementById('calGridCount');
+  if(countEl) countEl.textContent = `共 ${totalCount} 筆預約`;
+}
+
+/* ---- 行程：依日期分組的時間軸（含休息時段區塊） ---- */
+function addMinutes(timeStr, mins){
+  const [hh,mm] = timeStr.split(':').map(Number);
+  const total = hh*60 + mm + mins;
+  return String(Math.floor(total/60)%24).padStart(2,'0')+':'+String(total%60).padStart(2,'0');
+}
+function calGoToday(){
+  calGridDate = new Date();
+  const el = document.getElementById('calTodayAnchor');
+  if(el){ el.scrollIntoView({behavior:'smooth', block:'start'}); }
+  else { showToast('今天沒有預約或休息安排'); }
+}
+function collectBreakBlocksForRange(startKey, endKey){
+  // 找出這段期間內每一天「整天休息」的區塊，回傳 { dateKey: {label, isWeekly} }
+  const blocks = {};
+  const start = new Date(startKey), end = new Date(endKey);
+  for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+    const y=d.getFullYear(), m=d.getMonth()+1, dd=d.getDate();
+    const dateKey = y+'-'+String(m).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
+    if(isDateFullyClosedByBreak(dateKey)){
+      const wd = d.getDay();
+      const hit = (BUSINESS.breaks||[]).find(b=>{
+        if(!breakAppliesToDate(b, dateKey, wd)) return false;
+        return b.allDay===true || !b.ranges || b.ranges.length===0;
+      });
+      blocks[dateKey] = { label: (hit&&hit.label)||'休息', isWeekly: hit && hit.type==='weekly' };
+    }
+  }
+  return blocks;
+}
+function renderCalendarTimeline(){
+  const wrap = document.getElementById('calTimeline');
+  if(!wrap) return;
+  const q = (document.getElementById('tlSearch').value||'').trim().toLowerCase();
+  let list = loadBookings().filter(b=>b.status!=='cancelled');
+  if(q){ list = list.filter(b=> (b.customer.name||'').toLowerCase().includes(q) || (b.customer.phone||'').replace(/[-\s]/g,'').includes(q.replace(/[-\s]/g,''))); }
+  list = list.sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+
+  const now = new Date();
+  const todayKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  document.getElementById('calTlMonthLabel').textContent = now.getFullYear()+' 年 '+(now.getMonth()+1)+' 月';
+
+  if(list.length===0 && (BUSINESS.breaks||[]).length===0){
+    wrap.innerHTML = `<div class="cal-empty"><div style="font-size:36px; margin-bottom:10px;">📅</div><h3 style="font-family:'Noto Serif TC',serif; margin:0 0 6px;">尚無行程</h3><p style="font-size:13px; margin:0;">顧客預約或你手動新增後，會依日期顯示在這裡。</p></div>`;
+    return;
+  }
+
+  // 合併「預約」與「整天休息」兩種區塊，依日期排序後一起渲染
+  const rangeStart = list.length ? list[0].date : todayKey;
+  const rangeEnd = list.length ? list[list.length-1].date : todayKey;
+  const breakBlocks = collectBreakBlocksForRange(rangeStart<todayKey?rangeStart:todayKey, rangeEnd>todayKey?rangeEnd:todayKey);
+  const allDates = new Set([...list.map(b=>b.date), ...Object.keys(breakBlocks)]);
+  const sortedDates = [...allDates].sort();
+
+  let html = '';
+  let lastMonth = '';
+  sortedDates.forEach(dateKey=>{
+    const [y,m,d] = dateKey.split('-').map(Number);
+    const monthKey = y+'-'+m;
+    if(monthKey !== lastMonth){
+      html += `<div class="cal-month-sep">${y} 年 ${m} 月</div>`;
+      lastMonth = monthKey;
+    }
+    const wd = WD_NAMES[new Date(y, m-1, d).getDay()];
+    const anchor = (dateKey===todayKey) ? ' id="calTodayAnchor"' : '';
+    html += `<div class="cal-day-sep"${anchor}><span class="wd">${wd}</span><span class="dt">${m}/${d}</span></div>`;
+
+    if(breakBlocks[dateKey]){
+      const bb = breakBlocks[dateKey];
+      html += `
+        <div class="cal-off-card">
+          <div class="badge">${bb.label}${bb.isWeekly ? '<span class="rep">重複</span>' : ''}</div>
+          <div class="ttl">${bb.label}・全天</div>
+          <div class="sub">今日不接受預約</div>
+        </div>`;
+    }
+
+    list.filter(b=>b.date===dateKey).forEach(b=>{
+      const svcs = bookingServices(b);
+      const dur = svcs.reduce((sum,s)=>sum+(s.duration||0),0) || 30;
+      const endTime = addMinutes(b.time, dur);
+      const isPast = new Date(y, m-1, d, ...b.time.split(':').map(Number)) < now;
+      html += `
+        <div class="cal-card ${isPast?'is-past':''}" onclick="openBookingSheet('${b.id}')">
+          <div class="cal-time">
+            <div class="hm">${b.time}</div>
+            <div class="dur">${dur} 分</div>
+          </div>
+          <div class="cal-body">
+            <div class="nm">${displayCustomer(b).name}</div>
+            <div class="sv">${svcs.length ? svcs.map(s=>s.name).join('、') : '（服務已刪除）'}</div>
+            <div class="rowline">
+              <span class="status-pill ${statusClass(b.status)}">${statusLabel(b.status)}</span>
+              <span class="rng">${b.time}–${endTime}</span>
+            </div>
+          </div>
+        </div>`;
+    });
+  });
   wrap.innerHTML = html;
 }
 function previewCustomerLink(){
