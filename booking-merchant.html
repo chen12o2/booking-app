@@ -142,7 +142,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .stat-card .vl.stamp{ color:var(--stamp-dark); }
 
 .hero-ticket{
-  background:var(--ledger); color:var(--white);
+  background:var(--gold); color:var(--white);
   border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; margin-bottom:20px;
   padding:20px 20px 22px; position:relative;
 }
@@ -186,12 +186,22 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .cat-chip .cnt{ color:var(--ink-soft); font-weight:400; margin-left:2px; }
 .cat-chip.active{ border-color:var(--ledger); background:var(--white); }
 .cat-manage-row{
-  display:flex; align-items:center; justify-content:space-between; gap:10px;
-  padding:10px 0; border-bottom:1px solid var(--paper-2);
+  display:flex; align-items:center; gap:12px;
+  padding:14px; border:1.5px solid var(--line); border-radius:12px; margin-bottom:10px; background:var(--white);
 }
-.cat-manage-row:last-child{ border-bottom:none; }
-.cat-manage-row .nm{ font-size:14px; }
-.cat-manage-row .del{ color:var(--stamp-dark); font-size:18px; cursor:pointer; line-height:1; padding:2px 6px; }
+.cat-manage-row .reorder{ display:flex; flex-direction:column; gap:2px; flex-shrink:0; }
+.cat-manage-row .reorder button{
+  width:22px; height:18px; border:none; background:none; color:var(--ink-soft); cursor:pointer;
+  font-size:12px; line-height:1; padding:0; display:flex; align-items:center; justify-content:center;
+}
+.cat-manage-row .reorder button:disabled{ opacity:.3; cursor:default; }
+.cat-manage-row .nm{ font-size:14.5px; font-weight:700; flex:1; min-width:0; }
+.cat-manage-row .nm .cnt{ font-weight:400; color:var(--ink-soft); margin-left:4px; }
+.cat-manage-row .edit{ color:var(--ink-soft); font-size:15px; cursor:pointer; padding:4px 6px; flex-shrink:0; }
+.cat-manage-row .del-btn{
+  font-size:12.5px; font-weight:700; padding:8px 14px; border-radius:9px; border:1.5px solid var(--line);
+  background:var(--white); color:var(--ink); cursor:pointer; font-family:inherit; flex-shrink:0;
+}
 .cat-add-row{ display:flex; gap:8px; align-items:stretch; }
 .cat-add-row input{ flex:1 1 auto; min-width:0; }
 .cat-add-row button{ flex:0 0 auto; width:auto; white-space:nowrap; padding:0 20px; }
@@ -215,8 +225,8 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .status-noshow{ background:#F7E5E1; color:var(--stamp-dark); }
 .status-pending{ background:#FBF3E1; color:#8A6A1E; }
 .status-partial{ background:#E8EEF5; color:#3E6A96; }
-.status-active{ background:#EAF2EC; color:var(--ledger-dark); }
-.status-inactive{ background:#EFEAE0; color:var(--ink-soft); }
+.status-active{ background:#E3F0E5; color:#2F6844; }
+.status-inactive{ background:#EFEAE0; color:#8A7455; }
 
 .empty-state{ text-align:center; padding:60px 20px; color:var(--ink-soft); }
 .empty-state .ic{ font-size:38px; margin-bottom:10px; }
@@ -427,6 +437,13 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .order-card .actions button.danger{ color:var(--stamp-dark); border-color:var(--stamp); }
 .crud-actions{ display:flex; gap:8px; flex-shrink:0; }
 .crud-actions .ic-btn{ width:28px; height:28px; border-radius:50%; border:1.5px solid var(--line); background:var(--white); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px; }
+.crud-reorder{ display:flex; flex-direction:column; gap:2px; flex-shrink:0; padding-top:2px; }
+.crud-reorder button{
+  width:24px; height:20px; border:1.5px solid var(--line); border-radius:6px; background:var(--white);
+  color:var(--ink-soft); cursor:pointer; font-size:11px; line-height:1; padding:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.crud-reorder button:disabled{ opacity:.3; cursor:default; }
 
 /* ---- settings category list ---- */
 .settings-list{ background:var(--white); border:1.5px solid var(--line); border-radius:var(--radius); overflow:hidden; }
@@ -614,7 +631,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .avail-poster{
   border-radius:14px; overflow:hidden; border:1.5px solid var(--line);
 }
-.avail-poster .hd{ background:var(--ledger); color:var(--white); text-align:center; padding:16px; }
+.avail-poster .hd{ background:var(--gold); color:var(--white); text-align:center; padding:16px; }
 .avail-poster .hd h4{ margin:0 0 4px; font-family:'Noto Serif TC',serif; font-size:16px; }
 .avail-poster .hd p{ margin:0; font-size:11px; opacity:.85; }
 .avail-poster .mo{ text-align:center; font-family:'Noto Serif TC',serif; font-weight:700; font-size:14px; padding:12px 0 6px; background:var(--white); }
@@ -1208,10 +1225,40 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         <div class="field"><label for="prdFormName">商品名稱</label><input type="text" id="prdFormName" placeholder="例如：居家保養組"></div>
         <div class="field"><label for="prdFormDesc">商品說明</label><textarea id="prdFormDesc" placeholder="簡短描述這項商品，可按 Enter 換行"></textarea></div>
         <div class="field"><label for="prdFormCategory">分類</label><select id="prdFormCategory"><option value="">未分類</option></select></div>
+        <div class="field">
+          <label>商品類型</label>
+          <div class="toggle-pair">
+            <button type="button" class="toggle-opt" id="prdTypePhysical" onclick="setProductType('physical')">實體</button>
+            <button type="button" class="toggle-opt" id="prdTypeDigital" onclick="setProductType('digital')">數位</button>
+          </div>
+        </div>
         <div class="field-row">
           <div class="field"><label for="prdFormPrice">價格（NT$）</label><input type="number" id="prdFormPrice" min="0" step="10"></div>
-          <div class="field"><label for="prdFormStock">庫存數量（選填）</label><input type="number" id="prdFormStock" min="0" step="1" placeholder="不填表示不限"></div>
+          <div class="field" id="prdStockField"><label for="prdFormStock">庫存數量（選填）</label><input type="number" id="prdFormStock" min="0" step="1" placeholder="不填表示不限"></div>
         </div>
+
+        <div class="section-title" style="margin-bottom:14px; font-size:13px; color:var(--ink-soft);"><span class="lead">定金</span></div>
+        <div class="form-card">
+          <div class="toggle-row-inline">
+            <div><div class="tt">這個商品需要定金</div></div>
+            <div class="switch" id="prdDepositSwitch" onclick="togglePrdDepositCard()"><div class="knob"></div></div>
+          </div>
+          <div class="detail" id="prdDepositDetail" style="display:none;">
+            <div class="field" style="margin-bottom:14px;">
+              <label>定金金額</label>
+              <div class="toggle-pair">
+                <button type="button" class="toggle-opt" id="prdDepositTypeFixed" onclick="setPrdDepositType('fixed')">固定 NT$</button>
+                <button type="button" class="toggle-opt" id="prdDepositTypePercent" onclick="setPrdDepositType('percent')">商品比例 %</button>
+              </div>
+            </div>
+            <div class="field" style="margin-bottom:14px;">
+              <label for="prdFormDepositAmount">定金金額</label>
+              <input type="number" id="prdFormDepositAmount" min="0" step="1" placeholder="NT$">
+            </div>
+            <div class="field-hint">定金以顧客下單當下的商品總額計算並鎖定；之後改價不影響已成立的訂單。</div>
+          </div>
+        </div>
+
         <div class="sheet-actions" style="margin-bottom:20px;">
           <button class="btn btn-ghost" id="prdDeleteBtn" style="display:none;" onclick="deleteProduct()">刪除</button>
           <button class="btn btn-primary" onclick="saveProduct()">儲存</button>
@@ -1440,12 +1487,13 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
   <div class="modal-backdrop" id="categoryManagerBackdrop" onclick="if(event.target===this)closeCategoryManager()">
     <div class="modal-card">
       <h3 id="categoryManagerTitle">管理分類</h3>
+      <p class="field-hint" style="margin:-6px 0 14px;">排序會影響公開預約頁的分段順序；刪除分類不會刪服務，只會讓它們變為未分類。</p>
       <div id="categoryManagerList" style="margin-bottom:14px;"></div>
       <div class="field" style="margin-bottom:0;">
         <label for="categoryNewInput">新增分類</label>
         <div class="cat-add-row">
-          <input type="text" id="categoryNewInput" placeholder="例如：臉部保養" onkeydown="if(event.key==='Enter')addCategory()">
-          <button class="btn btn-primary" onclick="addCategory()">新增</button>
+          <input type="text" id="categoryNewInput" placeholder="分類名稱" onkeydown="if(event.key==='Enter')addCategory()">
+          <button class="btn btn-primary" onclick="addCategory()">＋ 新增</button>
         </div>
       </div>
       <div class="sheet-actions" style="margin-top:18px;">
@@ -2753,6 +2801,8 @@ let svcCategoryFilter = 'all';
 let svcFormAddonIds = [];
 let svcFormAddonMode = 'multi';
 let svcFormDepositType = 'fixed';
+let prdFormType = 'physical';
+let prdFormDepositType = 'fixed';
 let prdCategoryFilter = 'all';
 function renderCategoryChips(type){
   const cats = type==='service' ? (BUSINESS.serviceCategories||[]) : (BUSINESS.productCategories||[]);
@@ -2778,10 +2828,14 @@ function renderServicesList(){
     wrap.innerHTML = `<div class="empty-state"><div class="ic">🔖</div><h3>${SERVICES.length===0?'尚未新增服務項目':'這個分類還沒有服務'}</h3><p>${SERVICES.length===0?'新增後，顧客即可在預約頁選擇此服務。':'切換到其他分類，或新增一項服務到這裡。'}</p></div>`;
     return;
   }
-  wrap.innerHTML = list.map(s=>{
+  wrap.innerHTML = list.map((s,i)=>{
     const active = s.active !== false;
     return `
     <div class="crud-card">
+      <div class="crud-reorder">
+        <button ${i===0?'disabled':''} onclick="moveServiceInList('${s.id}',-1)">︿</button>
+        <button ${i===list.length-1?'disabled':''} onclick="moveServiceInList('${s.id}',1)">﹀</button>
+      </div>
       <div class="crud-ic">${s.icon}</div>
       <div class="crud-body">
         <div class="nm-row">
@@ -2976,6 +3030,22 @@ async function toggleServiceActive(id){
     showToast(nextActive ? '已重新上架' : '已下架');
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
+/* 上下移動排序：只跟目前畫面上顯示的清單（可能已被分類篩選過）裡相鄰的項目交換順序，
+   所見即所得，不會影響到其他分類裡的項目 */
+async function moveServiceInList(id, delta){
+  const list = svcCategoryFilter==='all' ? SERVICES : SERVICES.filter(s=>s.category===svcCategoryFilter);
+  const idx = list.findIndex(s=>s.id===id);
+  const targetIdx = idx + delta;
+  if(idx<0 || targetIdx<0 || targetIdx>=list.length) return;
+  const a = list[idx], b = list[targetIdx];
+  const orderA = a.order ?? 0, orderB = b.order ?? 0;
+  try{
+    const batch = db.batch();
+    batch.update(db.collection('services').doc(a.id), { order: orderB });
+    batch.update(db.collection('services').doc(b.id), { order: orderA });
+    await batch.commit();
+  }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
+}
 
 /* ============================================================
    PRODUCTS CRUD
@@ -2988,10 +3058,14 @@ function renderProductsList(){
     wrap.innerHTML = `<div class="empty-state"><div class="ic">🛍️</div><h3>${PRODUCTS.length===0?'尚未新增商品項目':'這個分類還沒有商品'}</h3><p>${PRODUCTS.length===0?'新增後可用於店內銷售或未來上架使用。':'切換到其他分類，或新增一項商品到這裡。'}</p></div>`;
     return;
   }
-  wrap.innerHTML = list.map(p=>{
+  wrap.innerHTML = list.map((p,i)=>{
     const active = p.active !== false;
     return `
     <div class="crud-card">
+      <div class="crud-reorder">
+        <button ${i===0?'disabled':''} onclick="moveProductInList('${p.id}',-1)">︿</button>
+        <button ${i===list.length-1?'disabled':''} onclick="moveProductInList('${p.id}',1)">﹀</button>
+      </div>
       <div class="crud-ic">${p.image ? `<img src="${p.image}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">` : p.icon}</div>
       <div class="crud-body">
         <div class="nm-row"><h4>${p.name}</h4></div>
@@ -3168,20 +3242,50 @@ function openProductForm(id){
     document.getElementById('prdFormName').value = p.name;
     document.getElementById('prdFormDesc').value = p.desc||'';
     catSel.value = p.category || '';
+    prdFormType = p.type || 'physical';
     document.getElementById('prdFormPrice').value = p.price;
     document.getElementById('prdFormStock').value = (p.stock===null||p.stock===undefined) ? '' : p.stock;
     renderProductImagePreview(p.image);
+    document.getElementById('prdDepositSwitch').classList.toggle('on', p.depositRequired === true);
+    document.getElementById('prdDepositDetail').style.display = p.depositRequired === true ? 'block' : 'none';
+    prdFormDepositType = p.depositAmountType || 'fixed';
+    document.getElementById('prdFormDepositAmount').value = p.depositAmount || '';
   } else {
     document.getElementById('prdFormId').value = '';
     document.getElementById('prdFormIcon').value = '🛍️';
     document.getElementById('prdFormName').value = '';
     document.getElementById('prdFormDesc').value = '';
     catSel.value = '';
+    prdFormType = 'physical';
     document.getElementById('prdFormPrice').value = 0;
     document.getElementById('prdFormStock').value = '';
     renderProductImagePreview(null);
+    document.getElementById('prdDepositSwitch').classList.remove('on');
+    document.getElementById('prdDepositDetail').style.display = 'none';
+    prdFormDepositType = 'fixed';
+    document.getElementById('prdFormDepositAmount').value = '';
   }
+  setProductType(prdFormType);
+  setPrdDepositType(prdFormDepositType);
   goScreen('product-form');
+}
+function setProductType(type){
+  prdFormType = type;
+  document.getElementById('prdTypePhysical').classList.toggle('active', type==='physical');
+  document.getElementById('prdTypeDigital').classList.toggle('active', type==='digital');
+  // 數位商品沒有實體庫存概念，隱藏庫存欄位
+  document.getElementById('prdStockField').style.display = type==='digital' ? 'none' : 'block';
+}
+function togglePrdDepositCard(){
+  const sw = document.getElementById('prdDepositSwitch');
+  sw.classList.toggle('on');
+  document.getElementById('prdDepositDetail').style.display = sw.classList.contains('on') ? 'block' : 'none';
+}
+function setPrdDepositType(type){
+  prdFormDepositType = type;
+  document.getElementById('prdDepositTypeFixed').classList.toggle('active', type==='fixed');
+  document.getElementById('prdDepositTypePercent').classList.toggle('active', type==='percent');
+  document.getElementById('prdFormDepositAmount').placeholder = type==='percent' ? '例如：30（代表 30%）' : 'NT$';
 }
 function renderProductImagePreview(image){
   const preview = document.getElementById('prdImagePreview');
@@ -3227,14 +3331,19 @@ async function saveProduct(){
   if(!name){ showToast('請輸入商品名稱'); return; }
   const stockRaw = document.getElementById('prdFormStock').value;
   const image = document.getElementById('prdImagePreview').dataset.image || '';
+  const depositOn = document.getElementById('prdDepositSwitch').classList.contains('on');
   const prd = {
     icon: document.getElementById('prdFormIcon').value.trim() || '🛍️',
     name,
     desc: document.getElementById('prdFormDesc').value.trim(),
     category: document.getElementById('prdFormCategory').value || '',
+    type: prdFormType,
     price: Number(document.getElementById('prdFormPrice').value) || 0,
-    stock: stockRaw==='' ? null : Number(stockRaw),
+    stock: (prdFormType==='digital' || stockRaw==='') ? null : Number(stockRaw),
     image: image || null,
+    depositRequired: depositOn,
+    depositAmountType: prdFormDepositType,
+    depositAmount: Number(document.getElementById('prdFormDepositAmount').value) || 0,
     order: id ? (PRODUCTS.find(p=>p.id===id)?.order ?? PRODUCTS.length) : PRODUCTS.length
   };
   try{
@@ -3263,6 +3372,20 @@ async function toggleProductActive(id){
     showToast(nextActive ? '已重新上架' : '已下架');
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
+async function moveProductInList(id, delta){
+  const list = prdCategoryFilter==='all' ? PRODUCTS : PRODUCTS.filter(p=>p.category===prdCategoryFilter);
+  const idx = list.findIndex(p=>p.id===id);
+  const targetIdx = idx + delta;
+  if(idx<0 || targetIdx<0 || targetIdx>=list.length) return;
+  const a = list[idx], b = list[targetIdx];
+  const orderA = a.order ?? 0, orderB = b.order ?? 0;
+  try{
+    const batch = db.batch();
+    batch.update(db.collection('products').doc(a.id), { order: orderB });
+    batch.update(db.collection('products').doc(b.id), { order: orderA });
+    await batch.commit();
+  }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
+}
 
 /* ============================================================
    服務／商品分類管理
@@ -3281,18 +3404,28 @@ function closeCategoryManager(){
   document.getElementById('categoryManagerBackdrop').classList.remove('show');
 }
 function renderCategoryManagerList(){
-  const cats = categoryManagerType==='service' ? (BUSINESS.serviceCategories||[]) : (BUSINESS.productCategories||[]);
+  const field = categoryManagerType==='service' ? 'serviceCategories' : 'productCategories';
+  const cats = BUSINESS[field] || [];
+  const items = categoryManagerType==='service' ? SERVICES : PRODUCTS;
   const wrap = document.getElementById('categoryManagerList');
   if(cats.length===0){
     wrap.innerHTML = `<p class="field-hint" style="margin:0 0 4px;">尚未新增任何分類。</p>`;
     return;
   }
-  wrap.innerHTML = cats.map(c=>`
+  wrap.innerHTML = cats.map((c,i)=>{
+    const count = items.filter(x=>x.category===c).length;
+    const esc = c.replace(/'/g,"\\'");
+    return `
     <div class="cat-manage-row">
-      <span class="nm">${c}</span>
-      <span class="del" onclick="deleteCategory('${c.replace(/'/g,"\\'")}')">✕</span>
+      <div class="reorder">
+        <button ${i===0?'disabled':''} onclick="moveCategory(${i},-1)">︿</button>
+        <button ${i===cats.length-1?'disabled':''} onclick="moveCategory(${i},1)">﹀</button>
+      </div>
+      <span class="nm">${c}<span class="cnt"> ${count}</span></span>
+      <span class="edit" onclick="renameCategory('${esc}')">✎</span>
+      <button class="del-btn" onclick="deleteCategory('${esc}')">刪除</button>
     </div>
-  `).join('');
+  `;}).join('');
 }
 async function addCategory(){
   const input = document.getElementById('categoryNewInput');
@@ -3306,6 +3439,36 @@ async function addCategory(){
     input.value = '';
     showToast('分類已新增');
   }catch(err){ showToast('新增失敗，請檢查網路連線後再試'); }
+}
+/* 分類的排序就是陣列的順序本身，交換陣列裡兩個位置即可 */
+async function moveCategory(index, delta){
+  const field = categoryManagerType==='service' ? 'serviceCategories' : 'productCategories';
+  const cats = [...(BUSINESS[field] || [])];
+  const target = index + delta;
+  if(target<0 || target>=cats.length) return;
+  [cats[index], cats[target]] = [cats[target], cats[index]];
+  try{
+    await db.collection('meta').doc('business').update({ [field]: cats });
+  }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
+}
+/* 重新命名分類：連同所有已使用這個分類的服務／商品一起更新，避免改名後項目變成孤兒分類 */
+async function renameCategory(oldName){
+  const newName = prompt('分類名稱', oldName);
+  if(newName===null) return;
+  const name = newName.trim();
+  if(!name || name===oldName) return;
+  const field = categoryManagerType==='service' ? 'serviceCategories' : 'productCategories';
+  const cats = BUSINESS[field] || [];
+  if(cats.includes(name)){ showToast('這個分類已經存在'); return; }
+  const items = (categoryManagerType==='service' ? SERVICES : PRODUCTS).filter(x=>x.category===oldName);
+  const coll = categoryManagerType==='service' ? 'services' : 'products';
+  try{
+    const batch = db.batch();
+    batch.update(db.collection('meta').doc('business'), { [field]: cats.map(c=>c===oldName?name:c) });
+    items.forEach(it=>{ batch.update(db.collection(coll).doc(it.id), { category:name }); });
+    await batch.commit();
+    showToast('分類已重新命名');
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
 async function deleteCategory(name){
   if(!confirm(`確定要刪除分類「${name}」嗎？已使用這個分類的項目不會被刪除，只會變成未分類。`)) return;
@@ -3522,7 +3685,7 @@ function downloadAvailPoster(){
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#FFFDF8'; ctx.fillRect(0,0,W,H);
-  ctx.fillStyle = '#7A5C2E'; ctx.fillRect(0,0,W,headH);
+  ctx.fillStyle = '#A08860'; ctx.fillRect(0,0,W,headH);
   ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center';
   ctx.font = '700 26px "Noto Serif TC", serif';
   ctx.fillText(BUSINESS.name||'預約服務', W/2, 55);

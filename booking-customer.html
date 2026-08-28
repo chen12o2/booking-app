@@ -698,6 +698,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         <span class="lbl">總計</span>
         <span class="amt" id="checkoutTotal">$0</span>
       </div>
+      <div id="checkoutDepositNotice"></div>
       <div class="field">
         <label for="ckName">姓名</label>
         <input type="text" id="ckName" placeholder="您的姓名">
@@ -1791,6 +1792,39 @@ function renderMyProducts(){
   ).join('');
   updateCartBarVisibility();
 }
+/* 依購物車內需要定金的商品各自算好金額（固定金額或依商品價格的百分比），
+   多個需定金商品時，依商家設定用「加總」或「取最高」合併，跟服務定金邏輯一致 */
+function computeOrderDepositAmount(){
+  const amounts = Object.entries(cart).map(([pid])=>{
+    const p = PRODUCTS.find(x=>x.id===pid);
+    if(!p || !p.depositRequired) return null;
+    if(p.depositAmountType==='percent'){
+      return Math.round((p.price||0) * (Number(p.depositAmount)||0) / 100);
+    }
+    return Number(p.depositAmount)||0;
+  }).filter(x=>x!==null);
+  if(amounts.length===0) return 0;
+  return BUSINESS.depositMultiServiceCalc==='max' ? Math.max(...amounts) : amounts.reduce((a,b)=>a+b,0);
+}
+function renderCheckoutDepositNotice(){
+  const wrap = document.getElementById('checkoutDepositNotice');
+  if(!wrap) return;
+  const needsDeposit = Object.keys(cart).some(pid=>{ const p=PRODUCTS.find(x=>x.id===pid); return p && p.depositRequired; });
+  if(!needsDeposit || !BUSINESS.depositPolicyText){ wrap.innerHTML = ''; return; }
+  const amount = computeOrderDepositAmount();
+  wrap.innerHTML = `
+    <div class="deposit-box" style="margin-bottom:18px;">
+      <div class="tt">💰 這筆訂單需要收訂金</div>
+      ${amount>0 ? `<div class="amt" style="font-family:'Space Mono',monospace; font-weight:700; font-size:16px; margin:4px 0 10px;">應付定金 NT$ ${amount}</div>` : ''}
+      <div class="policy">${BUSINESS.depositPolicyText}</div>
+      ${BUSINESS.depositPaymentInfo ? `<div class="pay"><b>收款方式</b><br>${BUSINESS.depositPaymentInfo.replace(/\n/g,'<br>')}</div>` : ''}
+      <label class="agree-row">
+        <input type="checkbox" id="checkoutDepositAgreeCheck">
+        <span>我已了解並同意上述取消／退款政策</span>
+      </label>
+    </div>
+  `;
+}
 function openCheckout(){
   const totalQty = Object.values(cart).reduce((a,b)=>a+b,0);
   if(totalQty===0){ showToast('購物車是空的'); return; }
@@ -1802,6 +1836,7 @@ function openCheckout(){
     <div class="ck-item-row"><span>${it.name} ×${it.qty}</span><span>$${it.subtotal}</span></div>
   `).join('');
   document.getElementById('checkoutTotal').textContent = '$'+cartTotal();
+  renderCheckoutDepositNotice();
   const cp = currentCustomer();
   document.getElementById('ckName').value = (cp && cp.name) || '';
   document.getElementById('ckPhone').value = (cp && cp.phone) || '';
@@ -1822,6 +1857,11 @@ async function submitOrder(){
   if(!phone){ showToast('請輸入手機號碼'); return; }
   const uid = currentCustomerId();
   if(!uid){ showToast('請先登入會員帳號才能送出訂單'); closeCheckout(); lockCustApp(); return; }
+  const needsDeposit = Object.keys(cart).some(pid=>{ const p=PRODUCTS.find(x=>x.id===pid); return p && p.depositRequired; });
+  if(needsDeposit && BUSINESS.depositPolicyText){
+    const agree = document.getElementById('checkoutDepositAgreeCheck');
+    if(!agree || !agree.checked){ showToast('請先閱讀並勾選同意取消／退款政策'); return; }
+  }
   const items = Object.entries(cart).map(([pid,qty])=>{
     const p = PRODUCTS.find(x=>x.id===pid);
     return p ? { productId:pid, name:p.name, price:p.price, qty, subtotal:p.price*qty, shippedQty:0 } : null;
