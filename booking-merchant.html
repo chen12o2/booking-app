@@ -1510,6 +1510,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
     <div class="modal-card">
       <h3 id="packagePlanFormTitle">新增套組方案</h3>
       <div class="field"><label for="ppName">方案名稱</label><input type="text" id="ppName" placeholder="例如：熱蠟腋下 5 堂送 1 堂"></div>
+      <div class="field"><label for="ppServiceId">對應服務（選填，讓顧客能用這個套組自己線上約這個服務）</label><select id="ppServiceId"><option value="">不綁定特定服務</option></select></div>
       <div class="field-row">
         <div class="field"><label for="ppSessions">總堂數</label><input type="number" id="ppSessions" placeholder="例如 6"></div>
         <div class="field"><label for="ppPrice">售價</label><input type="number" id="ppPrice" placeholder="例如 5000"></div>
@@ -1519,6 +1520,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         <label>綁定贈品（選填，跟顧客約定好、線上購買固定送這個）</label>
         <select id="ppGiftType" onchange="renderPpGiftFields()">
           <option value="">不贈送</option>
+          <option value="sessions">贈送堂數</option>
           <option value="product">贈送商品</option>
         </select>
       </div>
@@ -2698,6 +2700,7 @@ function renderPackageForm(){
     </div>
     <div id="pkgNameManagerBox"></div>
     <div id="pkgNameNewForm"></div>
+    <div class="field"><label>對應服務（選填，讓顧客能用這個套組自己線上約這個服務）</label><select id="pkgServiceId"><option value="">不綁定特定服務</option>${SERVICES.map(s=>`<option value="${s.id}" ${editing && editing.serviceId===s.id ? 'selected':''}>${s.name}</option>`).join('')}</select></div>
     <div class="field"><label>總堂數</label><input type="number" id="pkgTotal" placeholder="例如 6" value="${editing ? editing.total : ''}"></div>
     <div class="field"><label>實收金額</label><input type="number" id="pkgPaidAmount" placeholder="這次顧客實際付了多少錢（計入營業額）" value="${editing && editing.paidAmount ? editing.paidAmount : ''}"></div>
     ${editing ? '' : `
@@ -2812,6 +2815,7 @@ async function savePkgNamePreset(){
 async function submitPackageForm(){
   const nameSel = document.getElementById('pkgNameSelect');
   const name = nameSel ? nameSel.value : '';
+  const serviceId = document.getElementById('pkgServiceId').value || null;
   let total = Number(document.getElementById('pkgTotal').value);
   const paidAmount = Number(document.getElementById('pkgPaidAmount').value) || 0;
   let note = (document.getElementById('pkgNote').value||'').trim();
@@ -2820,7 +2824,7 @@ async function submitPackageForm(){
   if(!c) return;
 
   if(packageFormEditId){
-    const packages = (c.packages||[]).map(p=> p.id===packageFormEditId ? { ...p, name, total: Math.max(total, p.used), paidAmount, note } : p);
+    const packages = (c.packages||[]).map(p=> p.id===packageFormEditId ? { ...p, name, serviceId, total: Math.max(total, p.used), paidAmount, note } : p);
     try{
       await db.collection('customers').doc(c.id).update({ packages });
       showToast('已儲存修改');
@@ -2845,7 +2849,7 @@ async function submitPackageForm(){
     giftInfo = { productId: p.id, productName: p.name, qty };
   }
 
-  const packages = [...(c.packages||[]), { id:'pkg_'+Date.now(), name, total, used:0, note, paidAmount, createdAt: new Date().toISOString() }];
+  const packages = [...(c.packages||[]), { id:'pkg_'+Date.now(), name, serviceId, total, used:0, note, paidAmount, createdAt: new Date().toISOString() }];
   try{
     await db.collection('customers').doc(c.id).update({ packages });
     if(giftInfo){
@@ -3279,7 +3283,13 @@ async function confirmAdjustAmount(){
 
 /* ---- 收款：記錄這筆款項實際的收款方式 ---- */
 function paymentMethodSummary(o){
-  if(!o.payment || !o.payment.method) return '尚未記錄';
+  if(!o.payment || !o.payment.method){
+    if(o.customerDeclaredMethod){
+      const declaredLabels = { cash:'現金', transfer:'轉帳', linepay:'LinePay' };
+      return `尚未記錄（顧客表示將以${declaredLabels[o.customerDeclaredMethod]||o.customerDeclaredMethod}付款）`;
+    }
+    return '尚未記錄';
+  }
   const labels = { cash:'現金', transfer:'轉帳', linepay:'LinePay', wallet:'儲值金', package:'套組折抵', other:'其他' };
   let s = labels[o.payment.method] || o.payment.method;
   if(o.payment.method==='transfer' && (o.payment.bank || o.payment.last5)){
@@ -3300,7 +3310,9 @@ function openPayReconcile(id, type){
   payReconcileTarget = { type, id };
   document.getElementById('payMethodPackage').style.display = type==='order' ? 'none' : '';
   const p = obj.payment || {};
-  setPayMethod(p.method || 'cash');
+  // 如果商家還沒記錄過收款、但顧客結帳時有先選過想用什麼方式付款，
+  // 幫商家把選單預設帶到顧客說的那個，省得再問一次、也不用照抄
+  setPayMethod(p.method || obj.customerDeclaredMethod || 'cash');
   document.getElementById('payNoteInput').value = p.note || '';
   document.getElementById('payReconcileBackdrop').classList.add('show');
 }
@@ -4269,7 +4281,7 @@ function renderPackagePlansList(){
       <div class="crud-ic">📦</div>
       <div class="crud-body">
         <div class="nm-row"><h4>${p.name}</h4></div>
-        <p>${p.desc||''}${p.giftProductName ? `（含贈品：${p.giftProductName} × ${p.giftQty||1}）` : ''}</p>
+        <p>${p.desc||''}${p.giftProductName ? `（含贈品：${p.giftProductName} × ${p.giftQty||1}）` : ''}${p.giftSessions ? `（買${p.totalSessions}送${p.giftSessions}，實得 ${p.totalSessions+p.giftSessions} 堂）` : ''}${p.serviceName ? `　・對應服務：${p.serviceName}` : ''}</p>
         <div class="crud-meta"><span>${p.totalSessions} 堂</span><span>$${p.price}</span></div>
         <div class="crud-status-row"><span class="status-pill ${active?'status-active':'status-inactive'}">${active?'上架中':'已下架'}</span></div>
       </div>
@@ -4286,10 +4298,13 @@ function openPackagePlanForm(id){
   const p = id ? ALL_PACKAGE_PLANS.find(x=>x.id===id) : null;
   document.getElementById('packagePlanFormTitle').textContent = id ? '編輯套組方案' : '新增套組方案';
   document.getElementById('ppName').value = p ? p.name : '';
+  const svcSel = document.getElementById('ppServiceId');
+  svcSel.innerHTML = '<option value="">不綁定特定服務</option>' + SERVICES.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  svcSel.value = p && p.serviceId ? p.serviceId : '';
   document.getElementById('ppSessions').value = p ? p.totalSessions : '';
   document.getElementById('ppPrice').value = p ? p.price : '';
   document.getElementById('ppDesc').value = p ? (p.desc||'') : '';
-  document.getElementById('ppGiftType').value = p && p.giftProductId ? 'product' : '';
+  document.getElementById('ppGiftType').value = p && p.giftProductId ? 'product' : (p && p.giftSessions ? 'sessions' : '');
   renderPpGiftFields();
   if(p && p.giftProductId){
     setTimeout(()=>{
@@ -4297,6 +4312,11 @@ function openPackagePlanForm(id){
       const qty = document.getElementById('ppGiftQty');
       if(sel) sel.value = p.giftProductId;
       if(qty) qty.value = p.giftQty||1;
+    }, 0);
+  } else if(p && p.giftSessions){
+    setTimeout(()=>{
+      const qty = document.getElementById('ppGiftSessionsQty');
+      if(qty) qty.value = p.giftSessions;
     }, 0);
   }
   document.getElementById('packagePlanFormBackdrop').classList.add('show');
@@ -4308,7 +4328,9 @@ function closePackagePlanForm(){
 function renderPpGiftFields(){
   const type = document.getElementById('ppGiftType').value;
   const wrap = document.getElementById('ppGiftFields');
-  if(type==='product'){
+  if(type==='sessions'){
+    wrap.innerHTML = `<div class="field"><label>贈送堂數</label><input type="number" id="ppGiftSessionsQty" min="1" placeholder="例如 1"></div>`;
+  } else if(type==='product'){
     if(PRODUCTS.length===0){
       wrap.innerHTML = `<div class="field-hint">尚未設定任何商品，請先到「商品項目」新增。</div>`;
     } else {
@@ -4326,22 +4348,33 @@ function renderPpGiftFields(){
 let packagePlanFormId = null;
 async function savePackagePlanForm(){
   const name = (document.getElementById('ppName').value||'').trim();
+  const serviceId = document.getElementById('ppServiceId').value || null;
+  const svc = serviceId ? SERVICES.find(s=>s.id===serviceId) : null;
   const totalSessions = Number(document.getElementById('ppSessions').value);
   const price = Number(document.getElementById('ppPrice').value);
   const desc = (document.getElementById('ppDesc').value||'').trim();
   if(!name || !totalSessions || totalSessions<=0 || !price || price<0){ showToast('請填寫方案名稱、總堂數與售價'); return; }
   const giftType = document.getElementById('ppGiftType').value;
-  const data = { name, totalSessions, price, desc, updatedAt: new Date().toISOString() };
-  if(giftType==='product'){
+  const data = { name, serviceId, serviceName: svc ? svc.name : null, totalSessions, price, desc, updatedAt: new Date().toISOString() };
+  if(giftType==='sessions'){
+    const qty = Number(document.getElementById('ppGiftSessionsQty').value);
+    if(!qty || qty<=0){ showToast('請輸入正確的贈送堂數'); return; }
+    data.giftSessions = qty;
+    data.giftProductId = null;
+    data.giftProductName = null;
+    data.giftQty = null;
+  } else if(giftType==='product'){
     const p = PRODUCTS.find(x=>x.id===document.getElementById('ppGiftProduct')?.value);
     if(!p){ showToast('請先新增商品才能設定贈送商品'); return; }
     data.giftProductId = p.id;
     data.giftProductName = p.name;
     data.giftQty = Math.max(1, Number(document.getElementById('ppGiftQty').value)||1);
+    data.giftSessions = null;
   } else {
     data.giftProductId = null;
     data.giftProductName = null;
     data.giftQty = null;
+    data.giftSessions = null;
   }
   try{
     if(packagePlanFormId){
@@ -4460,7 +4493,8 @@ async function grantPackagePlanToCustomer(order){
     const custSnap = await custRef.get();
     if(!custSnap.exists){ return { ok:false, msg:'找不到顧客資料，請手動加堂數' }; }
     const cust = custSnap.data();
-    const packages = [...(cust.packages||[]), { id:'pkg_'+Date.now(), name: plan.name, total: plan.totalSessions, used:0, note:'顧客線上購買', paidAmount: order.totalAmount||plan.price, createdAt: new Date().toISOString() }];
+    const total = plan.totalSessions + (plan.giftSessions||0);
+    const packages = [...(cust.packages||[]), { id:'pkg_'+Date.now(), name: plan.name, serviceId: plan.serviceId||null, total, used:0, note: plan.giftSessions ? `顧客線上購買（含贈送 ${plan.giftSessions} 堂）` : '顧客線上購買', paidAmount: order.totalAmount||plan.price, createdAt: new Date().toISOString() }];
     await custRef.update({ packages });
     await db.collection('orders').doc(order.id).update({ packageGranted: true });
     return { ok:true, msg: plan.giftProductId ? '堂數已加進顧客帳戶，贈品出貨請照這筆訂單原本的流程處理（可延後或預購）' : '堂數已加進顧客帳戶' };

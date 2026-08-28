@@ -268,6 +268,12 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 /* ---- form ---- */
 .field{ margin-bottom:16px; }
 .field-hint{ font-size:11px; color:var(--ink-soft); margin-top:5px; line-height:1.5; }
+.toggle-pair{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:4px; }
+.toggle-opt{
+  flex:1; min-width:70px; padding:10px 8px; border-radius:10px; border:1.5px solid var(--line); background:var(--white);
+  color:var(--ink-soft); font-size:13px; font-weight:700; cursor:pointer; text-align:center; font-family:inherit;
+}
+.toggle-opt.active{ background:var(--stamp); border-color:var(--stamp); color:var(--white); }
 .field label{ display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; }
 .field input, .field textarea, .field select{
   width:100%; border:1.5px solid var(--line); border-radius:10px; padding:12px 13px;
@@ -586,6 +592,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
       <div class="section-title"><span class="num">5</span>填寫聯絡資訊</div>
 
       <div class="mini-summary" id="infoSummary"></div>
+      <div id="packageRedeemBox"></div>
       <div id="depositNotice"></div>
 
       <div class="field">
@@ -732,6 +739,16 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         <span class="amt" id="checkoutTotal">$0</span>
       </div>
       <div id="checkoutDepositNotice"></div>
+      <div class="field">
+        <label>付款方式</label>
+        <div class="toggle-pair" id="ckPayMethodRow">
+          <button class="toggle-opt active" id="ckPayCash" onclick="setCheckoutPayMethod('cash')">現金</button>
+          <button class="toggle-opt" id="ckPayTransfer" onclick="setCheckoutPayMethod('transfer')">轉帳</button>
+          <button class="toggle-opt" id="ckPayLinepay" onclick="setCheckoutPayMethod('linepay')">LinePay</button>
+          <button class="toggle-opt" id="ckPayWallet" onclick="setCheckoutPayMethod('wallet')">儲值金</button>
+        </div>
+        <div class="field-hint" id="ckPayMethodHint"></div>
+      </div>
       <div class="field">
         <label for="ckName">姓名</label>
         <input type="text" id="ckName" placeholder="您的姓名">
@@ -1573,6 +1590,33 @@ function computeDepositAmount(svcs){
   if(amounts.length===0) return 0;
   return BUSINESS.depositMultiServiceCalc==='max' ? Math.max(...amounts) : amounts.reduce((a,b)=>a+b,0);
 }
+/* 如果顧客名下有這個服務對應的套組（還有剩餘堂數），在填寫聯絡資訊這步給她一個
+   「用套組折抵」的選項；沒有對應套組、或這次選了不只一個服務（套組是綁單一服務的），
+   就完全不顯示，不會讓沒買套組的顧客看到用不到的選項 */
+function renderPackageRedeemOption(svcs){
+  const box = document.getElementById('packageRedeemBox');
+  if(!box) return;
+  if(svcs.length!==1){ box.innerHTML=''; state.usePackageId=null; return; }
+  const svc = svcs[0];
+  const profile = currentCustomer();
+  const matching = profile ? (profile.packages||[]).filter(p=>p.serviceId===svc.id && p.used<p.total) : [];
+  if(matching.length===0){ box.innerHTML=''; state.usePackageId=null; return; }
+  const pkg = matching[0];
+  if(state.usePackageId && !matching.find(p=>p.id===state.usePackageId)){ state.usePackageId = null; }
+  box.innerHTML = `
+    <div class="field" style="margin-top:4px; margin-bottom:14px;">
+      <label class="check-row">
+        <input type="checkbox" id="usePackageCheck" ${state.usePackageId===pkg.id?'checked':''} onchange="togglePackageRedeem('${pkg.id}')">
+        使用套組折抵這堂（${pkg.name}，剩餘 ${pkg.total-pkg.used} 堂）
+      </label>
+    </div>
+  `;
+}
+function togglePackageRedeem(pkgId){
+  const checked = document.getElementById('usePackageCheck').checked;
+  state.usePackageId = checked ? pkgId : null;
+  renderInfoSummary();
+}
 function renderDepositNotice(svcs){
   const wrap = document.getElementById('depositNotice');
   if(!wrap) return;
@@ -1605,8 +1649,9 @@ function renderInfoSummary(){
     <div class="row"><span class="lbl">服務項目</span><span class="val">${svcLabel}</span></div>
     <div class="row"><span class="lbl">服務人員</span><span class="val">${state.staff.name}</span></div>
     <div class="row"><span class="lbl">日期時間</span><span class="val">${state.date} ${state.time}</span></div>
-    <div class="row"><span class="lbl">預估費用</span><span class="val">$${selectedServicesTotal()}</span></div>
+    <div class="row"><span class="lbl">預估費用</span><span class="val">${state.usePackageId ? '套組折抵（本次免付費）' : '$'+selectedServicesTotal()}</span></div>
   `;
+  renderPackageRedeemOption(svcs);
   renderDepositNotice(svcs);
   applyFieldPolicy();
 
@@ -1688,8 +1733,32 @@ async function submitBooking(){
     status: (BUSINESS.requireConfirm === false) ? 'upcoming' : 'pending',
     createdAt: new Date().toISOString()
   };
+
+  // 套組折抵：顧客自己勾了要用套組折抵這堂，就直接扣一堂（套組已經是先付過的錢，
+  // 不用像現金/轉帳那樣還要等商家另外記錄收款才算數）
+  let usedPackage = null;
+  if(state.usePackageId){
+    const profile = currentCustomer();
+    const pkg = profile && (profile.packages||[]).find(p=>p.id===state.usePackageId);
+    if(!pkg || pkg.used>=pkg.total){
+      showToast('這個套組堂數已經用完或有異動，請重新確認');
+      state.usePackageId = null;
+      renderInfoSummary();
+      return;
+    }
+    usedPackage = pkg;
+    booking.usedPackageId = pkg.id;
+    booking.actualAmount = pkg.paidAmount ? Math.round(pkg.paidAmount/pkg.total) : 0;
+  }
+
   try{
     const ref = await db.collection('bookings').add(booking);
+    if(usedPackage){
+      const profile = currentCustomer();
+      const packages = (profile.packages||[]).map(p=> p.id===usedPackage.id ? {...p, used:p.used+1} : p);
+      await db.collection('customers').doc(uid).update({ packages });
+      state.usePackageId = null;
+    }
     lastBooking = { id: ref.id, ...booking };
     sendMerchantNotifyEmail(lastBooking);
     if(lastBooking.status === 'upcoming'){ sendCustomerConfirmEmail(lastBooking); }
@@ -1882,6 +1951,24 @@ function dtNext(){
    商品購買（購物車 + 訂單）
    ============================================================ */
 let cart = {}; // { productId: qty }
+let checkoutPayMethod = 'cash';
+function setCheckoutPayMethod(method){
+  checkoutPayMethod = method;
+  ['cash','transfer','linepay','wallet'].forEach(m=>{
+    const el = document.getElementById('ckPay'+m.charAt(0).toUpperCase()+m.slice(1));
+    if(el) el.classList.toggle('active', m===method);
+  });
+  const hint = document.getElementById('ckPayMethodHint');
+  if(!hint) return;
+  if(method==='wallet'){
+    const profile = currentCustomer();
+    const balance = profile ? (profile.balance||0) : 0;
+    const total = Object.entries(cart).reduce((s,[pid,qty])=>{ const p=PRODUCTS.find(x=>x.id===pid); return s+(p?p.price*qty:0); },0);
+    hint.textContent = `您目前儲值餘額 NT$${balance.toLocaleString()}，這筆需要 NT$${total}${total>balance?'（餘額不足，請改選其他付款方式或先儲值）':'，送出後立即扣款，不用等店家確認'}`;
+  } else {
+    hint.textContent = '';
+  }
+}
 let productsTab = 'shop';
 function setProductsTab(tab){
   productsTab = tab;
@@ -1931,68 +2018,129 @@ function renderPackagePlansShop(){
     wrap.innerHTML = `<div class="empty-state"><div class="ic">📦</div><h3>目前沒有套組方案</h3><p>請留意商家更新。</p></div>`;
     return;
   }
-  wrap.innerHTML = PACKAGE_PLANS.map(p=>`
-    <div class="svc-card">
-      <div class="svc-ic">📦</div>
-      <div class="svc-body">
-        <h3>${p.name}</h3>
-        <p>${p.desc||''}${p.giftProductName ? `（購買即贈：${p.giftProductName} × ${p.giftQty||1}）` : ''}</p>
-        <div class="svc-meta"><span>共 ${p.totalSessions} 堂</span></div>
+  wrap.innerHTML = PACKAGE_PLANS.map(p=>{
+    const expanded = packagePurchasePlanId===p.id;
+    const totalSessions = p.totalSessions + (p.giftSessions||0);
+    return `
+    <div class="svc-card" style="flex-direction:column; align-items:stretch;">
+      <div style="display:flex; gap:12px;">
+        <div class="svc-ic">📦</div>
+        <div class="svc-body">
+          <h3>${p.name}</h3>
+          <p>${p.desc||''}${p.giftProductName ? `（購買即贈：${p.giftProductName} × ${p.giftQty||1}）` : ''}${p.giftSessions ? `（買${p.totalSessions}送${p.giftSessions}）` : ''}</p>
+          <div class="svc-meta"><span>共 ${totalSessions} 堂</span></div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+          <div class="svc-price">$${p.price}</div>
+          <button class="btn ${expanded?'btn-outline':'btn-primary'}" style="padding:8px 16px; font-size:12.5px;" onclick="togglePackagePurchase('${p.id}')">${expanded?'取消':'購買'}</button>
+        </div>
       </div>
-      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
-        <div class="svc-price">$${p.price}</div>
-        <button class="btn btn-primary" style="padding:8px 16px; font-size:12.5px;" onclick="purchasePackagePlan('${p.id}')">購買</button>
-      </div>
+      ${expanded ? `
+        <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--line);">
+          <div class="field">
+            <label>付款方式</label>
+            <div class="toggle-pair">
+              <button class="toggle-opt ${packagePlanPayMethod==='cash'?'active':''}" onclick="setPackagePlanPayMethod('cash')">現金</button>
+              <button class="toggle-opt ${packagePlanPayMethod==='transfer'?'active':''}" onclick="setPackagePlanPayMethod('transfer')">轉帳</button>
+              <button class="toggle-opt ${packagePlanPayMethod==='linepay'?'active':''}" onclick="setPackagePlanPayMethod('linepay')">LinePay</button>
+              <button class="toggle-opt ${packagePlanPayMethod==='wallet'?'active':''}" onclick="setPackagePlanPayMethod('wallet')">儲值金</button>
+            </div>
+            <div class="field-hint">${packagePlanPayMethodHint(p)}</div>
+          </div>
+          <button class="btn btn-primary" style="width:100%;" onclick="confirmPurchasePackagePlan('${p.id}')">確認購買</button>
+        </div>
+      ` : ''}
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
-/* 顧客線上購買套組方案：先送出一筆「待處理」訂單（跟一般商品訂單共用同一套機制），
-   商家在後台確認收款、標記完成後，系統才會自動把堂數加進顧客帳戶——
-   這裡不會直接發放堂數，因為金流仍是商家人工對帳，要等商家確認收到錢才算數 */
-/* 顧客線上購買套組方案：先送出一筆「待處理」訂單（跟一般商品訂單共用同一套機制）。
-   如果方案有綁贈品，贈品會併入「同一筆」訂單裡（不是另外開一筆），這樣商家在這筆
-   訂單裡就能直接編輯、換貨或延後出貨贈品（例如贈品要預購），不會卡住堂數的發放——
-   堂數是商家「記錄收款」的那一刻就發放，不用等贈品出貨完成，兩件事互不阻擋。 */
-async function purchasePackagePlan(planId){
+let packagePurchasePlanId = null;
+let packagePlanPayMethod = 'cash';
+function togglePackagePurchase(planId){
+  packagePurchasePlanId = (packagePurchasePlanId===planId) ? null : planId;
+  packagePlanPayMethod = 'cash';
+  renderPackagePlansShop();
+}
+function setPackagePlanPayMethod(method){
+  packagePlanPayMethod = method;
+  renderPackagePlansShop();
+}
+function packagePlanPayMethodHint(p){
+  if(packagePlanPayMethod!=='wallet') return '';
+  const profile = currentCustomer();
+  const balance = profile ? (profile.balance||0) : 0;
+  return `您目前儲值餘額 NT$${balance.toLocaleString()}，這筆需要 NT$${p.price}${p.price>balance?'（餘額不足，請改選其他付款方式或先儲值）':'，送出後立即扣款並直接發放堂數，不用等店家確認'}`;
+}
+/* 顧客線上購買套組方案：選現金／轉帳／LinePay 這些方式，跟以前一樣先送出「待處理」訂單，
+   等商家記錄收款才發放堂數；選「儲值金」則不用等——當場檢查餘額夠不夠、直接扣款、
+   直接把堂數發到顧客帳戶，訂單狀態一樣走出貨流程（贈品要不要預購都不受影響），
+   只是付款這件事已經當場處理完了，不用商家再確認一次 */
+async function confirmPurchasePackagePlan(planId){
   const plan = PACKAGE_PLANS.find(p=>p.id===planId);
   if(!plan) return;
   const uid = currentCustomerId();
   if(!uid){ showToast('請先登入會員帳號才能購買套組'); lockCustApp(); return; }
+  if(packagePlanPayMethod==='wallet'){
+    const profile = currentCustomer();
+    if((profile&&profile.balance||0) < plan.price){ showToast('儲值餘額不足，請改選其他付款方式或先儲值'); return; }
+  }
   const cust = currentCustomer();
   const items = [{ productId: null, name: plan.name+'（套組方案）', price: plan.price, qty: 1, subtotal: plan.price, shippedQty: 0, isPackagePlan: true }];
   if(plan.giftProductId){
     items.push({ productId: plan.giftProductId, name: plan.giftProductName+'（套組贈品）', price: 0, qty: plan.giftQty||1, subtotal: 0, shippedQty: 0 });
   }
+  const order = {
+    code: genOrderCode(), customerId: uid,
+    customer: { name: (cust&&cust.name)||'', phone: (cust&&cust.phone)||'', email:(cust&&cust.email)||'', note: '線上購買套組方案' },
+    items, packagePlanId: plan.id, totalAmount: plan.price, status: 'pending', createdAt: new Date().toISOString()
+  };
+  if(packagePlanPayMethod==='wallet'){
+    order.payment = { method:'wallet', walletAmount: plan.price, recordedAt: new Date().toISOString(), note:'顧客結帳時使用儲值金付款' };
+    order.packageGranted = true;
+  } else {
+    order.customerDeclaredMethod = packagePlanPayMethod;
+  }
   const orderRef = db.collection('orders').doc();
   try{
-    if(plan.giftProductId){
-      // 贈品是實體商品，一樣要照正常出貨流程扣庫存，避免超賣；套組方案本身不是庫存商品，不用扣
+    if(plan.giftProductId || packagePlanPayMethod==='wallet'){
       await db.runTransaction(async (tx)=>{
-        const giftRef = db.collection('products').doc(plan.giftProductId);
-        const snap = await tx.get(giftRef);
-        const data = snap.data();
-        const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
-        if(hasStock && data.stock < (plan.giftQty||1)){
-          throw new Error('STOCK_SHORT');
+        let giftRef = null, giftSnap = null;
+        if(plan.giftProductId){
+          giftRef = db.collection('products').doc(plan.giftProductId);
+          giftSnap = await tx.get(giftRef);
         }
-        if(hasStock){ tx.update(giftRef, { stock: data.stock - (plan.giftQty||1) }); }
-        tx.set(orderRef, {
-          code: genOrderCode(), customerId: uid,
-          customer: { name: (cust&&cust.name)||'', phone: (cust&&cust.phone)||'', email:(cust&&cust.email)||'', note: '線上購買套組方案' },
-          items, packagePlanId: plan.id, totalAmount: plan.price, status: 'pending', createdAt: new Date().toISOString()
-        });
+        let custRef = null, custSnap = null;
+        if(packagePlanPayMethod==='wallet'){
+          custRef = db.collection('customers').doc(uid);
+          custSnap = await tx.get(custRef);
+          const bal = custSnap.exists ? (custSnap.data().balance||0) : 0;
+          if(bal < plan.price){ throw new Error('WALLET_SHORT'); }
+        }
+        if(giftRef){
+          const data = giftSnap.data();
+          const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
+          if(hasStock && data.stock < (plan.giftQty||1)){ throw new Error('STOCK_SHORT'); }
+          if(hasStock){ tx.update(giftRef, { stock: data.stock - (plan.giftQty||1) }); }
+        }
+        tx.set(orderRef, order);
+        if(custRef){
+          const custData = custSnap.data() || {};
+          const newBalance = (custData.balance||0) - plan.price;
+          const log = [...(custData.balanceLog||[]), { date:new Date().toISOString(), amount:-plan.price, note:'消費扣款（'+order.code+'）', type:'order_deduct' }];
+          const newPackages = [...(custData.packages||[]), { id:'pkg_'+Date.now(), name: plan.name, serviceId: plan.serviceId||null, total: plan.totalSessions+(plan.giftSessions||0), used:0, note: plan.giftSessions?`顧客線上購買（含贈送 ${plan.giftSessions} 堂）`:'顧客線上購買', paidAmount: plan.price, createdAt: new Date().toISOString() }];
+          tx.update(custRef, { balance:newBalance, balanceLog: log, packages: newPackages });
+        }
       });
     } else {
-      await orderRef.set({
-        code: genOrderCode(), customerId: uid,
-        customer: { name: (cust&&cust.name)||'', phone: (cust&&cust.phone)||'', email:(cust&&cust.email)||'', note: '線上購買套組方案' },
-        items, packagePlanId: plan.id, totalAmount: plan.price, status: 'pending', createdAt: new Date().toISOString()
-      });
+      await orderRef.set(order);
     }
-    showToast('已送出購買申請，請依商家指示付款，商家確認收款後堂數會自動加進您的帳戶');
+    packagePurchasePlanId = null;
+    showToast(packagePlanPayMethod==='wallet' ? '已購買成功，堂數已直接加進您的帳戶' : '已送出購買申請，請依商家指示付款，商家確認收款後堂數會自動加進您的帳戶');
     setProductsTab('orders');
   }catch(err){
-    if(String(err&&err.message)==='STOCK_SHORT'){ showToast('贈品目前庫存不足，請聯絡商家確認'); }
+    const msg = String(err&&err.message||'');
+    if(msg==='WALLET_SHORT'){ showToast('儲值餘額不足，請改選其他付款方式或先儲值'); }
+    else if(msg==='STOCK_SHORT'){ showToast('贈品目前庫存不足，請聯絡商家確認'); }
     else{ showToast('送出失敗，請檢查網路連線後再試'); }
   }
 }
@@ -2082,6 +2230,7 @@ function openCheckout(){
   document.getElementById('ckName').value = (cp && cp.name) || '';
   document.getElementById('ckPhone').value = (cp && cp.phone) || '';
   document.getElementById('ckNote').value = '';
+  setCheckoutPayMethod('cash');
   document.getElementById('checkoutBackdrop').classList.add('show');
 }
 function closeCheckout(){ document.getElementById('checkoutBackdrop').classList.remove('show'); }
@@ -2108,21 +2257,39 @@ async function submitOrder(){
     return p ? { productId:pid, name:p.name, price:p.price, qty, subtotal:p.price*qty, shippedQty:0 } : null;
   }).filter(Boolean);
   if(items.length===0){ showToast('購物車是空的'); return; }
+  const totalAmount = items.reduce((s,it)=>s+it.subtotal,0);
+  if(checkoutPayMethod==='wallet'){
+    const profile = currentCustomer();
+    if((profile&&profile.balance||0) < totalAmount){ showToast('儲值餘額不足，請改選其他付款方式或先儲值'); return; }
+  }
   const order = {
     code: genOrderCode(),
     customerId: uid,
     customer: { name, phone, email: (currentCustomer()&&currentCustomer().email) || '', note: document.getElementById('ckNote').value.trim() },
     items,
-    totalAmount: items.reduce((s,it)=>s+it.subtotal,0),
+    totalAmount,
     status: 'pending',
     createdAt: new Date().toISOString()
   };
+  if(checkoutPayMethod==='wallet'){
+    order.payment = { method:'wallet', walletAmount: totalAmount, recordedAt: new Date().toISOString(), note:'顧客結帳時使用儲值金付款' };
+  } else {
+    order.customerDeclaredMethod = checkoutPayMethod;
+  }
   const orderRef = db.collection('orders').doc();
+  const custRef = db.collection('customers').doc(uid);
   try{
     await db.runTransaction(async (tx)=>{
-      // 交易內：先讀取每個商品目前的庫存，確認夠了才真正扣，避免跟其他顧客同時搶購時超賣
+      // 交易內：先讀取每個商品目前的庫存，確認夠了才真正扣，避免跟其他顧客同時搶購時超賣；
+      // 選儲值金付款的話，也在同一筆交易內檢查餘額並扣款，確保庫存跟扣款是同時成功或同時失敗
       const productRefs = items.map(it=>db.collection('products').doc(it.productId));
       const snaps = await Promise.all(productRefs.map(ref=>tx.get(ref)));
+      let custSnap = null;
+      if(checkoutPayMethod==='wallet'){
+        custSnap = await tx.get(custRef);
+        const bal = custSnap.exists ? (custSnap.data().balance||0) : 0;
+        if(bal < totalAmount){ throw new Error('WALLET_SHORT'); }
+      }
       for(let i=0;i<items.length;i++){
         const data = snaps[i].data();
         const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
@@ -2136,17 +2303,27 @@ async function submitOrder(){
         if(hasStock){ tx.update(productRefs[i], { stock: data.stock - items[i].qty }); }
       }
       tx.set(orderRef, order);
+      if(checkoutPayMethod==='wallet'){
+        const custData = custSnap.data() || {};
+        const newBalance = (custData.balance||0) - totalAmount;
+        const log = [...(custData.balanceLog||[]), { date:new Date().toISOString(), amount:-totalAmount, note:'消費扣款（'+order.code+'）', type:'order_deduct' }];
+        tx.update(custRef, { balance:newBalance, balanceLog: log });
+      }
     });
     cart = {};
+    const usedWallet = checkoutPayMethod==='wallet';
+    checkoutPayMethod = 'cash';
     closeCheckout();
     renderMyProducts();
     updateCartBarVisibility();
     setProductsTab('orders');
-    showToast('訂單已送出');
+    showToast(usedWallet ? '訂單已送出，已直接扣除儲值金' : '訂單已送出');
   }catch(err){
     const msg = String(err && err.message || '');
     if(msg.startsWith('STOCK_SHORT:')){
       showToast(`「${msg.slice(12)}」庫存不足，請調整數量再試一次`);
+    } else if(msg==='WALLET_SHORT'){
+      showToast('儲值餘額不足，請改選其他付款方式或先儲值');
     } else {
       showToast('送出失敗，請檢查網路連線後再試');
     }
