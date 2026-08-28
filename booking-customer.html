@@ -476,7 +476,10 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
           </div>
         </div>
         <button class="btn btn-primary" id="loginBtn" onclick="submitCustLogin()">登入</button>
-        <div class="field-hint" style="text-align:center; margin-top:10px; cursor:pointer; text-decoration:underline;" id="loginToggleMode" onclick="toggleCustLoginMode()">還沒有帳號？註冊新帳號</div>
+        <div style="display:flex; justify-content:space-between; margin-top:10px;">
+          <span class="field-hint" style="cursor:pointer; text-decoration:underline;" id="loginToggleMode" onclick="toggleCustLoginMode()">還沒有帳號？註冊新帳號</span>
+          <span class="field-hint" style="cursor:pointer; text-decoration:underline;" id="forgotPassBtn" onclick="sendCustPasswordReset()">忘記密碼？</span>
+        </div>
         <div class="field-hint" style="text-align:center; margin-top:14px;">帳號使用雲端同步，可在不同裝置登入；每個帳號只能查看自己的預約紀錄。</div>
       </div>
 
@@ -1008,6 +1011,19 @@ function renderCustLoginScreen(){
   document.getElementById('loginRegisterFields').style.display = setupMode ? 'block' : 'none';
   document.getElementById('loginBtn').textContent = setupMode ? '註冊並登入' : '登入';
   document.getElementById('loginToggleMode').textContent = setupMode ? '已經有帳號了？直接登入' : '還沒有帳號？註冊新帳號';
+  document.getElementById('forgotPassBtn').style.display = setupMode ? 'none' : 'inline';
+}
+async function sendCustPasswordReset(){
+  const email = (document.getElementById('loginEmail').value||'').trim();
+  if(!email){ showToast('請先在上方欄位輸入您的註冊信箱'); return; }
+  try{
+    await auth.sendPasswordResetEmail(email);
+    showToast('重設密碼信已寄出，請至信箱查收並依指示設定新密碼');
+  }catch(err){
+    if(err.code==='auth/user-not-found'){ showToast('查無此信箱對應的帳號'); }
+    else if(err.code==='auth/invalid-email'){ showToast('信箱格式不正確'); }
+    else{ showToast('寄送失敗，請檢查網路連線後再試'); }
+  }
 }
 function friendlyAuthError(err){
   const map = {
