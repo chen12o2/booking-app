@@ -545,37 +545,37 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 }
 .poster-gen-foot{ padding:16px 20px calc(20px + env(safe-area-inset-bottom)); flex-shrink:0; border-top:1px solid var(--paper-2); }
 .slot-poster{
-  background:radial-gradient(120% 55% at 50% 0%, #FCF5EC 0%, #F4E6D2 65%, #EDDBC0 100%);
+  background:linear-gradient(165deg, #4A3520 0%, #2B1D10 100%);
   border-radius:20px; padding:26px 16px 18px; text-align:center;
 }
 .slot-poster .logo{
-  width:64px; height:64px; border-radius:50%; margin:0 auto 10px; overflow:hidden; background:var(--paper);
+  width:64px; height:64px; border-radius:50%; margin:0 auto 10px; overflow:hidden; background:#3A2A18;
   display:flex; align-items:center; justify-content:center; font-size:26px;
-  box-shadow:0 0 0 3px var(--white), 0 2px 8px rgba(38,34,27,0.12);
+  box-shadow:0 0 0 3px rgba(255,253,248,0.85), 0 2px 10px rgba(0,0,0,0.35);
 }
 .slot-poster .logo img{ width:100%; height:100%; object-fit:cover; }
-.slot-poster .en-month{ font-family:'Noto Sans TC',sans-serif; font-size:38px; font-weight:900; color:var(--stamp-dark); margin:4px 0 2px; letter-spacing:.5px; }
-.slot-poster .sub{ font-size:10.5px; letter-spacing:1.5px; color:var(--ink-soft); margin-bottom:12px; }
-.slot-poster .biz{ font-size:14px; font-weight:700; color:var(--ink); }
-.slot-poster .handle{ font-size:11px; font-weight:700; color:var(--stamp); margin-bottom:10px; }
-.slot-poster .divider{ border-top:1px solid rgba(38,34,27,0.14); margin:6px 0 12px; }
+.slot-poster .en-month{ font-family:'Noto Sans TC',sans-serif; font-size:38px; font-weight:900; color:#F3D9A4; margin:4px 0 2px; letter-spacing:.5px; }
+.slot-poster .sub{ font-size:10.5px; letter-spacing:1.5px; color:rgba(255,253,248,0.6); margin-bottom:12px; }
+.slot-poster .biz{ font-size:14px; font-weight:700; color:#FFFDF8; }
+.slot-poster .handle{ font-size:11px; font-weight:700; color:#E8B75C; margin-bottom:10px; }
+.slot-poster .divider{ border-top:1px solid rgba(255,253,248,0.18); margin:6px 0 12px; }
 .slot-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; background:transparent; padding:0; }
-.slot-grid .wd{ font-size:10px; color:var(--ink-soft); text-align:center; padding-bottom:6px; font-weight:700; }
-.slot-grid .wd.weekend{ color:var(--stamp); }
+.slot-grid .wd{ font-size:10px; color:rgba(255,253,248,0.55); text-align:center; padding-bottom:6px; font-weight:700; }
+.slot-grid .wd.weekend{ color:#E8935C; }
 .slot-grid .day{ font-size:10px; text-align:center; padding:2px 0; min-height:56px; }
 .slot-grid .day.blank{ visibility:hidden; }
-.slot-grid .day .dnum{ font-weight:700; font-size:11px; margin-bottom:2px; color:var(--ink); }
-.slot-grid .day .tm{ font-family:'Space Mono',monospace; font-weight:700; font-size:8.5px; color:var(--stamp-dark); line-height:1.55; }
-.slot-grid .day.weekend .tm{ color:var(--stamp); }
-.slot-grid .day.full .tm{ text-decoration:line-through; opacity:.5; font-weight:400; color:var(--ink-soft); }
-.slot-grid .day.closed .tm{ color:var(--stamp-dark); font-weight:700; }
+.slot-grid .day .dnum{ font-weight:700; font-size:11px; margin-bottom:2px; color:#FFFDF8; }
+.slot-grid .day .tm{ font-family:'Space Mono',monospace; font-weight:700; font-size:8.5px; color:#E0B36B; line-height:1.55; }
+.slot-grid .day.weekend .tm{ color:#E8935C; }
+.slot-grid .day.full .tm{ text-decoration:line-through; opacity:.5; font-weight:400; color:rgba(255,253,248,0.45); }
+.slot-grid .day.closed .tm{ color:#D98B5C; font-weight:700; }
 .slot-poster .cta{
-  display:inline-block; background:var(--stamp); color:var(--white); font-size:12.5px; font-weight:700;
+  display:inline-block; background:#F3D9A4; color:#2B1D10; font-size:12.5px; font-weight:700;
   padding:11px 20px; border-radius:99px; margin:16px 0 6px;
 }
-.slot-poster .microtext{ font-size:9.5px; color:var(--ink-soft); margin-bottom:12px; }
+.slot-poster .microtext{ font-size:9.5px; color:rgba(255,253,248,0.55); margin-bottom:12px; }
 .slot-poster .bottom-row{ display:flex; align-items:flex-end; justify-content:space-between; }
-.slot-poster .qr-cap{ font-size:9px; color:var(--ink-soft); }
+.slot-poster .qr-cap{ font-size:9px; color:rgba(255,253,248,0.55); }
 .slot-poster .qr-row img{ width:56px; height:56px; border-radius:6px; background:var(--white); padding:3px; }
 .avail-poster{
   border-radius:14px; overflow:hidden; border:1.5px solid var(--line);
@@ -702,10 +702,14 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .nav-item{
   flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
   gap:2px; cursor:pointer; color:var(--ink-soft); font-size:9.5px; font-weight:700; background:none; border:none;
-  font-family:inherit; padding:0 2px;
+  font-family:inherit; padding:0 2px; position:relative;
 }
 .nav-item.active{ color:var(--stamp); }
-.nav-item .ic{ font-size:17px; }
+.nav-item .ic{ font-size:17px; position:relative; display:inline-block; }
+.nav-item .ic .nav-badge{
+  position:absolute; top:-3px; right:-6px; width:8px; height:8px; border-radius:50%;
+  background:var(--stamp-dark); border:1.5px solid var(--white);
+}
 
 /* toast */
 .toast{
@@ -1246,9 +1250,9 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 
     <div class="navbar">
       <button class="nav-item active" data-nav="dashboard" onclick="goScreen('dashboard')"><div class="ic">📊</div>總覽</button>
-      <button class="nav-item" data-nav="bookings" onclick="goScreen('bookings')"><div class="ic">🎫</div>預約</button>
+      <button class="nav-item" data-nav="bookings" onclick="goScreen('bookings')"><div class="ic">🎫<span class="nav-badge" id="navBadgeBookings" style="display:none;"></span></div>預約</button>
       <button class="nav-item" data-nav="customers" onclick="goScreen('customers')"><div class="ic">🧑</div>顧客</button>
-      <button class="nav-item" data-nav="services" onclick="goScreen('services')"><div class="ic">🔖</div>服務</button>
+      <button class="nav-item" data-nav="services" onclick="goScreen('services')"><div class="ic">🔖<span class="nav-badge" id="navBadgeOrders" style="display:none;"></span></div>服務</button>
       <button class="nav-item" data-nav="calendar" onclick="goScreen('calendar')"><div class="ic">🔗</div>分享</button>
       <button class="nav-item" data-nav="settings" onclick="goScreen('settings')"><div class="ic">⚙️</div>設定</button>
     </div>
@@ -1426,12 +1430,18 @@ function startListeners(){
     db.collection('orders').onSnapshot(snap=>{
       ALL_ORDERS = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=> new Date(b.createdAt||0) - new Date(a.createdAt||0));
       rerenderActiveScreen();
+      const activeId = (document.querySelector('#mainApp .screen.active')||{}).id;
+      if(activeId==='screen-services'){ setNavLastSeen('orders'); }
+      updateNavBadges();
     }, err=>console.error('orders listener', err))
   );
   unsubscribers.push(
     db.collection('bookings').onSnapshot(snap=>{
       ALL_BOOKINGS = snap.docs.map(d=>({ id:d.id, ...d.data() }));
       rerenderActiveScreen();
+      const activeId = (document.querySelector('#mainApp .screen.active')||{}).id;
+      if(activeId==='screen-bookings' || activeId==='screen-booking-detail'){ setNavLastSeen('bookings'); }
+      updateNavBadges();
     }, err=>console.error('bookings listener', err))
   );
   unsubscribers.push(
@@ -1455,6 +1465,36 @@ function rerenderActiveScreen(){
   if(id==='customer-detail') renderCustomerDetailScreen();
   if(id==='settings-detail') renderSettingsDetailScreen();
   
+}
+
+/* ============================================================
+   底部導覽列新異動小紅點
+   用瀏覽器 localStorage 記錄「上次看過某個分頁的時間」，跟預約／訂單目前
+   最新的異動時間（updatedAt，沒有的話退回 createdAt）比較，比較新就顯示紅點；
+   點進該分頁時視為已讀，把 lastSeen 更新成現在、紅點消失
+   ============================================================ */
+function getNavLastSeen(key){
+  try{ return localStorage.getItem('navLastSeen_'+key) || ''; }catch(e){ return ''; }
+}
+function setNavLastSeen(key){
+  try{ localStorage.setItem('navLastSeen_'+key, new Date().toISOString()); }catch(e){}
+}
+function latestActivityTime(list){
+  let max = '';
+  list.forEach(x=>{ const t = x.updatedAt || x.createdAt || ''; if(t > max) max = t; });
+  return max;
+}
+function updateNavBadges(){
+  const bEl = document.getElementById('navBadgeBookings');
+  const oEl = document.getElementById('navBadgeOrders');
+  if(bEl){
+    const latest = latestActivityTime(ALL_BOOKINGS);
+    bEl.style.display = (latest && latest > getNavLastSeen('bookings')) ? 'block' : 'none';
+  }
+  if(oEl){
+    const latest = latestActivityTime(ALL_ORDERS);
+    oEl.style.display = (latest && latest > getNavLastSeen('orders')) ? 'block' : 'none';
+  }
 }
 
 /* 同步版的資料存取函式（給 render 內用，讀的是快取，不是 Firestore） */
@@ -1653,10 +1693,10 @@ function goScreen(id, opts={}){
   window.scrollTo(0,0);
 
   if(id==='dashboard') renderDashboard();
-  if(id==='bookings'){ setCalView(calView); renderBookingsList(); }
+  if(id==='bookings'){ setCalView(calView); renderBookingsList(); setNavLastSeen('bookings'); updateNavBadges(); }
   if(id==='calendar'){ renderCalLink(); renderSharePage(); }
   if(id==='customers') renderCustomersList();
-  if(id==='services') { renderServicesList(); renderProductsList(); renderOrdersList(); setServicesTab(servicesTab); }
+  if(id==='services') { renderServicesList(); renderProductsList(); renderOrdersList(); setServicesTab(servicesTab); setNavLastSeen('orders'); updateNavBadges(); }
   if(id==='staff') renderStaffListView();
   if(id==='shopfront') renderShopfrontScreen();
   if(id==='customer-detail') renderCustomerDetailScreen();
@@ -2478,7 +2518,7 @@ function sendCustomerConfirmEmail(booking){
 async function updateBookingStatus(id, status){
   try{
     const before = loadBookings().find(x=>x.id===id);
-    await db.collection('bookings').doc(id).update({ status });
+    await db.collection('bookings').doc(id).update({ status, updatedAt: new Date().toISOString() });
     if(before && before.status==='pending' && status==='upcoming'){
       sendCustomerConfirmEmail({ ...before, status });
     }
@@ -2732,7 +2772,8 @@ function renderOrdersList(){
       ${o.status==='cancelled' ? `
       <div class="actions">
         <button onclick="updateOrderStatus('${o.id}','pending')">恢復為待處理</button>
-      </div>` : `
+      </div>
+      <div class="bkt-danger-row"><a onclick="deleteOrderRecord('${o.id}')">刪除這筆紀錄</a></div>` : `
       <div class="actions">
         ${o.status!=='done' ? `<button class="primary" onclick="updateOrderStatus('${o.id}','done')">標記全部出貨</button>` : ''}
         <button class="danger" onclick="updateOrderStatus('${o.id}','cancelled')">取消訂單</button>
@@ -2751,7 +2792,7 @@ async function updateOrderItemShipped(orderId, itemIndex, delta){
     : it);
   const newStatus = computeOrderStatus(items);
   try{
-    await db.collection('orders').doc(orderId).update({ items, status: newStatus });
+    await db.collection('orders').doc(orderId).update({ items, status: newStatus, updatedAt: new Date().toISOString() });
   }catch(err){
     showToast('更新出貨進度失敗，請檢查網路連線後再試');
   }
@@ -2760,6 +2801,7 @@ async function updateOrderStatus(id, status){
   const order = ALL_ORDERS.find(o=>o.id===id);
   if(!order){ showToast('找不到這筆訂單'); return; }
   const orderRef = db.collection('orders').doc(id);
+  const nowIso = new Date().toISOString();
   try{
     // 取消訂單 → 只把「還沒出貨」的部分還回庫存，已經出貨的商品不會憑空變回庫存；
     // 從「已取消」恢復成「待處理」→ 也只針對還沒出貨的部分重新扣庫存（要重新檢查夠不夠），
@@ -2774,7 +2816,7 @@ async function updateOrderStatus(id, status){
           const remain = order.items[i].qty - (order.items[i].shippedQty||0);
           if(hasStock && remain>0){ tx.update(refs[i], { stock: data.stock + remain }); }
         }
-        tx.update(orderRef, { status });
+        tx.update(orderRef, { status, updatedAt: nowIso });
       });
     } else if(status==='pending' && order.status==='cancelled'){
       await db.runTransaction(async (tx)=>{
@@ -2792,14 +2834,14 @@ async function updateOrderStatus(id, status){
           const remain = order.items[i].qty - (order.items[i].shippedQty||0);
           if(hasStock && remain>0){ tx.update(refs[i], { stock: data.stock - remain }); }
         }
-        tx.update(orderRef, { status: computeOrderStatus(order.items) });
+        tx.update(orderRef, { status: computeOrderStatus(order.items), updatedAt: nowIso });
       });
     } else if(status==='done'){
       // 「標記全部出貨」快捷：把每個品項的已出貨數量都補到等於訂購數量
       const items = order.items.map(it=>({ ...it, shippedQty: it.qty }));
-      await orderRef.update({ items, status:'done' });
+      await orderRef.update({ items, status:'done', updatedAt: nowIso });
     } else {
-      await orderRef.update({ status });
+      await orderRef.update({ status, updatedAt: nowIso });
     }
     showToast('訂單狀態已更新');
   }catch(err){
@@ -2810,6 +2852,15 @@ async function updateOrderStatus(id, status){
       showToast('更新失敗，請檢查網路連線後再試');
     }
   }
+}
+/* 永久刪除一筆已取消的訂單紀錄。訂單資料存在 Firestore，刪除後會透過即時監聽
+   同步從顧客端的「我的訂單」頁面移除，不需要另外處理 */
+async function deleteOrderRecord(id){
+  if(!confirm('確定要刪除這筆訂單紀錄嗎？此動作無法復原。')) return;
+  try{
+    await db.collection('orders').doc(id).delete();
+    showToast('紀錄已刪除');
+  }catch(err){ showToast('刪除失敗，請檢查網路連線後再試'); }
 }
 function openProductForm(id){
   const isEdit = !!id;
@@ -3234,15 +3285,15 @@ function renderSlotPosterPreview(){
   const now = new Date();
   const target = new Date(now.getFullYear(), now.getMonth()+posterMonthOffset, 1);
   const y = target.getFullYear(), m = target.getMonth();
-  const firstDow = (new Date(y,m,1).getDay() + 6) % 7; // 週一開頭
+  const firstDow = new Date(y,m,1).getDay(); // 週日開頭
   const daysInMonth = new Date(y,m+1,0).getDate();
-  const wdNames = ['一','二','三','四','五','六','日'];
+  const wdNames = ['日','一','二','三','四','五','六'];
   let cells = '';
   for(let i=0;i<firstDow;i++){ cells += `<div class="day blank"></div>`; }
   for(let d=1; d<=daysInMonth; d++){
     const idx = firstDow + d - 1;
     const col = idx % 7;
-    const weekendCls = col>=5 ? ' weekend' : '';
+    const weekendCls = (col===0 || col===6) ? ' weekend' : '';
     const dateKey = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const info = availableSlotsForDate(dateKey);
     if(info.closed){
@@ -3263,7 +3314,7 @@ function renderSlotPosterPreview(){
       <div class="handle">${handle}</div>
       <div class="divider"></div>
       <div class="slot-grid">
-        ${wdNames.map((wd,i)=>`<div class="wd${i>=5?' weekend':''}">${wd}</div>`).join('')}
+        ${wdNames.map((wd,i)=>`<div class="wd${(i===0||i===6)?' weekend':''}">${wd}</div>`).join('')}
         ${cells}
       </div>
       <div class="cta">→ 立即線上預約 ・ ${handle}</div>
@@ -3291,9 +3342,9 @@ async function downloadSlotPoster(){
   const now = new Date();
   const target = new Date(now.getFullYear(), now.getMonth()+posterMonthOffset, 1);
   const y = target.getFullYear(), m = target.getMonth();
-  const firstDow = (new Date(y,m,1).getDay() + 6) % 7;
+  const firstDow = new Date(y,m,1).getDay(); // 週日開頭
   const daysInMonth = new Date(y,m+1,0).getDate();
-  const wdNames = ['一','二','三','四','五','六','日'];
+  const wdNames = ['日','一','二','三','四','五','六'];
   const rows = Math.ceil((firstDow+daysInMonth)/7);
   const handle = (BUSINESS.customerUrl||'').replace(/^https?:\/\//,'');
 
@@ -3319,21 +3370,21 @@ async function downloadSlotPoster(){
   const ctx = canvas.getContext('2d');
   ctx.textAlign = 'center';
 
-  // 背景：柔和米杏色放射狀漸層，跟預覽卡片一致
-  const grad = ctx.createRadialGradient(W/2, 0, 0, W/2, 0, H*0.9);
-  grad.addColorStop(0, '#FCF5EC'); grad.addColorStop(0.65, '#F4E6D2'); grad.addColorStop(1, '#EDDBC0');
+  // 背景：深棕色調，跟頁面本身的米杏色系拉開差異，讓分享出去的圖更醒目
+  const grad = ctx.createLinearGradient(W*0.15, 0, W*0.85, H);
+  grad.addColorStop(0, '#4A3520'); grad.addColorStop(1, '#2B1D10');
   ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
 
   let cy = 26*S;
   // logo（帶白色圓環，跟預覽的 box-shadow 效果一致）
   const logoR = 32*S;
   ctx.save();
-  ctx.shadowColor = 'rgba(38,34,27,0.15)'; ctx.shadowBlur = 6*S; ctx.shadowOffsetY = 1*S;
+  ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 8*S; ctx.shadowOffsetY = 1*S;
   ctx.beginPath(); ctx.arc(W/2, cy+logoR, logoR+3*S, 0, Math.PI*2);
-  ctx.fillStyle = '#FFFDF8'; ctx.fill();
+  ctx.fillStyle = 'rgba(255,253,248,0.85)'; ctx.fill();
   ctx.restore();
   ctx.beginPath(); ctx.arc(W/2, cy+logoR, logoR, 0, Math.PI*2);
-  ctx.fillStyle = '#F7F2E6'; ctx.fill();
+  ctx.fillStyle = '#3A2A18'; ctx.fill();
   if(logoImg){
     ctx.save(); ctx.beginPath(); ctx.arc(W/2, cy+logoR, logoR, 0, Math.PI*2); ctx.clip();
     ctx.drawImage(logoImg, W/2-logoR, cy, logoR*2, logoR*2);
@@ -3343,30 +3394,30 @@ async function downloadSlotPoster(){
   }
   cy += logoR*2 + 10*S;
 
-  ctx.fillStyle = '#8F6420'; ctx.font = '900 '+(38*S)+'px "Noto Sans TC", sans-serif';
+  ctx.fillStyle = '#F3D9A4'; ctx.font = '900 '+(38*S)+'px "Noto Sans TC", sans-serif';
   cy += 34*S;
   ctx.fillText(EN_MONTHS[m], W/2, cy);
   cy += 4*S + 11*S;
-  ctx.fillStyle = '#6B6356'; ctx.font = '400 '+(10.5*S)+'px "Noto Sans TC", sans-serif';
+  ctx.fillStyle = 'rgba(255,253,248,0.6)'; ctx.font = '400 '+(10.5*S)+'px "Noto Sans TC", sans-serif';
   ctx.fillText(y+' ・ '+(m+1)+'月可約時段', W/2, cy);
   cy += 12*S + 14*S;
-  ctx.fillStyle = '#26221B'; ctx.font = '700 '+(14*S)+'px "Noto Sans TC", sans-serif';
+  ctx.fillStyle = '#FFFDF8'; ctx.font = '700 '+(14*S)+'px "Noto Sans TC", sans-serif';
   ctx.fillText(BUSINESS.name||'', W/2, cy);
   cy += 4*S + 11*S;
-  ctx.fillStyle = '#BF8B3D'; ctx.font = '700 '+(11*S)+'px "Space Mono", monospace';
+  ctx.fillStyle = '#E8B75C'; ctx.font = '700 '+(11*S)+'px "Space Mono", monospace';
   ctx.fillText(handle, W/2, cy);
   cy += 10*S;
   // 分隔線
-  ctx.strokeStyle = 'rgba(38,34,27,0.14)'; ctx.lineWidth = 1*S;
+  ctx.strokeStyle = 'rgba(255,253,248,0.18)'; ctx.lineWidth = 1*S;
   ctx.beginPath(); ctx.moveTo(padX, cy); ctx.lineTo(W-padX, cy); ctx.stroke();
   cy += 12*S;
 
-  // 可約時段格線（不畫白色卡片底，直接鋪在漸層背景上，跟預覽一致）
+  // 可約時段格線（週日開頭，跟預覽一致）
   const gridTop = cy;
   const cellW = innerW / 7;
   ctx.font = '700 '+(10*S)+'px "Noto Sans TC", sans-serif';
   wdNames.forEach((wd,i)=>{
-    ctx.fillStyle = i>=5 ? '#BF8B3D' : '#6B6356';
+    ctx.fillStyle = (i===0||i===6) ? '#E8935C' : 'rgba(255,253,248,0.55)';
     ctx.fillText(wd, padX+cellW*i+cellW/2, gridTop+wdRowH-6*S);
   });
 
@@ -3374,20 +3425,20 @@ async function downloadSlotPoster(){
   for(let d=1; d<=daysInMonth; d++){
     const idx = firstDow + d - 1;
     const col = idx % 7, row = Math.floor(idx/7);
-    const isWeekend = col>=5;
+    const isWeekend = (col===0 || col===6);
     const cx = padX + cellW*col + cellW/2, cyTop = cellsTop + row*cellH + 12*S;
     const dateKey = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const info = availableSlotsForDate(dateKey);
-    ctx.font = '700 '+(11*S)+'px "Space Mono", monospace'; ctx.fillStyle = '#26221B';
+    ctx.font = '700 '+(11*S)+'px "Space Mono", monospace'; ctx.fillStyle = '#FFFDF8';
     ctx.fillText(String(d), cx, cyTop);
     if(info.closed){
-      ctx.font = '700 '+(8.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#8F6420';
+      ctx.font = '700 '+(8.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#D98B5C';
       ctx.fillText(info.label||'', cx, cyTop+14*S);
     } else if(info.full){
-      ctx.font = '400 '+(8.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(107,99,86,0.55)';
+      ctx.font = '400 '+(8.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(255,253,248,0.45)';
       ctx.fillText(info.label||'已約滿', cx, cyTop+14*S);
     } else {
-      ctx.font = '700 '+(8.5*S)+'px "Space Mono", monospace'; ctx.fillStyle = isWeekend ? '#BF8B3D' : '#8F6420';
+      ctx.font = '700 '+(8.5*S)+'px "Space Mono", monospace'; ctx.fillStyle = isWeekend ? '#E8935C' : '#E0B36B';
       info.slots.slice(0,3).forEach((t,i)=>{ ctx.fillText(t, cx, cyTop+14*S+i*11*S); });
     }
   }
@@ -3399,19 +3450,23 @@ async function downloadSlotPoster(){
   const ctaW = ctx.measureText(ctaText).width + 40*S;
   const ctaH = 44*S;
   roundRect(ctx, W/2-ctaW/2, cy, ctaW, ctaH, ctaH/2);
-  ctx.fillStyle = '#BF8B3D'; ctx.fill();
-  ctx.fillStyle = '#FFFFFF'; ctx.fillText(ctaText, W/2, cy+ctaH/2+4*S);
+  ctx.fillStyle = '#F3D9A4'; ctx.fill();
+  ctx.fillStyle = '#2B1D10'; ctx.fillText(ctaText, W/2, cy+ctaH/2+4*S);
   cy += ctaH + 12*S;
 
-  ctx.font = '400 '+(9.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B6356';
+  ctx.font = '400 '+(9.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(255,253,248,0.55)';
   ctx.fillText('時段皆可微調，歡迎私訊　劃掉＝已約滿', W/2, cy);
   cy += 16*S + 12*S;
 
   // 底部：QR code（靠右）＋ 說明文字，跟預覽的 bottom-row 一致
   const qrSize = 56*S;
-  ctx.textAlign = 'left'; ctx.font = '400 '+(9*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B6356';
+  ctx.textAlign = 'left'; ctx.font = '400 '+(9*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(255,253,248,0.55)';
   ctx.fillText('掃碼預約', padX, cy+qrSize-6*S);
-  if(qrImg){ ctx.drawImage(qrImg, W-padX-qrSize, cy, qrSize, qrSize); }
+  if(qrImg){
+    roundRect(ctx, W-padX-qrSize, cy, qrSize, qrSize, 6*S);
+    ctx.fillStyle = '#FFFFFF'; ctx.fill();
+    ctx.drawImage(qrImg, W-padX-qrSize+3*S, cy+3*S, qrSize-6*S, qrSize-6*S);
+  }
 
   downloadCanvasImage(canvas, (BUSINESS.name||'booking') + '-可約月曆圖.png');
 }

@@ -898,10 +898,34 @@ function startPublicListeners(){
     }, err=>console.error('upcoming bookings listener', err))
   );
 }
+let MY_ORDERS_BY_ID = [];
+let MY_ORDERS_BY_PHONE = [];
+/* 訂單可能是登入前用訪客身分下單（沒有 customerId，只有留電話），所以除了用
+   customerId 查詢，另外也用會員資料裡的電話號碼查一次，兩邊結果合併、去重，
+   顧客登入後才不會漏看到登入前下的訂單 */
+function mergeMyOrders(){
+  const map = {};
+  [...MY_ORDERS_BY_ID, ...MY_ORDERS_BY_PHONE].forEach(o=>{ map[o.id] = o; });
+  MY_ORDERS = Object.values(map).sort((a,b)=> new Date(b.createdAt||0) - new Date(a.createdAt||0));
+  if(productsTab==='orders') renderMyOrders();
+}
 function startCustomerListeners(uid){
+  let phoneOrdersUnsub = null;
   unsubscribers.push(
     db.collection('customers').doc(uid).onSnapshot(snap=>{
       CUSTOMER_PROFILE = snap.exists ? { id: snap.id, ...snap.data() } : null;
+      const phone = ((CUSTOMER_PROFILE && CUSTOMER_PROFILE.phone) || '').trim();
+      if(phoneOrdersUnsub){ phoneOrdersUnsub(); phoneOrdersUnsub = null; }
+      if(phone){
+        phoneOrdersUnsub = db.collection('orders').where('customer.phone','==',phone).onSnapshot(snap2=>{
+          MY_ORDERS_BY_PHONE = snap2.docs.map(d=>({ id:d.id, ...d.data() }));
+          mergeMyOrders();
+        }, err=>console.error('my orders listener (by phone)', err));
+        unsubscribers.push(phoneOrdersUnsub);
+      } else {
+        MY_ORDERS_BY_PHONE = [];
+        mergeMyOrders();
+      }
     }, err=>console.error('customer profile listener', err))
   );
   unsubscribers.push(
@@ -915,8 +939,8 @@ function startCustomerListeners(uid){
   );
   unsubscribers.push(
     db.collection('orders').where('customerId','==',uid).onSnapshot(snap=>{
-      MY_ORDERS = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=> new Date(b.createdAt||0) - new Date(a.createdAt||0));
-      if(productsTab==='orders') renderMyOrders();
+      MY_ORDERS_BY_ID = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      mergeMyOrders();
     }, err=>console.error('my orders listener', err))
   );
 }
@@ -1641,7 +1665,7 @@ async function cancelBooking(id){
     }
   }
   try{
-    await db.collection('bookings').doc(id).update({ status:'cancelled' });
+    await db.collection('bookings').doc(id).update({ status:'cancelled', updatedAt: new Date().toISOString() });
     showToast('已取消該筆預約');
   }catch(err){
     showToast('取消失敗，請檢查網路連線後再試');
