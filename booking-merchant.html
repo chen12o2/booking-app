@@ -900,8 +900,9 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         <div class="field-hint" style="margin:-4px 0 14px;">累積營收＝已完成預約的服務金額（不論當初用現金、轉帳或儲值金付款都算）。下面這筆是另一個角度：</div>
         <div class="stat-row">
           <div class="stat-card"><div class="lb">儲值／套組實收</div><div class="vl stamp" id="statWalletCash">$0</div></div>
+          <div class="stat-card"><div class="lb">商品營收</div><div class="vl stamp" id="statProductRevenue">$0</div></div>
         </div>
-        <div class="field-hint" style="margin:-4px 0 14px;">顧客儲值或購買套組當下實際收到的現金，跟上面的「累積營收」是兩個角度，不要加在一起看：一筆錢通常會先在這裡出現一次（收現金當下），之後顧客用儲值金扣款消費時，會反映在「累積營收」裡，但不會在這裡重複出現。</div>
+        <div class="field-hint" style="margin:-4px 0 14px;">顧客儲值或購買套組當下實際收到的現金，跟上面的「累積營收」是兩個角度，不要加在一起看：一筆錢通常會先在這裡出現一次（收現金當下），之後顧客用儲值金扣款消費時，會反映在「累積營收」裡，但不會在這裡重複出現。商品營收則是另外獨立算的，來自已完成出貨的商品訂單金額，不算在服務的累積營收裡。</div>
 
         <div id="birthdayWidget" style="display:none;">
           <div class="section-title"><span class="lead"><span class="num">🎂</span>本月壽星</span></div>
@@ -1493,7 +1494,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
   <div class="modal-backdrop" id="orderFormBackdrop" onclick="if(event.target===this)closeOrderForm()">
     <div class="modal-card">
       <h3 id="orderFormTitle">新增訂單</h3>
-      <div class="field"><label for="orderCustName">顧客姓名</label><input type="text" id="orderCustName" placeholder="請輸入顧客姓名"></div>
+      <div class="field"><label for="orderCustName">顧客姓名</label><input type="text" id="orderCustName" placeholder="請輸入顧客姓名" oninput="handleOrderNameInput()"></div>
       <div class="field"><label for="orderCustPhone">手機號碼</label><input type="text" id="orderCustPhone" placeholder="0912-345-678" oninput="handleOrderPhoneInput()"></div>
       <div class="field-hint" id="orderCustMatchHint"></div>
       <div class="field"><label for="orderCustNote">備註（選填）</label><input type="text" id="orderCustNote" placeholder="例如：儲值贈品、面交自取…"></div>
@@ -1518,6 +1519,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         <button class="toggle-opt" id="payMethodTransfer" onclick="setPayMethod('transfer')">轉帳</button>
         <button class="toggle-opt" id="payMethodLinepay" onclick="setPayMethod('linepay')">LinePay</button>
         <button class="toggle-opt" id="payMethodWallet" onclick="setPayMethod('wallet')">儲值金</button>
+        <button class="toggle-opt" id="payMethodPackage" onclick="setPayMethod('package')">套組折抵</button>
         <button class="toggle-opt" id="payMethodOther" onclick="setPayMethod('other')">其他</button>
       </div>
       <div id="payMethodExtraFields"></div>
@@ -1992,11 +1994,13 @@ function renderDashboard(){
     const pkgPaid = (c.packages||[]).reduce((s,p)=>s+(p.paidAmount||0),0);
     return sum + topups + pkgPaid;
   }, 0);
+  const productRevenue = ALL_ORDERS.filter(o=>o.status==='done').reduce((sum,o)=>sum+(o.totalAmount||0),0);
 
   document.getElementById('statToday').textContent = todayCount;
   document.getElementById('statWeek').textContent = weekCount;
   document.getElementById('statRevenue').textContent = '$'+revenue.toLocaleString();
   document.getElementById('statWalletCash').textContent = '$'+walletCash.toLocaleString();
+  document.getElementById('statProductRevenue').textContent = '$'+productRevenue.toLocaleString();
 
   const thisMonth = String(today.getMonth()+1).padStart(2,'0');
   const bdayCustomers = loadCustomers().filter(c=>c.birthday && c.birthday.split('-')[1]===thisMonth);
@@ -2279,7 +2283,7 @@ function renderWalletForm(){
   const box = document.getElementById('walletForm');
   if(!walletFormKind){ box.innerHTML=''; return; }
   const kind = walletFormKind;
-  const gifts = BUSINESS.giftPresets || [];
+  const gifts = (BUSINESS.giftPresets || []).filter(g=>g.type!=='sessions');
   box.innerHTML = `
     <div class="field" style="margin-top:10px;"><label>${kind==='topup'?'儲值金額':'扣款金額'}</label><input type="number" id="walletAmount" placeholder="例如 3000"></div>
     ${kind==='topup' ? `
@@ -2459,6 +2463,7 @@ function renderPackageForm(){
   const box = document.getElementById('packageForm');
   if(!packageFormOpen){ box.innerHTML=''; return; }
   const names = BUSINESS.packageNamePresets || [];
+  const gifts = (BUSINESS.giftPresets||[]).filter(g=>g.type!=='cash');
   box.innerHTML = `
     <div class="field" style="margin-top:10px;">
       <label>套組名稱</label>
@@ -2471,9 +2476,81 @@ function renderPackageForm(){
     <div id="pkgNameNewForm"></div>
     <div class="field"><label>總堂數</label><input type="number" id="pkgTotal" placeholder="例如 6"></div>
     <div class="field"><label>實收金額</label><input type="number" id="pkgPaidAmount" placeholder="這次顧客實際付了多少錢（計入營業額）"></div>
+    <div class="field">
+      <label>贈送（選填）</label>
+      <select id="pkgGiftSelect" onchange="handlePkgGiftSelectChange()">
+        <option value="">不贈送</option>
+        ${gifts.map(g=>`<option value="${g.id}">${g.label}</option>`).join('')}
+        <option value="__new__">＋ 新增贈送選項…</option>
+      </select>
+    </div>
+    <div id="pkgGiftNewForm"></div>
     <div class="field"><label>備註（選填）</label><input type="text" id="pkgNote" placeholder="例如：加贈舒緩乳一瓶"></div>
     <button class="btn btn-primary" style="width:100%;" onclick="submitPackageForm()">新增套組</button>
   `;
+}
+function handlePkgGiftSelectChange(){
+  const sel = document.getElementById('pkgGiftSelect');
+  const box = document.getElementById('pkgGiftNewForm');
+  if(sel.value==='__new__'){
+    box.innerHTML = `
+      <div class="field"><label>贈送類型</label>
+        <select id="newPkgGiftType" onchange="renderNewPkgGiftFields()">
+          <option value="sessions">贈送堂數</option>
+          <option value="product">贈送商品</option>
+        </select>
+      </div>
+      <div id="newPkgGiftFields"></div>
+      <div class="field"><label>選項名稱</label><input type="text" id="newPkgGiftLabel" placeholder="例如：買5送1"></div>
+      <button class="btn btn-outline btn-sm" onclick="savePkgGiftPreset()">儲存這個贈送選項</button>
+    `;
+    renderNewPkgGiftFields();
+  } else {
+    box.innerHTML = '';
+  }
+}
+function renderNewPkgGiftFields(){
+  const type = document.getElementById('newPkgGiftType').value;
+  const wrap = document.getElementById('newPkgGiftFields');
+  if(type==='sessions'){
+    wrap.innerHTML = `<div class="field"><label>贈送堂數</label><input type="number" id="newPkgGiftSessions" min="1" placeholder="例如 1"></div>`;
+  } else {
+    if(PRODUCTS.length===0){
+      wrap.innerHTML = `<div class="field-hint">尚未設定任何商品，請先到「服務→商品項目」新增。</div>`;
+      return;
+    }
+    wrap.innerHTML = `
+      <div class="field"><label>贈送商品</label>
+        <select id="newPkgGiftProduct">${PRODUCTS.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>數量</label><input type="number" id="newPkgGiftQty" value="1" min="1"></div>
+    `;
+  }
+}
+async function savePkgGiftPreset(){
+  const type = document.getElementById('newPkgGiftType').value;
+  const label = (document.getElementById('newPkgGiftLabel').value||'').trim();
+  if(!label){ showToast('請填寫選項名稱'); return; }
+  const preset = { id:'gift_'+Date.now(), type, label };
+  if(type==='sessions'){
+    const qty = Number(document.getElementById('newPkgGiftSessions').value);
+    if(!qty || qty<=0){ showToast('請輸入正確的贈送堂數'); return; }
+    preset.qty = qty;
+  } else {
+    const p = PRODUCTS.find(x=>x.id===document.getElementById('newPkgGiftProduct')?.value);
+    if(!p){ showToast('請先新增商品才能設定贈送商品'); return; }
+    preset.productId = p.id;
+    preset.productName = p.name;
+    preset.qty = Math.max(1, Number(document.getElementById('newPkgGiftQty').value)||1);
+  }
+  const presets = [...(BUSINESS.giftPresets||[]), preset];
+  try{
+    await db.collection('meta').doc('business').set({ giftPresets: presets }, { merge:true });
+    BUSINESS.giftPresets = presets;
+    showToast('已新增贈送選項');
+    renderPackageForm();
+    setTimeout(()=>{ const sel=document.getElementById('pkgGiftSelect'); if(sel) sel.value = preset.id; }, 0);
+  }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
 }
 function handlePkgNameSelectChange(){
   const sel = document.getElementById('pkgNameSelect');
@@ -2502,16 +2579,35 @@ async function savePkgNamePreset(){
 async function submitPackageForm(){
   const nameSel = document.getElementById('pkgNameSelect');
   const name = nameSel ? nameSel.value : '';
-  const total = Number(document.getElementById('pkgTotal').value);
+  let total = Number(document.getElementById('pkgTotal').value);
   const paidAmount = Number(document.getElementById('pkgPaidAmount').value) || 0;
-  const note = (document.getElementById('pkgNote').value||'').trim();
+  let note = (document.getElementById('pkgNote').value||'').trim();
   if(!name || name==='__new__' || !total || total<=0){ showToast('請選擇套組名稱並填寫總堂數'); return; }
   const c = loadCustomers().find(x=>x.id===currentCustomerDetailId);
   if(!c) return;
+
+  const giftSel = document.getElementById('pkgGiftSelect');
+  const giftId = giftSel ? giftSel.value : '';
+  const giftPreset = (giftId && giftId!=='__new__') ? (BUSINESS.giftPresets||[]).find(g=>g.id===giftId) : null;
+  if(giftPreset && giftPreset.type==='sessions'){
+    total += giftPreset.qty;
+    note = [note, `含贈送 ${giftPreset.qty} 堂（${giftPreset.label}）`].filter(Boolean).join('；');
+  }
+
   const packages = [...(c.packages||[]), { id:'pkg_'+Date.now(), name, total, used:0, note, paidAmount, createdAt: new Date().toISOString() }];
   try{
     await db.collection('customers').doc(c.id).update({ packages });
-    showToast('已新增套組');
+    if(giftPreset && giftPreset.type==='product'){
+      await db.collection('orders').add({
+        code: genOrderCode(), customerId: c.id,
+        customer: { name: c.name||'', phone: c.phone||'', note: '套組贈品：'+giftPreset.label },
+        items: [{ productId: giftPreset.productId, name: giftPreset.productName, price: 0, qty: giftPreset.qty||1, subtotal: 0, shippedQty: 0 }],
+        totalAmount: 0, status: 'pending', createdAt: new Date().toISOString()
+      });
+      showToast('已新增套組，贈送商品已建立訂單，請至「商品訂單」安排出貨');
+    } else {
+      showToast('已新增套組');
+    }
     packageFormOpen = false;
     renderCustomerDetailScreen();
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
@@ -2931,41 +3027,56 @@ async function confirmAdjustAmount(){
 }
 
 /* ---- 收款：記錄這筆款項實際的收款方式 ---- */
-function paymentMethodSummary(b){
-  if(!b.payment || !b.payment.method) return '尚未記錄';
-  const labels = { cash:'現金', transfer:'轉帳', linepay:'LinePay', wallet:'儲值金', other:'其他' };
-  let s = labels[b.payment.method] || b.payment.method;
-  if(b.payment.method==='transfer' && (b.payment.bank || b.payment.last5)){
-    s += '（' + [b.payment.bank, b.payment.last5?'後五碼 '+b.payment.last5:''].filter(Boolean).join('・') + '）';
+function paymentMethodSummary(o){
+  if(!o.payment || !o.payment.method) return '尚未記錄';
+  const labels = { cash:'現金', transfer:'轉帳', linepay:'LinePay', wallet:'儲值金', package:'套組折抵', other:'其他' };
+  let s = labels[o.payment.method] || o.payment.method;
+  if(o.payment.method==='transfer' && (o.payment.bank || o.payment.last5)){
+    s += '（' + [o.payment.bank, o.payment.last5?'後五碼 '+o.payment.last5:''].filter(Boolean).join('・') + '）';
+  }
+  if(o.payment.method==='package' && o.payment.packageName){
+    s += '（'+o.payment.packageName+'）';
   }
   return s;
 }
-let payReconcileBookingId = null;
-function openPayReconcile(id){
-  const b = loadBookings().find(x=>x.id===id);
-  if(!b) return;
-  payReconcileBookingId = id;
-  const p = b.payment || {};
+/* 收款彈窗現在共用於「預約」跟「商品訂單」兩種對象，用 payReconcileTarget.type 分辨；
+   套組折抵這個付款方式只對預約開放（套組是服務堂數，不適用於商品訂單） */
+let payReconcileTarget = null;
+function openPayReconcile(id, type){
+  type = type || 'booking';
+  const obj = type==='order' ? ALL_ORDERS.find(x=>x.id===id) : loadBookings().find(x=>x.id===id);
+  if(!obj) return;
+  payReconcileTarget = { type, id };
+  document.getElementById('payMethodPackage').style.display = type==='order' ? 'none' : '';
+  const p = obj.payment || {};
   setPayMethod(p.method || 'cash');
   document.getElementById('payNoteInput').value = p.note || '';
   document.getElementById('payReconcileBackdrop').classList.add('show');
 }
 function closePayReconcile(){
   document.getElementById('payReconcileBackdrop').classList.remove('show');
-  payReconcileBookingId = null;
+  payReconcileTarget = null;
 }
-function payReconcileCustomer(b){
-  if(!b) return null;
-  return b.customerId ? loadCustomers().find(c=>c.id===b.customerId) : loadCustomers().find(c=>c.phone===b.customer.phone);
+function payReconcileObj(){
+  if(!payReconcileTarget) return null;
+  return payReconcileTarget.type==='order' ? ALL_ORDERS.find(x=>x.id===payReconcileTarget.id) : loadBookings().find(x=>x.id===payReconcileTarget.id);
+}
+function payReconcileAmount(obj){
+  if(!payReconcileTarget || !obj) return 0;
+  return payReconcileTarget.type==='order' ? (obj.totalAmount||0) : bookingActualTotal(obj);
+}
+function payReconcileCustomer(obj){
+  if(!obj) return null;
+  return obj.customerId ? loadCustomers().find(c=>c.id===obj.customerId) : loadCustomers().find(c=>c.phone===obj.customer.phone);
 }
 function setPayMethod(method){
-  ['cash','transfer','linepay','wallet','other'].forEach(m=>{
+  ['cash','transfer','linepay','wallet','package','other'].forEach(m=>{
     document.getElementById('payMethod'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active', m===method);
   });
   document.getElementById('payMethodExtraFields').dataset.method = method;
   const extra = document.getElementById('payMethodExtraFields');
-  const b = payReconcileBookingId ? loadBookings().find(x=>x.id===payReconcileBookingId) : null;
-  const p = (b && b.payment) || {};
+  const obj = payReconcileObj();
+  const p = (obj && obj.payment) || {};
   if(method==='transfer'){
     extra.innerHTML = `
       <div class="field-row">
@@ -2973,8 +3084,8 @@ function setPayMethod(method){
         <div class="field"><label for="payLast5Input">帳號後五碼</label><input type="text" id="payLast5Input" maxlength="5" placeholder="12345" value="${p.last5||''}"></div>
       </div>`;
   } else if(method==='wallet'){
-    const cust = payReconcileCustomer(b);
-    const amount = b ? bookingActualTotal(b) : 0;
+    const cust = payReconcileCustomer(obj);
+    const amount = payReconcileAmount(obj);
     if(!cust){
       extra.innerHTML = `<div class="field-hint" style="color:var(--stamp-dark);">查無此顧客的會員資料，無法使用儲值金付款。</div>`;
     } else {
@@ -2982,14 +3093,49 @@ function setPayMethod(method){
       const availableNow = (cust.balance||0) + (wasWallet ? (p.walletAmount||0) : 0);
       extra.innerHTML = `<div class="field-hint">顧客目前儲值餘額 NT$${availableNow.toLocaleString()}，這筆需要扣 NT$${amount}${amount>availableNow?'（餘額不足）':''}。</div>`;
     }
+  } else if(method==='package'){
+    const cust = payReconcileCustomer(obj);
+    const wasPackage = p.method==='package';
+    const activePackages = cust ? (cust.packages||[]).filter(pkg=> pkg.used<pkg.total || (wasPackage && pkg.id===p.packageId)) : [];
+    if(!cust || activePackages.length===0){
+      extra.innerHTML = `<div class="field-hint" style="color:var(--stamp-dark);">這位顧客目前沒有可使用的套組堂數。</div>`;
+    } else {
+      extra.innerHTML = `
+        <div class="field"><label>選擇套組</label>
+          <select id="payPackageSelect" onchange="renderPackagePayPreview()">
+            ${activePackages.map(pkg=>{
+              const remain = pkg.total - pkg.used + (wasPackage && pkg.id===p.packageId ? 1 : 0);
+              return `<option value="${pkg.id}" ${wasPackage && pkg.id===p.packageId?'selected':''}>${pkg.name}（剩 ${remain} 堂）</option>`;
+            }).join('')}
+          </select>
+        </div>
+        <div class="field-hint" id="packagePayPreview"></div>
+      `;
+      renderPackagePayPreview();
+    }
   } else {
     extra.innerHTML = '';
   }
 }
+function renderPackagePayPreview(){
+  const sel = document.getElementById('payPackageSelect');
+  const box = document.getElementById('packagePayPreview');
+  if(!sel || !box) return;
+  const obj = payReconcileObj();
+  const cust = payReconcileCustomer(obj);
+  const pkg = cust ? (cust.packages||[]).find(p=>p.id===sel.value) : null;
+  if(!pkg) return;
+  if(pkg.paidAmount){
+    const perSession = Math.round(pkg.paidAmount / pkg.total);
+    box.textContent = `這堂平均金額約 NT$${perSession}（套組實收 NT$${pkg.paidAmount} ÷ ${pkg.total} 堂，四捨五入到整數），儲存後會用這個金額更新這筆預約的實收金額，讓累積營收算得準。`;
+  } else {
+    box.textContent = `這個套組沒有記錄實收金額，扣一堂後不會更動這筆預約的實收金額。`;
+  }
+}
 async function confirmPayReconcile(){
-  if(!payReconcileBookingId) return;
-  const b = loadBookings().find(x=>x.id===payReconcileBookingId);
-  if(!b) return;
+  if(!payReconcileTarget) return;
+  const obj = payReconcileObj();
+  if(!obj) return;
   const method = document.getElementById('payMethodExtraFields').dataset.method || 'cash';
   const payment = {
     method,
@@ -3001,13 +3147,14 @@ async function confirmPayReconcile(){
     payment.last5 = (document.getElementById('payLast5Input')?.value||'').trim();
   }
 
-  const prevPayment = b.payment || {};
-  const amount = bookingActualTotal(b);
-  const cust = payReconcileCustomer(b);
+  const prevPayment = obj.payment || {};
+  const amount = payReconcileAmount(obj);
+  const cust = payReconcileCustomer(obj);
 
   /* 計算這次操作對儲值餘額造成的「淨變化」：如果原本就是用儲值金付款，先把那筆加回去；
-     如果這次改成用儲值金付，再扣一次。兩者合併成單一筆異動寫入，避免同一批次對同一份
-     顧客文件寫兩次時後面蓋掉前面。 */
+     如果這次改成用儲值金付，再扣一次。兩者合併成單一筆異動寫入，避免同一份顧客文件被
+     寫兩次時後面蓋掉前面。套組折抵是堂數，跟儲值金分開處理，但最後也會合併進同一次
+     顧客文件更新裡，同一批次不對同一份文件呼叫兩次 update。 */
   let balanceDelta = 0;
   const logNotes = [];
   if(prevPayment.method==='wallet' && prevPayment.walletAmount){
@@ -3023,19 +3170,53 @@ async function confirmPayReconcile(){
     payment.walletAmount = amount;
   }
 
+  let newPackages = null;
+  let revenueOverride = null;
+  if(payReconcileTarget.type==='booking'){
+    let packages = cust ? [...(cust.packages||[])] : [];
+    let packagesTouched = false;
+    if(prevPayment.method==='package' && prevPayment.packageId){
+      packages = packages.map(p=> p.id===prevPayment.packageId ? {...p, used: Math.max(0, p.used-1)} : p);
+      packagesTouched = true;
+    }
+    if(method==='package'){
+      const sel = document.getElementById('payPackageSelect');
+      const pkgId = sel ? sel.value : '';
+      const pkg = packages.find(p=>p.id===pkgId);
+      if(!cust || !pkg){ showToast('請選擇要折抵的套組'); return; }
+      if(pkg.used>=pkg.total){ showToast('這個套組已經沒有剩餘堂數'); return; }
+      packages = packages.map(p=> p.id===pkgId ? {...p, used: p.used+1} : p);
+      packagesTouched = true;
+      payment.packageId = pkg.id;
+      payment.packageName = pkg.name;
+      if(pkg.paidAmount){ revenueOverride = Math.round(pkg.paidAmount / pkg.total); }
+    }
+    if(packagesTouched) newPackages = packages;
+  }
+
   try{
     const batch = db.batch();
-    if(balanceDelta !== 0 && cust){
-      const newBalance = (cust.balance||0) + balanceDelta;
-      const log = [...(cust.balanceLog||[]), { date:new Date().toISOString(), amount:balanceDelta, note: logNotes.join('、')+'（'+b.code+'）', type: method==='wallet' ? 'booking_deduct' : 'booking_refund' }];
-      batch.update(db.collection('customers').doc(cust.id), { balance:newBalance, balanceLog: log });
+    if(cust && (balanceDelta !== 0 || newPackages)){
+      const custUpdate = {};
+      if(balanceDelta !== 0){
+        custUpdate.balance = (cust.balance||0) + balanceDelta;
+        custUpdate.balanceLog = [...(cust.balanceLog||[]), { date:new Date().toISOString(), amount:balanceDelta, note: logNotes.join('、')+'（'+(obj.code||'')+'）', type: method==='wallet' ? 'booking_deduct' : 'booking_refund' }];
+      }
+      if(newPackages){ custUpdate.packages = newPackages; }
+      batch.update(db.collection('customers').doc(cust.id), custUpdate);
     }
-    batch.update(db.collection('bookings').doc(payReconcileBookingId), { payment });
+    const collectionName = payReconcileTarget.type==='order' ? 'orders' : 'bookings';
+    const updateData = { payment };
+    if(payReconcileTarget.type==='booking'){
+      updateData.updatedAt = new Date().toISOString();
+      if(revenueOverride !== null){ updateData.actualAmount = revenueOverride; }
+    }
+    batch.update(db.collection(collectionName).doc(payReconcileTarget.id), updateData);
     await batch.commit();
     showToast('收款已儲存');
-    const id = payReconcileBookingId;
+    const { type, id } = payReconcileTarget;
     closePayReconcile();
-    openBookingSheet(id);
+    if(type==='order'){ renderOrdersList(); } else { openBookingSheet(id); }
   }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
 }
 
@@ -3681,6 +3862,22 @@ function handleOrderPhoneInput(){
     hint.textContent = '此電話目前沒有對應的顧客資料，儲存後會視為新顧客（若之後該電話有註冊會員或訂位，系統會自動對應）';
   }
 }
+/* 姓名欄位也做同樣的事：打完姓名，如果剛好唯一比對到一位既有顧客，就自動帶入她的電話，
+   兩個欄位互相補齊，不管商家先填哪一個都行 */
+function handleOrderNameInput(){
+  const nameRaw = (document.getElementById('orderCustName').value||'').trim();
+  const hint = document.getElementById('orderCustMatchHint');
+  const phoneField = document.getElementById('orderCustPhone');
+  if(!nameRaw){ return; }
+  if(phoneField.value.trim()) return; // 電話已經有值就不覆蓋，避免打亂商家自己輸入的資料
+  const matches = loadCustomers().filter(c=>(c.name||'').trim()===nameRaw);
+  if(matches.length===1){
+    phoneField.value = matches[0].phone || '';
+    hint.textContent = `✓ 已找到既有顧客「${nameRaw}」，將會關聯到同一份顧客資料`;
+  } else if(matches.length>1){
+    hint.textContent = `找到 ${matches.length} 位同名顧客，請直接輸入手機號碼以正確比對`;
+  }
+}
 function closeOrderForm(){
   document.getElementById('orderFormBackdrop').classList.remove('show');
   orderFormId = null;
@@ -3811,6 +4008,7 @@ function renderOrdersList(){
       </div>
       ${o.customer.note ? `<div class="note">備註：${o.customer.note}</div>` : ''}
       <div class="foot"><span class="field-hint" style="margin:0;">${(o.createdAt||'').slice(0,10)}</span><span class="total">$${o.totalAmount}</span></div>
+      ${o.status!=='cancelled' ? `<div class="field-hint" style="margin:2px 0 8px;">收款：${paymentMethodSummary(o)}</div>` : ''}
       ${o.status==='cancelled' ? `
       <div class="actions">
         <button onclick="updateOrderStatus('${o.id}','pending')">恢復為待處理</button>
@@ -3819,6 +4017,7 @@ function renderOrdersList(){
       <div class="actions">
         ${o.status!=='done' ? `<button class="primary" onclick="updateOrderStatus('${o.id}','done')">標記全部出貨</button>` : ''}
         <button onclick="openOrderForm('${o.id}')">編輯內容</button>
+        <button onclick="openPayReconcile('${o.id}','order')">${o.payment ? '修改收款' : '記錄收款'}</button>
         <button class="danger" onclick="updateOrderStatus('${o.id}','cancelled')">取消訂單</button>
       </div>`}
     </div>
