@@ -354,8 +354,12 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .status-pending{ background:#FBF3E1; color:#8A6A1E; }
 .status-partial{ background:#E8EEF5; color:#3E6A96; }
 
-.ticket-actions{ display:flex; gap:10px; margin-top:16px; }
-.ticket-actions .btn{ flex:1; padding:12px 8px; font-size:13.5px; }
+.ticket-actions{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
+.ticket-actions .btn{ padding:12px 8px; font-size:13.5px; }
+.ticket-remind{
+  background:#FBF3E1; border:1.5px solid #E8D49A; border-radius:10px; padding:12px 14px;
+  font-size:13.5px; font-weight:700; color:#8A6A1E; line-height:1.6; margin-bottom:14px;
+}
 
 .empty-state{ text-align:center; padding:60px 20px; color:var(--ink-soft); }
 .empty-state .ic{ font-size:38px; margin-bottom:10px; }
@@ -1740,7 +1744,7 @@ function renderMyBookings(){
       ${ticketHtml(b,false)}
       <div style="padding:0 20px 18px;">
         ${b.cancelRequested ? `<div class="field-hint" style="margin-bottom:10px;">已送出取消申請，正在等待店家確認，尚未正式取消</div>` : ''}
-        ${canAct ? `<div class="field-hint" style="margin-bottom:10px;">送出預約後，記得將下方的分享預約資訊傳給官方，這樣才算完成送出預約噢～</div>` : ''}
+        ${canAct ? `<div class="ticket-remind">📌 送出預約後，記得將下方的分享預約資訊傳給官方，這樣才算完成送出預約噢～</div>` : ''}
         <div class="ticket-actions">
           <button class="btn btn-outline" onclick="downloadIcs(${JSON.stringify(b).replace(/"/g,'&quot;')})">加入行事曆</button>
           ${canAct ? `<button class="btn btn-outline" onclick="shareBooking(${JSON.stringify(b).replace(/"/g,'&quot;')})">分享預約資訊</button>` : ''}
