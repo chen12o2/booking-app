@@ -440,13 +440,13 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .order-card .actions button.danger{ color:var(--stamp-dark); border-color:var(--stamp); }
 .crud-actions{ display:flex; gap:8px; flex-shrink:0; }
 .crud-actions .ic-btn{ width:28px; height:28px; border-radius:50%; border:1.5px solid var(--line); background:var(--white); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px; }
-.crud-reorder{ display:flex; flex-direction:column; gap:1px; flex-shrink:0; padding-top:2px; }
+.crud-reorder{ display:grid; grid-template-columns:1fr 1fr; gap:3px; flex-shrink:0; padding-top:2px; width:56px; }
 .crud-reorder button{
-  width:24px; height:16px; border:none; border-radius:5px; background:none;
-  color:var(--ink-soft); cursor:pointer; font-size:10px; line-height:1; padding:0;
+  width:26px; height:26px; border:1.5px solid var(--line); border-radius:8px; background:var(--white);
+  color:var(--ink-soft); cursor:pointer; font-size:13px; line-height:1; padding:0;
   display:flex; align-items:center; justify-content:center;
 }
-.crud-reorder button.edge{ font-size:9px; }
+.crud-reorder button.edge{ font-size:12px; background:var(--paper-2); }
 .crud-reorder button:disabled{ opacity:.3; cursor:default; }
 
 /* ---- settings category list ---- */
@@ -997,6 +997,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
               <button class="btn-outline-sm" onclick="openCategoryManager('service')">管理分類</button>
             </div>
             <div class="cat-chips" id="svcCategoryChips"></div>
+            <div class="cat-chips" id="svcStatusChips" style="margin-top:8px;"></div>
           </div>
           <div style="display:flex; justify-content:flex-end; margin-bottom:14px;">
             <button class="add-btn" onclick="openServiceForm()">＋ 新增服務</button>
@@ -1014,6 +1015,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
               <button class="btn-outline-sm" onclick="openCategoryManager('product')">管理分類</button>
             </div>
             <div class="cat-chips" id="prdCategoryChips"></div>
+            <div class="cat-chips" id="prdStatusChips" style="margin-top:8px;"></div>
           </div>
           <div style="display:flex; justify-content:flex-end; margin-bottom:14px;">
             <button class="add-btn" onclick="openProductForm()">＋ 新增商品</button>
@@ -2802,12 +2804,14 @@ function setServicesTab(tab){
   document.getElementById('svcOrdersView').style.display = tab==='orders' ? 'block' : 'none';
 }
 let svcCategoryFilter = 'all';
+let svcStatusFilter = 'all';
 let svcFormAddonIds = [];
 let svcFormAddonMode = 'multi';
 let svcFormDepositType = 'fixed';
 let prdFormType = 'physical';
 let prdFormDepositType = 'fixed';
 let prdCategoryFilter = 'all';
+let prdStatusFilter = 'all';
 function renderCategoryChips(type){
   const cats = type==='service' ? (BUSINESS.serviceCategories||[]) : (BUSINESS.productCategories||[]);
   const items = type==='service' ? SERVICES : PRODUCTS;
@@ -2822,20 +2826,40 @@ function renderCategoryChips(type){
     }));
   wrap.innerHTML = chips.join('');
 }
+function renderStatusChips(type){
+  const items = type==='service' ? SERVICES : PRODUCTS;
+  const wrap = document.getElementById(type==='service' ? 'svcStatusChips' : 'prdStatusChips');
+  if(!wrap) return;
+  const activeFilter = type==='service' ? svcStatusFilter : prdStatusFilter;
+  const setFn = type==='service' ? 'setServiceStatusFilter' : 'setProductStatusFilter';
+  const activeCount = items.filter(x=>x.active!==false).length;
+  const inactiveCount = items.length - activeCount;
+  const chips = [
+    `<div class="cat-chip ${activeFilter==='all'?'active':''}" onclick="${setFn}('all')">全部狀態</div>`,
+    `<div class="cat-chip ${activeFilter==='active'?'active':''}" onclick="${setFn}('active')">上架中<span class="cnt"> ${activeCount}</span></div>`,
+    `<div class="cat-chip ${activeFilter==='inactive'?'active':''}" onclick="${setFn}('inactive')">已下架<span class="cnt"> ${inactiveCount}</span></div>`,
+  ];
+  wrap.innerHTML = chips.join('');
+}
 function setServiceCategoryFilter(cat){ svcCategoryFilter = cat; renderServicesList(); }
 function setProductCategoryFilter(cat){ prdCategoryFilter = cat; renderProductsList(); }
+function setServiceStatusFilter(st){ svcStatusFilter = st; renderServicesList(); }
+function setProductStatusFilter(st){ prdStatusFilter = st; renderProductsList(); }
 /* 依商家設定的分類順序把清單排好；不影響 SERVICES/PRODUCTS 本身的儲存順序，
    只是「目前畫面上看到的順序」，排序按鈕跟分組標題都是照這個順序來算 */
 function getDisplayedServiceList(){
-  if(svcCategoryFilter!=='all') return SERVICES.filter(s=>s.category===svcCategoryFilter);
+  const byStatus = s => svcStatusFilter==='all' ? true : (svcStatusFilter==='active' ? s.active!==false : s.active===false);
+  const pool = SERVICES.filter(byStatus);
+  if(svcCategoryFilter!=='all') return pool.filter(s=>s.category===svcCategoryFilter);
   const cats = BUSINESS.serviceCategories||[];
   const out = [];
-  cats.forEach(c=>{ out.push(...SERVICES.filter(s=>s.category===c)); });
-  out.push(...SERVICES.filter(s=>!s.category || !cats.includes(s.category)));
+  cats.forEach(c=>{ out.push(...pool.filter(s=>s.category===c)); });
+  out.push(...pool.filter(s=>!s.category || !cats.includes(s.category)));
   return out;
 }
 function renderServicesList(){
   renderCategoryChips('service');
+  renderStatusChips('service');
   const wrap = document.getElementById('servicesList');
   const list = getDisplayedServiceList();
   if(list.length===0){
@@ -3059,26 +3083,33 @@ async function toggleServiceActive(id){
   try{
     await db.collection('services').doc(id).update({ active: nextActive });
     showToast(nextActive ? '已重新上架' : '已下架');
+    svcStatusFilter = nextActive ? 'active' : 'inactive';
+    s.active = nextActive;
+    renderServicesList();
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
 /* 上下移動排序：只跟目前畫面上顯示的清單（可能已被分類篩選過）裡相鄰的項目交換順序，
    所見即所得，不會影響到其他分類裡的項目 */
-async function moveServiceInList(id, delta){
+function moveServiceInList(id, delta){
   const list = getDisplayedServiceList();
   const idx = list.findIndex(s=>s.id===id);
   const targetIdx = idx + delta;
   if(idx<0 || targetIdx<0 || targetIdx>=list.length) return;
   const a = list[idx], b = list[targetIdx];
   const orderA = a.order ?? 0, orderB = b.order ?? 0;
-  try{
-    const batch = db.batch();
-    batch.update(db.collection('services').doc(a.id), { order: orderB });
-    batch.update(db.collection('services').doc(b.id), { order: orderA });
-    await batch.commit();
-  }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
+  a.order = orderB; b.order = orderA;
+  renderServicesList();
+  (async()=>{
+    try{
+      const batch = db.batch();
+      batch.update(db.collection('services').doc(a.id), { order: orderB });
+      batch.update(db.collection('services').doc(b.id), { order: orderA });
+      await batch.commit();
+    }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
+  })();
 }
 /* 直接把項目移到（同分類群組內的）最上面或最下面，一次到位不用一步一步點 */
-async function moveServiceToEdge(id, edge){
+function moveServiceToEdge(id, edge){
   const list = getDisplayedServiceList();
   const idx = list.findIndex(s=>s.id===id);
   if(idx<0) return;
@@ -3096,26 +3127,33 @@ async function moveServiceToEdge(id, edge){
   const group = list.slice(start, end+1);
   const [item] = group.splice(idx-start, 1);
   group.splice(edge==='top' ? 0 : group.length, 0, item);
-  try{
-    const batch = db.batch();
-    group.forEach((s,i)=>{ batch.update(db.collection('services').doc(s.id), { order: i*10 }); });
-    await batch.commit();
-  }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
+  group.forEach((s,i)=>{ s.order = i*10; });
+  renderServicesList();
+  (async()=>{
+    try{
+      const batch = db.batch();
+      group.forEach((s,i)=>{ batch.update(db.collection('services').doc(s.id), { order: i*10 }); });
+      await batch.commit();
+    }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
+  })();
 }
 
 /* ============================================================
    PRODUCTS CRUD
    ============================================================ */
 function getDisplayedProductList(){
-  if(prdCategoryFilter!=='all') return PRODUCTS.filter(p=>p.category===prdCategoryFilter);
+  const byStatus = p => prdStatusFilter==='all' ? true : (prdStatusFilter==='active' ? p.active!==false : p.active===false);
+  const pool = PRODUCTS.filter(byStatus);
+  if(prdCategoryFilter!=='all') return pool.filter(p=>p.category===prdCategoryFilter);
   const cats = BUSINESS.productCategories||[];
   const out = [];
-  cats.forEach(c=>{ out.push(...PRODUCTS.filter(p=>p.category===c)); });
-  out.push(...PRODUCTS.filter(p=>!p.category || !cats.includes(p.category)));
+  cats.forEach(c=>{ out.push(...pool.filter(p=>p.category===c)); });
+  out.push(...pool.filter(p=>!p.category || !cats.includes(p.category)));
   return out;
 }
 function renderProductsList(){
   renderCategoryChips('product');
+  renderStatusChips('product');
   const wrap = document.getElementById('productsList');
   const list = getDisplayedProductList();
   if(list.length===0){
@@ -3451,23 +3489,30 @@ async function toggleProductActive(id){
   try{
     await db.collection('products').doc(id).update({ active: nextActive });
     showToast(nextActive ? '已重新上架' : '已下架');
+    prdStatusFilter = nextActive ? 'active' : 'inactive';
+    p.active = nextActive;
+    renderProductsList();
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
-async function moveProductInList(id, delta){
+function moveProductInList(id, delta){
   const list = getDisplayedProductList();
   const idx = list.findIndex(p=>p.id===id);
   const targetIdx = idx + delta;
   if(idx<0 || targetIdx<0 || targetIdx>=list.length) return;
   const a = list[idx], b = list[targetIdx];
   const orderA = a.order ?? 0, orderB = b.order ?? 0;
-  try{
-    const batch = db.batch();
-    batch.update(db.collection('products').doc(a.id), { order: orderB });
-    batch.update(db.collection('products').doc(b.id), { order: orderA });
-    await batch.commit();
-  }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
+  a.order = orderB; b.order = orderA;
+  renderProductsList();
+  (async()=>{
+    try{
+      const batch = db.batch();
+      batch.update(db.collection('products').doc(a.id), { order: orderB });
+      batch.update(db.collection('products').doc(b.id), { order: orderA });
+      await batch.commit();
+    }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
+  })();
 }
-async function moveProductToEdge(id, edge){
+function moveProductToEdge(id, edge){
   const list = getDisplayedProductList();
   const idx = list.findIndex(p=>p.id===id);
   if(idx<0) return;
@@ -3485,11 +3530,15 @@ async function moveProductToEdge(id, edge){
   const group = list.slice(start, end+1);
   const [item] = group.splice(idx-start, 1);
   group.splice(edge==='top' ? 0 : group.length, 0, item);
-  try{
-    const batch = db.batch();
-    group.forEach((p,i)=>{ batch.update(db.collection('products').doc(p.id), { order: i*10 }); });
-    await batch.commit();
-  }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
+  group.forEach((p,i)=>{ p.order = i*10; });
+  renderProductsList();
+  (async()=>{
+    try{
+      const batch = db.batch();
+      group.forEach((p,i)=>{ batch.update(db.collection('products').doc(p.id), { order: i*10 }); });
+      await batch.commit();
+    }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
+  })();
 }
 
 /* ============================================================
