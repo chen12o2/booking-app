@@ -1025,6 +1025,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
           <button class="svc-tab active" id="svcTabServices" onclick="setServicesTab('services')">服務項目</button>
           <button class="svc-tab" id="svcTabProducts" onclick="setServicesTab('products')">商品項目</button>
           <button class="svc-tab" id="svcTabOrders" onclick="setServicesTab('orders')">商品訂單</button>
+          <button class="svc-tab" id="svcTabPackagePlans" onclick="setServicesTab('packagePlans')">套組方案</button>
         </div>
 
         <div id="svcServicesView">
@@ -1073,6 +1074,15 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
             <div class="filter-chip" data-status="cancelled" onclick="setOrderFilter('cancelled')">已取消</div>
           </div>
           <div id="ordersList"></div>
+        </div>
+
+        <div id="svcPackagePlansView" style="display:none;">
+          <div style="display:flex; justify-content:flex-end; margin-bottom:14px;">
+            <button class="add-btn" onclick="openPackagePlanForm()">＋ 新增方案</button>
+          </div>
+          <div class="field-hint" style="margin-bottom:14px;">套組方案是顧客能在預約頁自己線上購買的堂數包（例如「熱蠟腋下 5 堂送 1 堂」）。顧客購買後會先是「待處理」訂單，您在訂單裡按「記錄收款」確認收到錢的那一刻，系統就會自動把堂數加進這位顧客的套組帳戶；如果方案有綁贈品，會另外自動建立一筆 $0 的贈品訂單，出貨進度不會卡住堂數的發放——贈品需要跟廠商預購、缺貨要延後出貨或臨時想換成別的商品，都可以直接到那筆贈品訂單編輯或取消，不影響顧客已經到手的堂數。</div>
+          <div class="field-hint" style="margin-bottom:14px;">若您沒有特別走「記錄收款」，直接把訂單標記為完成，系統一樣會自動補發堂數，不會漏掉。</div>
+          <div id="packagePlansList"></div>
         </div>
       </section>
 
@@ -1495,6 +1505,31 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
     </div>
   </div>
 
+  <!-- ============ PACKAGE PLAN FORM MODAL（新增／編輯可供顧客線上購買的套組方案） ============ -->
+  <div class="modal-backdrop" id="packagePlanFormBackdrop" onclick="if(event.target===this)closePackagePlanForm()">
+    <div class="modal-card">
+      <h3 id="packagePlanFormTitle">新增套組方案</h3>
+      <div class="field"><label for="ppName">方案名稱</label><input type="text" id="ppName" placeholder="例如：熱蠟腋下 5 堂送 1 堂"></div>
+      <div class="field-row">
+        <div class="field"><label for="ppSessions">總堂數</label><input type="number" id="ppSessions" placeholder="例如 6"></div>
+        <div class="field"><label for="ppPrice">售價</label><input type="number" id="ppPrice" placeholder="例如 5000"></div>
+      </div>
+      <div class="field"><label for="ppDesc">說明（選填，顧客看得到）</label><input type="text" id="ppDesc" placeholder="例如：5 堂送 1 堂，每堂約 30 分鐘"></div>
+      <div class="field">
+        <label>綁定贈品（選填，跟顧客約定好、線上購買固定送這個）</label>
+        <select id="ppGiftType" onchange="renderPpGiftFields()">
+          <option value="">不贈送</option>
+          <option value="product">贈送商品</option>
+        </select>
+      </div>
+      <div id="ppGiftFields"></div>
+      <div class="sheet-actions" style="margin-top:14px;">
+        <button class="btn btn-outline" onclick="closePackagePlanForm()">取消</button>
+        <button class="btn btn-primary" onclick="savePackagePlanForm()">儲存方案</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ ORDER FORM MODAL（新增／編輯訂單，商家手動操作用） ============ -->
   <div class="modal-backdrop" id="orderFormBackdrop" onclick="if(event.target===this)closeOrderForm()">
     <div class="modal-card">
@@ -1624,6 +1659,7 @@ let BUSINESS = {...DEFAULT_BUSINESS};
 let SERVICES = [...DEFAULT_SERVICES];
 let PRODUCTS = [];
 let ALL_ORDERS = [];
+let ALL_PACKAGE_PLANS = [];
 let orderFilter = 'all';
 let STAFF_LIST = [...DEFAULT_STAFF];
 let ALL_BOOKINGS = [];
@@ -1696,6 +1732,12 @@ function startListeners(){
       rerenderActiveScreen();
       updateNavBadges();
     }, err=>console.error('orders listener', err))
+  );
+  unsubscribers.push(
+    db.collection('packagePlans').onSnapshot(snap=>{
+      ALL_PACKAGE_PLANS = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(a.order??9999)-(b.order??9999));
+      rerenderActiveScreen();
+    }, err=>console.error('package plans listener', err))
   );
   unsubscribers.push(
     db.collection('bookings').onSnapshot(snap=>{
@@ -2397,7 +2439,6 @@ async function saveGiftPresetsAndRefresh(presets){
     BUSINESS.giftPresets = presets;
     showToast('已更新');
     renderWalletGiftManager();
-    renderPkgGiftManager();
     if(walletFormKind) renderWalletForm();
     if(packageFormOpen) renderPackageForm();
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
@@ -2643,7 +2684,6 @@ function renderPackageForm(){
   const box = document.getElementById('packageForm');
   if(!packageFormOpen){ box.innerHTML=''; return; }
   const names = BUSINESS.packageNamePresets || [];
-  const gifts = (BUSINESS.giftPresets||[]).filter(g=>g.type!=='cash');
   const c = loadCustomers().find(x=>x.id===currentCustomerDetailId);
   const editing = packageFormEditId ? (c && (c.packages||[]).find(p=>p.id===packageFormEditId)) : null;
   box.innerHTML = `
@@ -2662,16 +2702,15 @@ function renderPackageForm(){
     <div class="field"><label>實收金額</label><input type="number" id="pkgPaidAmount" placeholder="這次顧客實際付了多少錢（計入營業額）" value="${editing && editing.paidAmount ? editing.paidAmount : ''}"></div>
     ${editing ? '' : `
     <div class="field">
-      <label>贈送（選填） <a onclick="togglePkgGiftManager()" style="font-size:11px; font-weight:400; text-decoration:underline; cursor:pointer; margin-left:6px;">管理</a></label>
-      <select id="pkgGiftSelect" onchange="handlePkgGiftSelectChange()">
+      <label>贈送（選填）</label>
+      <select id="pkgGiftType" onchange="renderPkgGiftAdhocFields()">
         <option value="">不贈送</option>
-        ${gifts.map(g=>`<option value="${g.id}">${g.label}</option>`).join('')}
-        <option value="__new__">＋ 新增贈送選項…</option>
+        <option value="sessions">贈送堂數</option>
+        <option value="product">贈送商品</option>
       </select>
     </div>
-    <div id="pkgGiftManagerBox"></div>
-    <div class="field-hint" id="pkgGiftPreview"></div>
-    <div id="pkgGiftNewForm"></div>
+    <div id="pkgGiftAdhocFields"></div>
+    <div class="field-hint">每次新增套組都可以自己現場挑要送的商品或堂數，不會綁定固定搭配——同一個套組名稱，這次可以送 A 商品、下次沒貨了也能改送 B 商品。</div>
     `}
     <div class="field"><label>備註（選填）</label><input type="text" id="pkgNote" placeholder="例如：加贈舒緩乳一瓶" value="${editing ? (editing.note||'').replace(/"/g,'&quot;') : ''}"></div>
     ${editing ? `<div class="field-hint">編輯不會重新套用贈送選項，如果要補贈可以直接把「總堂數」加上去。已使用堂數（${editing.used}）不會變動。</div>` : ''}
@@ -2681,7 +2720,26 @@ function renderPackageForm(){
     </div>
   `;
   renderPkgNameManager();
-  renderPkgGiftManager();
+}
+function renderPkgGiftAdhocFields(){
+  const type = document.getElementById('pkgGiftType').value;
+  const wrap = document.getElementById('pkgGiftAdhocFields');
+  if(type==='sessions'){
+    wrap.innerHTML = `<div class="field"><label>贈送堂數</label><input type="number" id="pkgGiftSessionsQty" min="1" placeholder="例如 1"></div>`;
+  } else if(type==='product'){
+    if(PRODUCTS.length===0){
+      wrap.innerHTML = `<div class="field-hint">尚未設定任何商品，請先到「服務→商品項目」新增。</div>`;
+    } else {
+      wrap.innerHTML = `
+        <div class="field"><label>贈送商品</label>
+          <select id="pkgGiftProductSelect">${PRODUCTS.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select>
+        </div>
+        <div class="field"><label>數量</label><input type="number" id="pkgGiftProductQty" value="1" min="1"></div>
+      `;
+    }
+  } else {
+    wrap.innerHTML = '';
+  }
 }
 let pkgNameManagerOpen = false;
 function togglePkgNameManager(){
@@ -2726,102 +2784,6 @@ async function deletePkgNamePreset(i){
     renderPkgNameManager();
     if(packageFormOpen) renderPackageForm();
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
-}
-let pkgGiftManagerOpen = false;
-function togglePkgGiftManager(){
-  pkgGiftManagerOpen = !pkgGiftManagerOpen;
-  renderPkgGiftManager();
-}
-function renderPkgGiftManager(){
-  const box = document.getElementById('pkgGiftManagerBox');
-  if(!box) return;
-  if(!pkgGiftManagerOpen){ box.innerHTML=''; return; }
-  const gifts = (BUSINESS.giftPresets||[]).filter(g=>g.type!=='cash');
-  box.innerHTML = gifts.length===0 ? `<div class="field-hint">尚未儲存任何贈送選項。</div>` : gifts.map(g=>`
-    <div class="wallet-log-row">
-      <span>${g.label}</span>
-      <span class="wallet-log-actions"><a onclick="renameGiftPreset('${g.id}')">修改</a><a onclick="deleteGiftPreset('${g.id}')">刪除</a></span>
-    </div>
-  `).join('');
-}
-function handlePkgGiftSelectChange(){
-  const sel = document.getElementById('pkgGiftSelect');
-  const box = document.getElementById('pkgGiftNewForm');
-  const preview = document.getElementById('pkgGiftPreview');
-  if(sel.value==='__new__'){
-    if(preview) preview.textContent = '';
-    box.innerHTML = `
-      <div class="field"><label>贈送類型</label>
-        <select id="newPkgGiftType" onchange="renderNewPkgGiftFields()">
-          <option value="sessions">贈送堂數</option>
-          <option value="product">贈送商品</option>
-        </select>
-      </div>
-      <div id="newPkgGiftFields"></div>
-      <div class="field"><label>選項名稱</label><input type="text" id="newPkgGiftLabel" placeholder="例如：買5送1"></div>
-      <button class="btn btn-outline btn-sm" onclick="savePkgGiftPreset()">儲存這個贈送選項</button>
-    `;
-    renderNewPkgGiftFields();
-  } else {
-    box.innerHTML = '';
-    if(preview){
-      if(!sel.value){
-        preview.textContent = '';
-      } else {
-        const g = (BUSINESS.giftPresets||[]).find(x=>x.id===sel.value);
-        if(g && g.type==='sessions'){
-          preview.textContent = `儲存後這個套組的總堂數會自動 +${g.qty} 堂。`;
-        } else if(g && g.type==='product'){
-          preview.textContent = `儲存後會自動建立一筆 NT$0 的商品訂單：${g.productName} × ${g.qty}，請記得之後到「商品訂單」安排出貨。`;
-        } else {
-          preview.textContent = '';
-        }
-      }
-    }
-  }
-}
-function renderNewPkgGiftFields(){
-  const type = document.getElementById('newPkgGiftType').value;
-  const wrap = document.getElementById('newPkgGiftFields');
-  if(type==='sessions'){
-    wrap.innerHTML = `<div class="field"><label>贈送堂數</label><input type="number" id="newPkgGiftSessions" min="1" placeholder="例如 1"></div>`;
-  } else {
-    if(PRODUCTS.length===0){
-      wrap.innerHTML = `<div class="field-hint">尚未設定任何商品，請先到「服務→商品項目」新增。</div>`;
-      return;
-    }
-    wrap.innerHTML = `
-      <div class="field"><label>贈送商品</label>
-        <select id="newPkgGiftProduct">${PRODUCTS.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select>
-      </div>
-      <div class="field"><label>數量</label><input type="number" id="newPkgGiftQty" value="1" min="1"></div>
-    `;
-  }
-}
-async function savePkgGiftPreset(){
-  const type = document.getElementById('newPkgGiftType').value;
-  const label = (document.getElementById('newPkgGiftLabel').value||'').trim();
-  if(!label){ showToast('請填寫選項名稱'); return; }
-  const preset = { id:'gift_'+Date.now(), type, label };
-  if(type==='sessions'){
-    const qty = Number(document.getElementById('newPkgGiftSessions').value);
-    if(!qty || qty<=0){ showToast('請輸入正確的贈送堂數'); return; }
-    preset.qty = qty;
-  } else {
-    const p = PRODUCTS.find(x=>x.id===document.getElementById('newPkgGiftProduct')?.value);
-    if(!p){ showToast('請先新增商品才能設定贈送商品'); return; }
-    preset.productId = p.id;
-    preset.productName = p.name;
-    preset.qty = Math.max(1, Number(document.getElementById('newPkgGiftQty').value)||1);
-  }
-  const presets = [...(BUSINESS.giftPresets||[]), preset];
-  try{
-    await db.collection('meta').doc('business').set({ giftPresets: presets }, { merge:true });
-    BUSINESS.giftPresets = presets;
-    showToast('已新增贈送選項');
-    renderPackageForm();
-    setTimeout(()=>{ const sel=document.getElementById('pkgGiftSelect'); if(sel) sel.value = preset.id; }, 0);
-  }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
 }
 function handlePkgNameSelectChange(){
   const sel = document.getElementById('pkgNameSelect');
@@ -2869,22 +2831,28 @@ async function submitPackageForm(){
     return;
   }
 
-  const giftSel = document.getElementById('pkgGiftSelect');
-  const giftId = giftSel ? giftSel.value : '';
-  const giftPreset = (giftId && giftId!=='__new__') ? (BUSINESS.giftPresets||[]).find(g=>g.id===giftId) : null;
-  if(giftPreset && giftPreset.type==='sessions'){
-    total += giftPreset.qty;
-    note = [note, `含贈送 ${giftPreset.qty} 堂（${giftPreset.label}）`].filter(Boolean).join('；');
+  const giftType = document.getElementById('pkgGiftType') ? document.getElementById('pkgGiftType').value : '';
+  let giftInfo = null;
+  if(giftType==='sessions'){
+    const qty = Number(document.getElementById('pkgGiftSessionsQty').value);
+    if(!qty || qty<=0){ showToast('請輸入正確的贈送堂數'); return; }
+    total += qty;
+    note = [note, `含贈送 ${qty} 堂`].filter(Boolean).join('；');
+  } else if(giftType==='product'){
+    const p = PRODUCTS.find(x=>x.id===document.getElementById('pkgGiftProductSelect')?.value);
+    if(!p){ showToast('請先新增商品才能設定贈送商品'); return; }
+    const qty = Math.max(1, Number(document.getElementById('pkgGiftProductQty').value)||1);
+    giftInfo = { productId: p.id, productName: p.name, qty };
   }
 
   const packages = [...(c.packages||[]), { id:'pkg_'+Date.now(), name, total, used:0, note, paidAmount, createdAt: new Date().toISOString() }];
   try{
     await db.collection('customers').doc(c.id).update({ packages });
-    if(giftPreset && giftPreset.type==='product'){
+    if(giftInfo){
       await db.collection('orders').add({
         code: genOrderCode(), customerId: c.id,
-        customer: { name: c.name||'', phone: c.phone||'', note: '套組贈品：'+giftPreset.label },
-        items: [{ productId: giftPreset.productId, name: giftPreset.productName, price: 0, qty: giftPreset.qty||1, subtotal: 0, shippedQty: 0 }],
+        customer: { name: c.name||'', phone: c.phone||'', note: '套組贈品：'+name },
+        items: [{ productId: giftInfo.productId, name: giftInfo.productName, price: 0, qty: giftInfo.qty, subtotal: 0, shippedQty: 0 }],
         totalAmount: 0, status: 'pending', createdAt: new Date().toISOString()
       });
       showToast('已新增套組，贈送商品已建立訂單，請至「商品訂單」安排出貨');
@@ -3496,7 +3464,12 @@ async function confirmPayReconcile(){
     }
     batch.update(db.collection(collectionName).doc(payReconcileTarget.id), updateData);
     await batch.commit();
-    showToast('收款已儲存');
+    let toastMsg = '收款已儲存';
+    if(payReconcileTarget.type==='order' && obj.packagePlanId && !obj.packageGranted){
+      const grant = await grantPackagePlanToCustomer(obj);
+      toastMsg = '收款已儲存，'+grant.msg;
+    }
+    showToast(toastMsg);
     const { type, id } = payReconcileTarget;
     closePayReconcile();
     if(type==='order'){ renderOrdersList(); } else { openBookingSheet(id); }
@@ -3744,9 +3717,12 @@ function setServicesTab(tab){
   document.getElementById('svcTabServices').classList.toggle('active', tab==='services');
   document.getElementById('svcTabProducts').classList.toggle('active', tab==='products');
   document.getElementById('svcTabOrders').classList.toggle('active', tab==='orders');
+  document.getElementById('svcTabPackagePlans').classList.toggle('active', tab==='packagePlans');
   document.getElementById('svcServicesView').style.display = tab==='services' ? 'block' : 'none';
   document.getElementById('svcProductsView').style.display = tab==='products' ? 'block' : 'none';
   document.getElementById('svcOrdersView').style.display = tab==='orders' ? 'block' : 'none';
+  document.getElementById('svcPackagePlansView').style.display = tab==='packagePlans' ? 'block' : 'none';
+  if(tab==='packagePlans') renderPackagePlansList();
 }
 let svcCategoryFilter = 'all';
 let svcFormAddonIds = [];
@@ -4252,6 +4228,122 @@ function computeOrderStatus(items){
   if(shippedQty>=totalQty) return 'done';
   return 'partial';
 }
+/* ============================================================
+   套組方案：可供顧客在預約頁自己線上購買的堂數包（跟商家手動幫顧客
+   建的「套組」共用 customer.packages 這個資料結構，只是多了一層
+   「顧客自己買」的下單流程）
+   ============================================================ */
+function renderPackagePlansList(){
+  const wrap = document.getElementById('packagePlansList');
+  if(!wrap) return;
+  if(ALL_PACKAGE_PLANS.length===0){
+    wrap.innerHTML = `<div class="empty-state"><div class="ic">📦</div><h3>尚未新增套組方案</h3><p>新增後，顧客就能在預約頁自己購買堂數包。</p></div>`;
+    return;
+  }
+  wrap.innerHTML = ALL_PACKAGE_PLANS.map(p=>{
+    const active = p.active !== false;
+    return `
+    <div class="crud-card">
+      <div class="crud-ic">📦</div>
+      <div class="crud-body">
+        <div class="nm-row"><h4>${p.name}</h4></div>
+        <p>${p.desc||''}${p.giftProductName ? `（含贈品：${p.giftProductName} × ${p.giftQty||1}）` : ''}</p>
+        <div class="crud-meta"><span>${p.totalSessions} 堂</span><span>$${p.price}</span></div>
+        <div class="crud-status-row"><span class="status-pill ${active?'status-active':'status-inactive'}">${active?'上架中':'已下架'}</span></div>
+      </div>
+      <div class="crud-actions">
+        <div class="ic-btn" onclick="openPackagePlanForm('${p.id}')" title="編輯">✎</div>
+        <div class="ic-btn" onclick="togglePackagePlanActive('${p.id}')" title="${active?'下架':'上架'}">${active?'⬇':'⬆'}</div>
+      </div>
+    </div>
+  `;
+  }).join('');
+}
+function openPackagePlanForm(id){
+  packagePlanFormId = id || null;
+  const p = id ? ALL_PACKAGE_PLANS.find(x=>x.id===id) : null;
+  document.getElementById('packagePlanFormTitle').textContent = id ? '編輯套組方案' : '新增套組方案';
+  document.getElementById('ppName').value = p ? p.name : '';
+  document.getElementById('ppSessions').value = p ? p.totalSessions : '';
+  document.getElementById('ppPrice').value = p ? p.price : '';
+  document.getElementById('ppDesc').value = p ? (p.desc||'') : '';
+  document.getElementById('ppGiftType').value = p && p.giftProductId ? 'product' : '';
+  renderPpGiftFields();
+  if(p && p.giftProductId){
+    setTimeout(()=>{
+      const sel = document.getElementById('ppGiftProduct');
+      const qty = document.getElementById('ppGiftQty');
+      if(sel) sel.value = p.giftProductId;
+      if(qty) qty.value = p.giftQty||1;
+    }, 0);
+  }
+  document.getElementById('packagePlanFormBackdrop').classList.add('show');
+}
+function closePackagePlanForm(){
+  document.getElementById('packagePlanFormBackdrop').classList.remove('show');
+  packagePlanFormId = null;
+}
+function renderPpGiftFields(){
+  const type = document.getElementById('ppGiftType').value;
+  const wrap = document.getElementById('ppGiftFields');
+  if(type==='product'){
+    if(PRODUCTS.length===0){
+      wrap.innerHTML = `<div class="field-hint">尚未設定任何商品，請先到「商品項目」新增。</div>`;
+    } else {
+      wrap.innerHTML = `
+        <div class="field"><label>贈送商品</label>
+          <select id="ppGiftProduct">${PRODUCTS.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select>
+        </div>
+        <div class="field"><label>數量</label><input type="number" id="ppGiftQty" value="1" min="1"></div>
+      `;
+    }
+  } else {
+    wrap.innerHTML = '';
+  }
+}
+let packagePlanFormId = null;
+async function savePackagePlanForm(){
+  const name = (document.getElementById('ppName').value||'').trim();
+  const totalSessions = Number(document.getElementById('ppSessions').value);
+  const price = Number(document.getElementById('ppPrice').value);
+  const desc = (document.getElementById('ppDesc').value||'').trim();
+  if(!name || !totalSessions || totalSessions<=0 || !price || price<0){ showToast('請填寫方案名稱、總堂數與售價'); return; }
+  const giftType = document.getElementById('ppGiftType').value;
+  const data = { name, totalSessions, price, desc, updatedAt: new Date().toISOString() };
+  if(giftType==='product'){
+    const p = PRODUCTS.find(x=>x.id===document.getElementById('ppGiftProduct')?.value);
+    if(!p){ showToast('請先新增商品才能設定贈送商品'); return; }
+    data.giftProductId = p.id;
+    data.giftProductName = p.name;
+    data.giftQty = Math.max(1, Number(document.getElementById('ppGiftQty').value)||1);
+  } else {
+    data.giftProductId = null;
+    data.giftProductName = null;
+    data.giftQty = null;
+  }
+  try{
+    if(packagePlanFormId){
+      await db.collection('packagePlans').doc(packagePlanFormId).update(data);
+      showToast('已更新套組方案');
+    } else {
+      data.active = true;
+      data.order = ALL_PACKAGE_PLANS.length;
+      data.createdAt = new Date().toISOString();
+      await db.collection('packagePlans').add(data);
+      showToast('已新增套組方案');
+    }
+    closePackagePlanForm();
+  }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
+}
+async function togglePackagePlanActive(id){
+  const p = ALL_PACKAGE_PLANS.find(x=>x.id===id);
+  if(!p) return;
+  const nextActive = !(p.active !== false);
+  try{
+    await db.collection('packagePlans').doc(id).update({ active: nextActive });
+    showToast(nextActive ? '已重新上架' : '已下架');
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
 function renderOrdersList(){
   const wrap = document.getElementById('ordersList');
   if(!wrap) return;
@@ -4322,6 +4414,38 @@ async function updateOrderItemShipped(orderId, itemIndex, delta){
     showToast('更新出貨進度失敗，請檢查網路連線後再試');
   }
 }
+/* 顧客線上購買套組方案的訂單，堂數什麼時候發放：改成「商家確認收款」的當下就發放，
+   不用等到「標記全部出貨」——因為方案綁定的贈品可能需要跟廠商預購、缺貨，商家不會希望
+   被贈品的出貨進度卡住而遲遲不敢把堂數給顧客。贈品訂單一樣會自動建立，商家可以之後
+   再處理出貨（要延遲出貨、或改成別的商品，都可以在那筆贈品訂單自己編輯/取消/刪除）。
+   用 packageGranted 旗標避免重複發放（例如收款記錄改了兩次、或又被標記一次已完成）。
+   回傳 {ok, msg} 讓呼叫端自己組合要顯示的 toast 文字，這裡不直接顯示 toast，
+   避免跟呼叫端原本的「收款已儲存」「訂單狀態已更新」互相蓋掉。 */
+async function grantPackagePlanToCustomer(order){
+  const plan = ALL_PACKAGE_PLANS.find(p=>p.id===order.packagePlanId);
+  if(!plan){ return { ok:false, msg:'找不到對應的套組方案，請手動幫顧客加堂數' }; }
+  const custId = order.customerId;
+  if(!custId){ return { ok:false, msg:'這筆訂單沒有對應的會員資料，請手動幫顧客加堂數' }; }
+  try{
+    const custRef = db.collection('customers').doc(custId);
+    const custSnap = await custRef.get();
+    if(!custSnap.exists){ return { ok:false, msg:'找不到顧客資料，請手動加堂數' }; }
+    const cust = custSnap.data();
+    const packages = [...(cust.packages||[]), { id:'pkg_'+Date.now(), name: plan.name, total: plan.totalSessions, used:0, note:'顧客線上購買', paidAmount: order.totalAmount||plan.price, createdAt: new Date().toISOString() }];
+    await custRef.update({ packages });
+    await db.collection('orders').doc(order.id).update({ packageGranted: true });
+    if(plan.giftProductId){
+      await db.collection('orders').add({
+        code: genOrderCode(), customerId: custId,
+        customer: { name: order.customer.name||'', phone: order.customer.phone||'', note: '套組贈品：'+plan.name },
+        items: [{ productId: plan.giftProductId, name: plan.giftProductName, price: 0, qty: plan.giftQty||1, subtotal: 0, shippedQty: 0 }],
+        totalAmount: 0, status: 'pending', createdAt: new Date().toISOString()
+      });
+      return { ok:true, msg:'堂數已加進顧客帳戶，贈品也已建立訂單，可視需要安排出貨或預購' };
+    }
+    return { ok:true, msg:'堂數已加進顧客帳戶' };
+  }catch(err){ return { ok:false, msg:'堂數發放失敗，請手動幫顧客加套組' }; }
+}
 async function updateOrderStatus(id, status){
   const order = ALL_ORDERS.find(o=>o.id===id);
   if(!order){ showToast('找不到這筆訂單'); return; }
@@ -4365,6 +4489,13 @@ async function updateOrderStatus(id, status){
       // 「標記全部出貨」快捷：把每個品項的已出貨數量都補到等於訂購數量
       const items = order.items.map(it=>({ ...it, shippedQty: it.qty }));
       await orderRef.update({ items, status:'done', updatedAt: nowIso });
+      // 正常情況下套組堂數應該在「記錄收款」那一步就已經發放過了；這裡留著只是防呆
+      // ——萬一商家沒特別走收款流程、直接把訂單標記完成，堂數還是不會漏發
+      if(order.packagePlanId && !order.packageGranted){
+        const grant = await grantPackagePlanToCustomer(order);
+        showToast('訂單狀態已更新，'+grant.msg);
+        return;
+      }
     } else {
       await orderRef.update({ status, updatedAt: nowIso });
     }

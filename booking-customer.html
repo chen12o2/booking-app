@@ -651,11 +651,16 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
       <div class="section-title" style="margin-bottom:14px;"><span class="num">🛍️</span>商品</div>
       <div class="prod-tab-pair">
         <button class="prod-tab active" id="prodTabShop" onclick="setProductsTab('shop')">商品</button>
+        <button class="prod-tab" id="prodTabPackagePlans" onclick="setProductsTab('packagePlans')">套組方案</button>
         <button class="prod-tab" id="prodTabOrders" onclick="setProductsTab('orders')">訂單</button>
       </div>
 
       <div id="prodShopView">
         <div id="myProductsList"></div>
+      </div>
+
+      <div id="prodPackagePlansView" style="display:none;">
+        <div id="packagePlansShopList"></div>
       </div>
 
       <div id="prodOrdersView" style="display:none;">
@@ -873,6 +878,7 @@ let BUSINESS = {...DEFAULT_BUSINESS};
 let SERVICES = [...DEFAULT_SERVICES];
 let STAFF = [...DEFAULT_STAFF];
 let PRODUCTS = [];
+let PACKAGE_PLANS = [];
 let MY_BOOKINGS = [];       // 目前登入顧客自己的預約（customerId == uid）
 let UPCOMING_BOOKINGS = []; // 全部「即將到來」的預約，用來判斷時段是否已被占用
 let CUSTOMER_PROFILE = null; // customers/{uid} 文件內容
@@ -924,6 +930,12 @@ function startPublicListeners(){
       PRODUCTS = snap.docs.map(d=>({ id:d.id, ...d.data() })).filter(p=>p.active!==false).sort((a,b)=>(a.order??9999)-(b.order??9999));
       rerenderActiveScreen();
     }, err=>console.error('products listener', err))
+  );
+  unsubscribers.push(
+    db.collection('packagePlans').onSnapshot(snap=>{
+      PACKAGE_PLANS = snap.docs.map(d=>({ id:d.id, ...d.data() })).filter(p=>p.active!==false).sort((a,b)=>(a.order??9999)-(b.order??9999));
+      rerenderActiveScreen();
+    }, err=>console.error('package plans listener', err))
   );
   unsubscribers.push(
     db.collection('bookings').where('status','in',['upcoming','pending']).onSnapshot(snap=>{
@@ -1874,11 +1886,14 @@ let productsTab = 'shop';
 function setProductsTab(tab){
   productsTab = tab;
   document.getElementById('prodTabShop').classList.toggle('active', tab==='shop');
+  document.getElementById('prodTabPackagePlans').classList.toggle('active', tab==='packagePlans');
   document.getElementById('prodTabOrders').classList.toggle('active', tab==='orders');
   document.getElementById('prodShopView').style.display = tab==='shop' ? 'block' : 'none';
+  document.getElementById('prodPackagePlansView').style.display = tab==='packagePlans' ? 'block' : 'none';
   document.getElementById('prodOrdersView').style.display = tab==='orders' ? 'block' : 'none';
   updateCartBarVisibility();
   if(tab==='orders') renderMyOrders();
+  if(tab==='packagePlans') renderPackagePlansShop();
 }
 function updateCartBarVisibility(){
   const bar = document.getElementById('cartBar');
@@ -1908,6 +1923,51 @@ function stepProdQty(pid, delta){
   if(next===0){ delete cart[pid]; } else { cart[pid] = next; }
   renderMyProducts();
   updateCartBarVisibility();
+}
+function renderPackagePlansShop(){
+  const wrap = document.getElementById('packagePlansShopList');
+  if(!wrap) return;
+  if(PACKAGE_PLANS.length===0){
+    wrap.innerHTML = `<div class="empty-state"><div class="ic">📦</div><h3>目前沒有套組方案</h3><p>請留意商家更新。</p></div>`;
+    return;
+  }
+  wrap.innerHTML = PACKAGE_PLANS.map(p=>`
+    <div class="svc-card">
+      <div class="svc-ic">📦</div>
+      <div class="svc-body">
+        <h3>${p.name}</h3>
+        <p>${p.desc||''}${p.giftProductName ? `（購買即贈：${p.giftProductName} × ${p.giftQty||1}）` : ''}</p>
+        <div class="svc-meta"><span>共 ${p.totalSessions} 堂</span></div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+        <div class="svc-price">$${p.price}</div>
+        <button class="btn btn-primary" style="padding:8px 16px; font-size:12.5px;" onclick="purchasePackagePlan('${p.id}')">購買</button>
+      </div>
+    </div>
+  `).join('');
+}
+/* 顧客線上購買套組方案：先送出一筆「待處理」訂單（跟一般商品訂單共用同一套機制），
+   商家在後台確認收款、標記完成後，系統才會自動把堂數加進顧客帳戶——
+   這裡不會直接發放堂數，因為金流仍是商家人工對帳，要等商家確認收到錢才算數 */
+async function purchasePackagePlan(planId){
+  const plan = PACKAGE_PLANS.find(p=>p.id===planId);
+  if(!plan) return;
+  const uid = currentCustomerId();
+  if(!uid){ showToast('請先登入會員帳號才能購買套組'); lockCustApp(); return; }
+  const cust = currentCustomer();
+  try{
+    await db.collection('orders').add({
+      code: genOrderCode(), customerId: uid,
+      customer: { name: (cust&&cust.name)||'', phone: (cust&&cust.phone)||'', email:(cust&&cust.email)||'', note: '線上購買套組方案' },
+      items: [{ productId: null, name: plan.name+'（套組方案）', price: plan.price, qty: 1, subtotal: plan.price, shippedQty: 0 }],
+      packagePlanId: plan.id,
+      totalAmount: plan.price,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    });
+    showToast('已送出購買申請，請依商家指示付款，商家確認收款後堂數會自動加進您的帳戶');
+    setProductsTab('orders');
+  }catch(err){ showToast('送出失敗，請檢查網路連線後再試'); }
 }
 function renderMyProducts(){
   const wrap = document.getElementById('myProductsList');
