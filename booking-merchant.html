@@ -440,12 +440,13 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .order-card .actions button.danger{ color:var(--stamp-dark); border-color:var(--stamp); }
 .crud-actions{ display:flex; gap:8px; flex-shrink:0; }
 .crud-actions .ic-btn{ width:28px; height:28px; border-radius:50%; border:1.5px solid var(--line); background:var(--white); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px; }
-.crud-reorder{ display:flex; flex-direction:column; gap:2px; flex-shrink:0; padding-top:2px; }
+.crud-reorder{ display:flex; flex-direction:column; gap:1px; flex-shrink:0; padding-top:2px; }
 .crud-reorder button{
-  width:24px; height:20px; border:none; border-radius:6px; background:none;
-  color:var(--ink-soft); cursor:pointer; font-size:11px; line-height:1; padding:0;
+  width:24px; height:16px; border:none; border-radius:5px; background:none;
+  color:var(--ink-soft); cursor:pointer; font-size:10px; line-height:1; padding:0;
   display:flex; align-items:center; justify-content:center;
 }
+.crud-reorder button.edge{ font-size:9px; }
 .crud-reorder button:disabled{ opacity:.3; cursor:default; }
 
 /* ---- settings category list ---- */
@@ -2859,8 +2860,10 @@ function renderServicesList(){
     html += `
     <div class="crud-card">
       <div class="crud-reorder">
+        <button class="edge" ${isFirst?'disabled':''} onclick="moveServiceToEdge('${s.id}','top')">⏫</button>
         <button ${isFirst?'disabled':''} onclick="moveServiceInList('${s.id}',-1)">︿</button>
         <button ${isLast?'disabled':''} onclick="moveServiceInList('${s.id}',1)">﹀</button>
+        <button class="edge" ${isLast?'disabled':''} onclick="moveServiceToEdge('${s.id}','bottom')">⏬</button>
       </div>
       <div class="crud-ic">${s.icon}</div>
       <div class="crud-body">
@@ -3074,6 +3077,31 @@ async function moveServiceInList(id, delta){
     await batch.commit();
   }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
 }
+/* 直接把項目移到（同分類群組內的）最上面或最下面，一次到位不用一步一步點 */
+async function moveServiceToEdge(id, edge){
+  const list = getDisplayedServiceList();
+  const idx = list.findIndex(s=>s.id===id);
+  if(idx<0) return;
+  const cats = BUSINESS.serviceCategories||[];
+  const showHeaders = svcCategoryFilter==='all' && cats.length>0;
+  const catOf = s => (s.category && cats.includes(s.category)) ? s.category : '未分類';
+  let start=0, end=list.length-1;
+  if(showHeaders){
+    const cat = catOf(list[idx]);
+    start = idx; while(start>0 && catOf(list[start-1])===cat) start--;
+    end = idx; while(end<list.length-1 && catOf(list[end+1])===cat) end++;
+  }
+  const targetIdx = edge==='top' ? start : end;
+  if(targetIdx===idx) return;
+  const group = list.slice(start, end+1);
+  const [item] = group.splice(idx-start, 1);
+  group.splice(edge==='top' ? 0 : group.length, 0, item);
+  try{
+    const batch = db.batch();
+    group.forEach((s,i)=>{ batch.update(db.collection('services').doc(s.id), { order: i*10 }); });
+    await batch.commit();
+  }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
+}
 
 /* ============================================================
    PRODUCTS CRUD
@@ -3112,8 +3140,10 @@ function renderProductsList(){
     html += `
     <div class="crud-card">
       <div class="crud-reorder">
+        <button class="edge" ${isFirst?'disabled':''} onclick="moveProductToEdge('${p.id}','top')">⏫</button>
         <button ${isFirst?'disabled':''} onclick="moveProductInList('${p.id}',-1)">︿</button>
         <button ${isLast?'disabled':''} onclick="moveProductInList('${p.id}',1)">﹀</button>
+        <button class="edge" ${isLast?'disabled':''} onclick="moveProductToEdge('${p.id}','bottom')">⏬</button>
       </div>
       <div class="crud-ic">${p.image ? `<img src="${p.image}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">` : p.icon}</div>
       <div class="crud-body">
@@ -3434,6 +3464,30 @@ async function moveProductInList(id, delta){
     const batch = db.batch();
     batch.update(db.collection('products').doc(a.id), { order: orderB });
     batch.update(db.collection('products').doc(b.id), { order: orderA });
+    await batch.commit();
+  }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
+}
+async function moveProductToEdge(id, edge){
+  const list = getDisplayedProductList();
+  const idx = list.findIndex(p=>p.id===id);
+  if(idx<0) return;
+  const cats = BUSINESS.productCategories||[];
+  const showHeaders = prdCategoryFilter==='all' && cats.length>0;
+  const catOf = p => (p.category && cats.includes(p.category)) ? p.category : '未分類';
+  let start=0, end=list.length-1;
+  if(showHeaders){
+    const cat = catOf(list[idx]);
+    start = idx; while(start>0 && catOf(list[start-1])===cat) start--;
+    end = idx; while(end<list.length-1 && catOf(list[end+1])===cat) end++;
+  }
+  const targetIdx = edge==='top' ? start : end;
+  if(targetIdx===idx) return;
+  const group = list.slice(start, end+1);
+  const [item] = group.splice(idx-start, 1);
+  group.splice(edge==='top' ? 0 : group.length, 0, item);
+  try{
+    const batch = db.batch();
+    group.forEach((p,i)=>{ batch.update(db.collection('products').doc(p.id), { order: i*10 }); });
     await batch.commit();
   }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
 }

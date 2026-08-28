@@ -621,6 +621,12 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
       <div id="myBookingsList"></div>
     </section>
 
+    <!-- ============ SERVICES CATALOG (獨立瀏覽頁，非預約流程) ============ -->
+    <section class="screen" id="screen-servicesbrowse">
+      <div class="section-title" style="margin-bottom:14px;"><span class="num">📋</span>服務項目</div>
+      <div id="svcBrowseList"></div>
+    </section>
+
     <!-- ============ PRODUCTS ============ -->
     <section class="screen" id="screen-products">
       <div class="section-title" style="margin-bottom:14px;"><span class="num">🛍️</span>商品</div>
@@ -673,6 +679,9 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
   <div class="navbar">
     <div class="nav-item active" data-nav="home" onclick="goScreen('home')">
       <div class="ic">🗓️</div>預約
+    </div>
+    <div class="nav-item" data-nav="servicesbrowse" onclick="goScreen('servicesbrowse')">
+      <div class="ic">📋</div>服務
     </div>
     <div class="nav-item" data-nav="mybookings" onclick="goScreen('mybookings')">
       <div class="ic">🎫</div>我的預約
@@ -961,6 +970,7 @@ function rerenderActiveScreen(){
   if(id==='staff') renderStaffGrid();
   if(id==='datetime'){ renderDateStrip(); renderTimeGrid(); }
   if(id==='mybookings') renderMyBookings();
+  if(id==='servicesbrowse') renderServicesBrowse();
   if(id==='products'){ renderMyProducts(); setProductsTab(productsTab); }
   if(id!=='products'){ const bar=document.getElementById('cartBar'); if(bar) bar.style.display='none'; }
   if(id==='about') renderAbout();
@@ -1165,13 +1175,13 @@ function goScreen(id, opts={}){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const navMap = {home:'home', mybookings:'mybookings', products:'products', about:'about'};
+  const navMap = {home:'home', servicesbrowse:'servicesbrowse', mybookings:'mybookings', products:'products', about:'about'};
   const navKey = navMap[id];
   if(navKey){ document.querySelector('.nav-item[data-nav="'+navKey+'"]').classList.add('active'); }
 
   const titles = {
     home:'預約', service:'選擇服務', staff:'選擇服務人員', datetime:'選擇時間',
-    info:'聯絡資訊', confirm:'預約完成', mybookings:'我的預約', products:'商品', about:'商家資訊'
+    info:'聯絡資訊', confirm:'預約完成', mybookings:'我的預約', products:'商品', about:'商家資訊', servicesbrowse:'服務項目'
   };
   document.getElementById('topbarTitle').textContent = titles[id] || '預約';
 
@@ -1191,6 +1201,7 @@ function goScreen(id, opts={}){
   if(id==='datetime') { renderDateStrip(); renderTimeGrid(); }
   if(id==='info') renderInfoSummary();
   if(id==='mybookings') renderMyBookings();
+  if(id==='servicesbrowse') renderServicesBrowse();
   if(id==='products'){ renderMyProducts(); setProductsTab(productsTab); }
   if(id!=='products'){ const bar=document.getElementById('cartBar'); if(bar) bar.style.display='none'; }
   if(id==='about') renderAbout();
@@ -1297,6 +1308,36 @@ function pickService(id){
     state.service = s;
   }
   renderServiceList();
+}
+/* 獨立的「服務」瀏覽頁：只顯示所有上架中的服務，供顧客瀏覽；點選項目直接帶入預約流程 */
+function renderServicesBrowse(){
+  const wrap = document.getElementById('svcBrowseList');
+  if(SERVICES.length===0){
+    wrap.innerHTML = `<div class="empty-state"><div class="ic">📋</div><h3>尚未提供服務項目</h3><p>請留意商家更新。</p></div>`;
+    return;
+  }
+  const renderCard = (s)=>`
+    <div class="svc-card" onclick="startBookingWithService('${s.id}')">
+      <div class="svc-ic">${s.icon}</div>
+      <div class="svc-body">
+        <h3>${s.name}</h3>
+        <p>${s.desc||''}</p>
+        <div class="svc-meta"><span>⏱ ${s.duration} 分鐘</span></div>
+      </div>
+      <div class="svc-price">$${s.price}</div>
+    </div>
+  `;
+  const groups = groupItemsByCategory(SERVICES, BUSINESS.serviceCategories);
+  wrap.innerHTML = groups.map(g=>
+    (g.category ? `<div class="svc-cat-header">${g.category}</div>` : '') + g.items.map(renderCard).join('')
+  ).join('');
+}
+function startBookingWithService(id){
+  const s = SERVICES.find(x=>x.id===id);
+  if(!s) return;
+  state = { service:s, services:[s], staff:STAFF[0], date:null, time:null };
+  infoPrefilled = false;
+  goScreen('staff');
 }
 
 /* ============================================================
