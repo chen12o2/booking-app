@@ -459,8 +459,8 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .order-card .note{ font-size:12px; color:var(--ink-soft); margin-bottom:8px; }
 .order-card .foot{ display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--line); padding-top:10px; margin-bottom:10px; }
 .order-card .total{ font-weight:700; font-family:'Space Mono',monospace; }
-.order-card .actions{ display:flex; gap:8px; }
-.order-card .actions button{ flex:1; padding:9px 10px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; border:1.5px solid var(--line); background:var(--white); color:var(--ink); }
+.order-card .actions{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.order-card .actions button{ padding:9px 10px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; border:1.5px solid var(--line); background:var(--white); color:var(--ink); }
 .order-card .actions button.primary{ background:var(--gold); border-color:var(--ledger); color:var(--white); }
 .order-card .actions button.danger{ color:var(--stamp-dark); border-color:var(--stamp); }
 .crud-actions{ display:flex; gap:8px; flex-shrink:0; }
@@ -2326,22 +2326,150 @@ function renderWalletForm(){
   if(!walletFormKind){ box.innerHTML=''; return; }
   const kind = walletFormKind;
   const gifts = (BUSINESS.giftPresets || []).filter(g=>g.type!=='sessions');
+  const notes = BUSINESS.walletNotePresets || [];
   box.innerHTML = `
     <div class="field" style="margin-top:10px;"><label>${kind==='topup'?'儲值金額':'扣款金額'}</label><input type="number" id="walletAmount" placeholder="例如 3000"></div>
     ${kind==='topup' ? `
     <div class="field">
-      <label>贈送（選填）</label>
+      <label>贈送（選填） <a onclick="toggleWalletGiftManager()" style="font-size:11px; font-weight:400; text-decoration:underline; cursor:pointer; margin-left:6px;">管理</a></label>
       <select id="walletGiftSelect" onchange="handleGiftSelectChange()">
         <option value="">不贈送</option>
         ${gifts.map(g=>`<option value="${g.id}">${g.label}</option>`).join('')}
         <option value="__new__">＋ 新增贈送選項…</option>
       </select>
     </div>
+    <div id="walletGiftManagerBox"></div>
     <div id="walletGiftNewForm"></div>
     ` : ''}
-    <div class="field"><label>備註（選填）</label><input type="text" id="walletNote" placeholder="${kind==='topup'?'例如：儲5000送500':'例如：本次消費折抵'}"></div>
+    <div class="field">
+      <label>備註（選填） <a onclick="toggleWalletNoteManager()" style="font-size:11px; font-weight:400; text-decoration:underline; cursor:pointer; margin-left:6px;">管理</a></label>
+      <select id="walletNoteSelect" onchange="handleWalletNoteSelectChange()">
+        <option value="">不填寫</option>
+        ${notes.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('')}
+        <option value="__new__">＋ 新增備註…</option>
+      </select>
+    </div>
+    <div id="walletNoteManagerBox"></div>
+    <div id="walletNoteNewForm"></div>
     <button class="btn btn-primary" style="width:100%;" onclick="submitWalletForm('${kind}')">確認${kind==='topup'?'儲值':'扣款'}</button>
   `;
+  if(kind==='topup') renderWalletGiftManager();
+  renderWalletNoteManager();
+}
+/* ---- 贈送選項、套組名稱這些自建清單，都可以在下拉選單旁邊按「管理」修改名稱或刪除 ---- */
+let walletGiftManagerOpen = false;
+function toggleWalletGiftManager(){
+  walletGiftManagerOpen = !walletGiftManagerOpen;
+  renderWalletGiftManager();
+}
+function renderWalletGiftManager(){
+  const box = document.getElementById('walletGiftManagerBox');
+  if(!box) return;
+  if(!walletGiftManagerOpen){ box.innerHTML=''; return; }
+  const gifts = (BUSINESS.giftPresets||[]).filter(g=>g.type!=='sessions');
+  box.innerHTML = gifts.length===0 ? `<div class="field-hint">尚未儲存任何贈送選項。</div>` : gifts.map(g=>`
+    <div class="wallet-log-row">
+      <span>${g.label}</span>
+      <span class="wallet-log-actions"><a onclick="renameGiftPreset('${g.id}')">修改</a><a onclick="deleteGiftPreset('${g.id}')">刪除</a></span>
+    </div>
+  `).join('');
+}
+async function renameGiftPreset(id){
+  const presets = [...(BUSINESS.giftPresets||[])];
+  const idx = presets.findIndex(g=>g.id===id);
+  if(idx<0) return;
+  const newLabel = prompt('贈送選項名稱', presets[idx].label);
+  if(newLabel===null) return;
+  const trimmed = newLabel.trim();
+  if(!trimmed){ showToast('名稱不能空白'); return; }
+  presets[idx] = { ...presets[idx], label: trimmed };
+  await saveGiftPresetsAndRefresh(presets);
+}
+async function deleteGiftPreset(id){
+  if(!confirm('確定要刪除這個贈送選項嗎？已經用過這個選項的紀錄不會受影響。')) return;
+  const presets = (BUSINESS.giftPresets||[]).filter(g=>g.id!==id);
+  await saveGiftPresetsAndRefresh(presets);
+}
+async function saveGiftPresetsAndRefresh(presets){
+  try{
+    await db.collection('meta').doc('business').set({ giftPresets: presets }, { merge:true });
+    BUSINESS.giftPresets = presets;
+    showToast('已更新');
+    renderWalletGiftManager();
+    renderPkgGiftManager();
+    if(walletFormKind) renderWalletForm();
+    if(packageFormOpen) renderPackageForm();
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
+/* ---- 儲值／扣款的備註也做成跟套組名稱一樣的自建清單，常用的備註（例如「儲5000送500」）
+   選過一次以後就能重複挑選，一樣可以在「管理」裡改名稱或刪除 ---- */
+function handleWalletNoteSelectChange(){
+  const sel = document.getElementById('walletNoteSelect');
+  const box = document.getElementById('walletNoteNewForm');
+  if(sel.value==='__new__'){
+    box.innerHTML = `
+      <div class="field"><label>新的備註內容</label><input type="text" id="walletNoteNewInput" placeholder="例如：儲5000送500"></div>
+      <button class="btn btn-outline btn-sm" onclick="saveWalletNotePreset()">儲存這個備註</button>
+    `;
+  } else {
+    box.innerHTML = '';
+  }
+}
+async function saveWalletNotePreset(){
+  const note = (document.getElementById('walletNoteNewInput').value||'').trim();
+  if(!note){ showToast('請輸入備註內容'); return; }
+  const notes = [...new Set([...(BUSINESS.walletNotePresets||[]), note])];
+  try{
+    await db.collection('meta').doc('business').set({ walletNotePresets: notes }, { merge:true });
+    BUSINESS.walletNotePresets = notes;
+    showToast('已新增備註');
+    renderWalletForm();
+    setTimeout(()=>{ const sel=document.getElementById('walletNoteSelect'); if(sel) sel.value = note; }, 0);
+  }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
+}
+let walletNoteManagerOpen = false;
+function toggleWalletNoteManager(){
+  walletNoteManagerOpen = !walletNoteManagerOpen;
+  renderWalletNoteManager();
+}
+function renderWalletNoteManager(){
+  const box = document.getElementById('walletNoteManagerBox');
+  if(!box) return;
+  if(!walletNoteManagerOpen){ box.innerHTML=''; return; }
+  const notes = BUSINESS.walletNotePresets || [];
+  box.innerHTML = notes.length===0 ? `<div class="field-hint">尚未儲存任何備註。</div>` : notes.map((n,i)=>`
+    <div class="wallet-log-row">
+      <span>${n}</span>
+      <span class="wallet-log-actions"><a onclick="renameWalletNotePreset(${i})">修改</a><a onclick="deleteWalletNotePreset(${i})">刪除</a></span>
+    </div>
+  `).join('');
+}
+async function renameWalletNotePreset(i){
+  const notes = [...(BUSINESS.walletNotePresets||[])];
+  const newNote = prompt('備註內容', notes[i]);
+  if(newNote===null) return;
+  const trimmed = newNote.trim();
+  if(!trimmed){ showToast('備註不能空白'); return; }
+  notes[i] = trimmed;
+  try{
+    await db.collection('meta').doc('business').set({ walletNotePresets: notes }, { merge:true });
+    BUSINESS.walletNotePresets = notes;
+    showToast('已修改');
+    renderWalletNoteManager();
+    if(walletFormKind) renderWalletForm();
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
+async function deleteWalletNotePreset(i){
+  if(!confirm('確定要刪除這個備註嗎？已經用過這個備註的紀錄不會受影響。')) return;
+  const notes = [...(BUSINESS.walletNotePresets||[])];
+  notes.splice(i,1);
+  try{
+    await db.collection('meta').doc('business').set({ walletNotePresets: notes }, { merge:true });
+    BUSINESS.walletNotePresets = notes;
+    showToast('已刪除');
+    renderWalletNoteManager();
+    if(walletFormKind) renderWalletForm();
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
 function handleGiftSelectChange(){
   const sel = document.getElementById('walletGiftSelect');
@@ -2409,7 +2537,8 @@ async function saveNewGiftPreset(){
 async function submitWalletForm(kind){
   const amt = Number(document.getElementById('walletAmount').value);
   if(!amt || amt<=0){ showToast('請輸入正確的金額'); return; }
-  const note = document.getElementById('walletNote').value.trim();
+  const noteSel = document.getElementById('walletNoteSelect');
+  const note = (noteSel && noteSel.value!=='__new__') ? noteSel.value : '';
   const c = loadCustomers().find(x=>x.id===currentCustomerDetailId);
   if(!c) return;
   if(kind==='deduct' && (c.balance||0) < amt){ showToast('餘額不足'); return; }
@@ -2508,28 +2637,93 @@ function renderPackageForm(){
   const gifts = (BUSINESS.giftPresets||[]).filter(g=>g.type!=='cash');
   box.innerHTML = `
     <div class="field" style="margin-top:10px;">
-      <label>套組名稱</label>
+      <label>套組名稱 <a onclick="togglePkgNameManager()" style="font-size:11px; font-weight:400; text-decoration:underline; cursor:pointer; margin-left:6px;">管理</a></label>
       <select id="pkgNameSelect" onchange="handlePkgNameSelectChange()">
         <option value="">請選擇</option>
         ${names.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('')}
         <option value="__new__">＋ 新增名稱…</option>
       </select>
     </div>
+    <div id="pkgNameManagerBox"></div>
     <div id="pkgNameNewForm"></div>
     <div class="field"><label>總堂數</label><input type="number" id="pkgTotal" placeholder="例如 6"></div>
     <div class="field"><label>實收金額</label><input type="number" id="pkgPaidAmount" placeholder="這次顧客實際付了多少錢（計入營業額）"></div>
     <div class="field">
-      <label>贈送（選填）</label>
+      <label>贈送（選填） <a onclick="togglePkgGiftManager()" style="font-size:11px; font-weight:400; text-decoration:underline; cursor:pointer; margin-left:6px;">管理</a></label>
       <select id="pkgGiftSelect" onchange="handlePkgGiftSelectChange()">
         <option value="">不贈送</option>
         ${gifts.map(g=>`<option value="${g.id}">${g.label}</option>`).join('')}
         <option value="__new__">＋ 新增贈送選項…</option>
       </select>
     </div>
+    <div id="pkgGiftManagerBox"></div>
     <div id="pkgGiftNewForm"></div>
     <div class="field"><label>備註（選填）</label><input type="text" id="pkgNote" placeholder="例如：加贈舒緩乳一瓶"></div>
     <button class="btn btn-primary" style="width:100%;" onclick="submitPackageForm()">新增套組</button>
   `;
+  renderPkgNameManager();
+  renderPkgGiftManager();
+}
+let pkgNameManagerOpen = false;
+function togglePkgNameManager(){
+  pkgNameManagerOpen = !pkgNameManagerOpen;
+  renderPkgNameManager();
+}
+function renderPkgNameManager(){
+  const box = document.getElementById('pkgNameManagerBox');
+  if(!box) return;
+  if(!pkgNameManagerOpen){ box.innerHTML=''; return; }
+  const names = BUSINESS.packageNamePresets || [];
+  box.innerHTML = names.length===0 ? `<div class="field-hint">尚未儲存任何套組名稱。</div>` : names.map((n,i)=>`
+    <div class="wallet-log-row">
+      <span>${n}</span>
+      <span class="wallet-log-actions"><a onclick="renamePkgNamePreset(${i})">修改</a><a onclick="deletePkgNamePreset(${i})">刪除</a></span>
+    </div>
+  `).join('');
+}
+async function renamePkgNamePreset(i){
+  const names = [...(BUSINESS.packageNamePresets||[])];
+  const newName = prompt('套組名稱', names[i]);
+  if(newName===null) return;
+  const trimmed = newName.trim();
+  if(!trimmed){ showToast('名稱不能空白'); return; }
+  names[i] = trimmed;
+  try{
+    await db.collection('meta').doc('business').set({ packageNamePresets: names }, { merge:true });
+    BUSINESS.packageNamePresets = names;
+    showToast('已修改');
+    renderPkgNameManager();
+    if(packageFormOpen) renderPackageForm();
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
+async function deletePkgNamePreset(i){
+  if(!confirm('確定要刪除這個套組名稱嗎？已經用這個名稱建立的套組不會受影響。')) return;
+  const names = [...(BUSINESS.packageNamePresets||[])];
+  names.splice(i,1);
+  try{
+    await db.collection('meta').doc('business').set({ packageNamePresets: names }, { merge:true });
+    BUSINESS.packageNamePresets = names;
+    showToast('已刪除');
+    renderPkgNameManager();
+    if(packageFormOpen) renderPackageForm();
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
+let pkgGiftManagerOpen = false;
+function togglePkgGiftManager(){
+  pkgGiftManagerOpen = !pkgGiftManagerOpen;
+  renderPkgGiftManager();
+}
+function renderPkgGiftManager(){
+  const box = document.getElementById('pkgGiftManagerBox');
+  if(!box) return;
+  if(!pkgGiftManagerOpen){ box.innerHTML=''; return; }
+  const gifts = (BUSINESS.giftPresets||[]).filter(g=>g.type!=='cash');
+  box.innerHTML = gifts.length===0 ? `<div class="field-hint">尚未儲存任何贈送選項。</div>` : gifts.map(g=>`
+    <div class="wallet-log-row">
+      <span>${g.label}</span>
+      <span class="wallet-log-actions"><a onclick="renameGiftPreset('${g.id}')">修改</a><a onclick="deleteGiftPreset('${g.id}')">刪除</a></span>
+    </div>
+  `).join('');
 }
 function handlePkgGiftSelectChange(){
   const sel = document.getElementById('pkgGiftSelect');
@@ -4053,7 +4247,7 @@ function renderOrdersList(){
       ${o.status!=='cancelled' ? `<div class="field-hint" style="margin:2px 0 8px;">收款：${paymentMethodSummary(o)}</div>` : ''}
       ${o.status==='cancelled' ? `
       <div class="actions">
-        <button onclick="updateOrderStatus('${o.id}','pending')">恢復為待處理</button>
+        <button style="grid-column:1/-1;" onclick="updateOrderStatus('${o.id}','pending')">恢復為待處理</button>
       </div>
       <div class="bkt-danger-row"><a onclick="deleteOrderRecord('${o.id}')">刪除這筆紀錄</a></div>` : `
       <div class="actions">
