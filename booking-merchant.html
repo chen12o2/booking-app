@@ -109,7 +109,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .section-title .lead{ display:flex; align-items:center; gap:8px; }
 .section-title .num{
   font-family:'Space Mono', monospace; font-size:11px; color:var(--white);
-  background:var(--ledger); width:20px; height:20px; border-radius:50%;
+  background:var(--gold); width:20px; height:20px; border-radius:50%;
   display:flex; align-items:center; justify-content:center; flex-shrink:0;
 }
 .section-title .add-btn{
@@ -124,7 +124,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 /* ---- login ---- */
 .login-wrap{ min-height:100vh; display:flex; flex-direction:column; justify-content:center; padding:32px 26px; }
 .login-seal{
-  width:64px; height:64px; border-radius:50%; background:var(--ledger); color:var(--white);
+  width:64px; height:64px; border-radius:50%; background:var(--gold); color:var(--white);
   display:flex; align-items:center; justify-content:center; font-family:'Noto Serif TC',serif; font-weight:900; font-size:22px;
   margin:0 auto 18px;
 }
@@ -165,7 +165,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
   flex:0 0 auto; font-size:12px; font-weight:700; padding:8px 14px; border-radius:99px;
   border:1.5px solid var(--line); background:var(--white); cursor:pointer; color:var(--ink-soft);
 }
-.filter-chip.active{ background:var(--ledger); border-color:var(--ledger); color:var(--white); }
+.filter-chip.active{ background:var(--gold); border-color:var(--ledger); color:var(--white); }
 
 .cat-section{
   background:var(--white); border:1.5px solid var(--line); border-radius:var(--radius);
@@ -332,7 +332,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 }
 #custDetailNote:focus{ outline:2px solid var(--ledger); outline-offset:1px; }
 .btn-noshow{ background:transparent; border:1.5px solid var(--stamp); color:var(--stamp-dark); }
-.btn-success{ background:var(--ledger); color:var(--white); }
+.btn-success{ background:var(--gold); color:var(--white); }
 .bkt-total-row{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
 .btn-adjust{
   background:transparent; border:1.5px solid var(--line); color:var(--ink-soft);
@@ -350,7 +350,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
   border-radius:99px; padding:9px 16px; font-size:12.5px; font-weight:700; cursor:pointer;
   border:1.5px solid var(--line); background:var(--white); color:var(--ink); flex:1 1 auto; text-align:center; min-width:0;
 }
-.pill-btn.pill-success{ background:var(--ledger); color:var(--white); border-color:var(--ledger); }
+.pill-btn.pill-success{ background:var(--gold); color:var(--white); border-color:var(--ledger); }
 .pill-btn.pill-danger-outline{ background:transparent; border-color:var(--stamp); color:var(--stamp-dark); }
 .pill-btn.pill-outline{ background:transparent; }
 .bkt-restore-link{ text-align:center; margin-bottom:14px; }
@@ -401,6 +401,9 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .crud-body .nm-row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px; }
 .crud-body h4{ margin:0; font-size:14px; font-weight:700; }
 .crud-tag{ font-size:10px; font-weight:700; color:var(--stamp); background:var(--paper-2); padding:2px 7px; border-radius:99px; }
+.crud-section-header{ font-size:13px; font-weight:700; color:var(--ink-soft); margin:18px 4px 10px; }
+.crud-section-header:first-child{ margin-top:0; }
+.crud-section-header .cnt{ font-weight:400; margin-left:4px; }
 .crud-body p{ margin:0 0 5px; font-size:11.5px; color:var(--ink-soft); line-height:1.45; white-space:pre-line; }
 .crud-meta{ font-family:'Space Mono', monospace; font-size:11px; color:var(--ledger-dark); display:flex; gap:8px; margin-bottom:5px; }
 .crud-status-row{ margin-top:0; }
@@ -433,7 +436,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .order-card .total{ font-weight:700; font-family:'Space Mono',monospace; }
 .order-card .actions{ display:flex; gap:8px; }
 .order-card .actions button{ flex:1; padding:9px 10px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; border:1.5px solid var(--line); background:var(--white); color:var(--ink); }
-.order-card .actions button.primary{ background:var(--ledger); border-color:var(--ledger); color:var(--white); }
+.order-card .actions button.primary{ background:var(--gold); border-color:var(--ledger); color:var(--white); }
 .order-card .actions button.danger{ color:var(--stamp-dark); border-color:var(--stamp); }
 .crud-actions{ display:flex; gap:8px; flex-shrink:0; }
 .crud-actions .ic-btn{ width:28px; height:28px; border-radius:50%; border:1.5px solid var(--line); background:var(--white); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px; }
@@ -621,7 +624,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .slot-grid .day.full .tm{ text-decoration:line-through; opacity:.5; font-weight:400; color:var(--ink-soft); }
 .slot-grid .day.closed .tm{ color:var(--stamp-dark); font-weight:700; }
 .slot-poster .cta{
-  display:inline-block; background:var(--ledger); color:var(--white); font-size:12.5px; font-weight:700;
+  display:inline-block; background:var(--gold); color:var(--white); font-size:12.5px; font-weight:700;
   padding:11px 20px; border-radius:99px; margin:16px 0 6px;
 }
 .slot-poster .microtext{ font-size:9.5px; color:var(--ink-soft); margin-bottom:12px; }
@@ -792,7 +795,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 
 .switch{ width:44px; height:26px; border-radius:99px; background:var(--line); position:relative; cursor:pointer; flex-shrink:0; transition:background .15s ease; }
-.switch.on{ background:var(--ledger); }
+.switch.on{ background:var(--gold); }
 .switch .knob{ width:20px; height:20px; border-radius:50%; background:var(--white); position:absolute; top:3px; left:3px; transition:left .15s ease; box-shadow:0 1px 3px rgba(0,0,0,.25); }
 .switch.on .knob{ left:21px; }
 </style>
@@ -2820,21 +2823,44 @@ function renderCategoryChips(type){
 }
 function setServiceCategoryFilter(cat){ svcCategoryFilter = cat; renderServicesList(); }
 function setProductCategoryFilter(cat){ prdCategoryFilter = cat; renderProductsList(); }
+/* 依商家設定的分類順序把清單排好；不影響 SERVICES/PRODUCTS 本身的儲存順序，
+   只是「目前畫面上看到的順序」，排序按鈕跟分組標題都是照這個順序來算 */
+function getDisplayedServiceList(){
+  if(svcCategoryFilter!=='all') return SERVICES.filter(s=>s.category===svcCategoryFilter);
+  const cats = BUSINESS.serviceCategories||[];
+  const out = [];
+  cats.forEach(c=>{ out.push(...SERVICES.filter(s=>s.category===c)); });
+  out.push(...SERVICES.filter(s=>!s.category || !cats.includes(s.category)));
+  return out;
+}
 function renderServicesList(){
   renderCategoryChips('service');
   const wrap = document.getElementById('servicesList');
-  const list = svcCategoryFilter==='all' ? SERVICES : SERVICES.filter(s=>s.category===svcCategoryFilter);
+  const list = getDisplayedServiceList();
   if(list.length===0){
     wrap.innerHTML = `<div class="empty-state"><div class="ic">🔖</div><h3>${SERVICES.length===0?'尚未新增服務項目':'這個分類還沒有服務'}</h3><p>${SERVICES.length===0?'新增後，顧客即可在預約頁選擇此服務。':'切換到其他分類，或新增一項服務到這裡。'}</p></div>`;
     return;
   }
-  wrap.innerHTML = list.map((s,i)=>{
+  const cats = BUSINESS.serviceCategories||[];
+  const showHeaders = svcCategoryFilter==='all' && cats.length>0;
+  const catOf = s => (s.category && cats.includes(s.category)) ? s.category : '未分類';
+  let lastCat;
+  let html = '';
+  list.forEach((s,i)=>{
+    const cat = catOf(s);
+    if(showHeaders && cat !== lastCat){
+      const count = list.filter(x=>catOf(x)===cat).length;
+      html += `<div class="crud-section-header">${cat}<span class="cnt"> ${count}</span></div>`;
+      lastCat = cat;
+    }
     const active = s.active !== false;
-    return `
+    const isFirst = showHeaders ? (i===0 || catOf(list[i-1])!==cat) : (i===0);
+    const isLast = showHeaders ? (i===list.length-1 || catOf(list[i+1])!==cat) : (i===list.length-1);
+    html += `
     <div class="crud-card">
       <div class="crud-reorder">
-        <button ${i===0?'disabled':''} onclick="moveServiceInList('${s.id}',-1)">︿</button>
-        <button ${i===list.length-1?'disabled':''} onclick="moveServiceInList('${s.id}',1)">﹀</button>
+        <button ${isFirst?'disabled':''} onclick="moveServiceInList('${s.id}',-1)">︿</button>
+        <button ${isLast?'disabled':''} onclick="moveServiceInList('${s.id}',1)">﹀</button>
       </div>
       <div class="crud-ic">${s.icon}</div>
       <div class="crud-body">
@@ -2851,7 +2877,9 @@ function renderServicesList(){
         <div class="ic-btn" onclick="toggleServiceActive('${s.id}')" title="${active?'下架':'上架'}">${active?'⬇':'⬆'}</div>
       </div>
     </div>
-  `;}).join('');
+  `;
+  });
+  wrap.innerHTML = html;
 }
 function openServiceForm(id){
   const isEdit = !!id;
@@ -3033,7 +3061,7 @@ async function toggleServiceActive(id){
 /* 上下移動排序：只跟目前畫面上顯示的清單（可能已被分類篩選過）裡相鄰的項目交換順序，
    所見即所得，不會影響到其他分類裡的項目 */
 async function moveServiceInList(id, delta){
-  const list = svcCategoryFilter==='all' ? SERVICES : SERVICES.filter(s=>s.category===svcCategoryFilter);
+  const list = getDisplayedServiceList();
   const idx = list.findIndex(s=>s.id===id);
   const targetIdx = idx + delta;
   if(idx<0 || targetIdx<0 || targetIdx>=list.length) return;
@@ -3050,21 +3078,42 @@ async function moveServiceInList(id, delta){
 /* ============================================================
    PRODUCTS CRUD
    ============================================================ */
+function getDisplayedProductList(){
+  if(prdCategoryFilter!=='all') return PRODUCTS.filter(p=>p.category===prdCategoryFilter);
+  const cats = BUSINESS.productCategories||[];
+  const out = [];
+  cats.forEach(c=>{ out.push(...PRODUCTS.filter(p=>p.category===c)); });
+  out.push(...PRODUCTS.filter(p=>!p.category || !cats.includes(p.category)));
+  return out;
+}
 function renderProductsList(){
   renderCategoryChips('product');
   const wrap = document.getElementById('productsList');
-  const list = prdCategoryFilter==='all' ? PRODUCTS : PRODUCTS.filter(p=>p.category===prdCategoryFilter);
+  const list = getDisplayedProductList();
   if(list.length===0){
     wrap.innerHTML = `<div class="empty-state"><div class="ic">🛍️</div><h3>${PRODUCTS.length===0?'尚未新增商品項目':'這個分類還沒有商品'}</h3><p>${PRODUCTS.length===0?'新增後可用於店內銷售或未來上架使用。':'切換到其他分類，或新增一項商品到這裡。'}</p></div>`;
     return;
   }
-  wrap.innerHTML = list.map((p,i)=>{
+  const cats = BUSINESS.productCategories||[];
+  const showHeaders = prdCategoryFilter==='all' && cats.length>0;
+  const catOf = p => (p.category && cats.includes(p.category)) ? p.category : '未分類';
+  let lastCat;
+  let html = '';
+  list.forEach((p,i)=>{
+    const cat = catOf(p);
+    if(showHeaders && cat !== lastCat){
+      const count = list.filter(x=>catOf(x)===cat).length;
+      html += `<div class="crud-section-header">${cat}<span class="cnt"> ${count}</span></div>`;
+      lastCat = cat;
+    }
     const active = p.active !== false;
-    return `
+    const isFirst = showHeaders ? (i===0 || catOf(list[i-1])!==cat) : (i===0);
+    const isLast = showHeaders ? (i===list.length-1 || catOf(list[i+1])!==cat) : (i===list.length-1);
+    html += `
     <div class="crud-card">
       <div class="crud-reorder">
-        <button ${i===0?'disabled':''} onclick="moveProductInList('${p.id}',-1)">︿</button>
-        <button ${i===list.length-1?'disabled':''} onclick="moveProductInList('${p.id}',1)">﹀</button>
+        <button ${isFirst?'disabled':''} onclick="moveProductInList('${p.id}',-1)">︿</button>
+        <button ${isLast?'disabled':''} onclick="moveProductInList('${p.id}',1)">﹀</button>
       </div>
       <div class="crud-ic">${p.image ? `<img src="${p.image}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">` : p.icon}</div>
       <div class="crud-body">
@@ -3078,7 +3127,9 @@ function renderProductsList(){
         <div class="ic-btn" onclick="toggleProductActive('${p.id}')" title="${active?'下架':'上架'}">${active?'⬇':'⬆'}</div>
       </div>
     </div>
-  `;}).join('');
+  `;
+  });
+  wrap.innerHTML = html;
 }
 /* ---- 商品訂單管理 ---- */
 function setOrderFilter(status){
@@ -3373,7 +3424,7 @@ async function toggleProductActive(id){
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
 async function moveProductInList(id, delta){
-  const list = prdCategoryFilter==='all' ? PRODUCTS : PRODUCTS.filter(p=>p.category===prdCategoryFilter);
+  const list = getDisplayedProductList();
   const idx = list.findIndex(p=>p.id===id);
   const targetIdx = idx + delta;
   if(idx<0 || targetIdx<0 || targetIdx>=list.length) return;
@@ -3697,7 +3748,7 @@ function downloadAvailPoster(){
   const wdNames = ['日','一','二','三','四','五','六'];
   const colW = W/7;
   ctx.font = '700 13px "Noto Sans TC", sans-serif';
-  ctx.fillStyle = '#6B6356';
+  ctx.fillStyle = '#9C8563';
   wdNames.forEach((wd,i)=>{ ctx.fillText(wd, colW*i+colW/2, headH+moH+wdH-6); });
   const cellsTop = gridTop + 16;
   for(let d=1; d<=daysInMonth; d++){
@@ -3709,18 +3760,18 @@ function downloadAvailPoster(){
     ctx.font = '700 12px "Space Mono", monospace'; ctx.fillStyle = '#26221B';
     ctx.fillText(String(d), cx, cy);
     if(info.closed){
-      ctx.font = '700 9.5px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#8F6420';
+      ctx.font = '700 9.5px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B5636';
       ctx.fillText(info.label||'', cx, cy+16);
     } else if(info.full){
       ctx.font = '400 9.5px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(107,99,86,0.55)';
       ctx.fillText(info.label||'已約滿', cx, cy+16);
     } else {
-      ctx.font = '400 9.5px "Space Mono", monospace'; ctx.fillStyle = '#6B6356';
+      ctx.font = '400 9.5px "Space Mono", monospace'; ctx.fillStyle = '#9C8563';
       info.slots.slice(0,3).forEach((t,i)=>{ ctx.fillText(t, cx, cy+16+i*12); });
     }
   }
   const legendY = gridTop + gridH + 28;
-  ctx.font = '400 11px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B6356';
+  ctx.font = '400 11px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#9C8563';
   ctx.fillText('時段皆可微調，歡迎私訊　劃掉＝已約滿', W/2, legendY);
   ctx.font = '400 12px "Space Mono", monospace';
   ctx.fillText(BUSINESS.customerUrl||'', W/2, legendY+26);
@@ -3915,17 +3966,17 @@ async function downloadSlotPoster(){
   }
   cy += logoR*2 + 10*S;
 
-  ctx.fillStyle = '#7A5C2E'; ctx.font = '900 '+(38*S)+'px "Noto Sans TC", sans-serif';
+  ctx.fillStyle = '#6B5636'; ctx.font = '900 '+(38*S)+'px "Noto Sans TC", sans-serif';
   cy += 34*S;
   ctx.fillText(EN_MONTHS[m], W/2, cy);
   cy += 4*S + 11*S;
-  ctx.fillStyle = '#6B6356'; ctx.font = '400 '+(10.5*S)+'px "Noto Sans TC", sans-serif';
+  ctx.fillStyle = '#9C8563'; ctx.font = '400 '+(10.5*S)+'px "Noto Sans TC", sans-serif';
   ctx.fillText(y+' ・ '+(m+1)+'月可約時段', W/2, cy);
   cy += 12*S + 14*S;
   ctx.fillStyle = '#26221B'; ctx.font = '700 '+(14*S)+'px "Noto Sans TC", sans-serif';
   ctx.fillText(BUSINESS.name||'', W/2, cy);
   cy += 4*S + 11*S;
-  ctx.fillStyle = '#BF8B3D'; ctx.font = '700 '+(11*S)+'px "Space Mono", monospace';
+  ctx.fillStyle = '#8A6E47'; ctx.font = '700 '+(11*S)+'px "Space Mono", monospace';
   ctx.fillText(handle, W/2, cy);
   cy += 10*S;
   // 分隔線
@@ -3938,7 +3989,7 @@ async function downloadSlotPoster(){
   const cellW = innerW / 7;
   ctx.font = '700 '+(10*S)+'px "Noto Sans TC", sans-serif';
   wdNames.forEach((wd,i)=>{
-    ctx.fillStyle = (i===0||i===6) ? '#BF8B3D' : '#6B6356';
+    ctx.fillStyle = (i===0||i===6) ? '#8A6E47' : '#9C8563';
     ctx.fillText(wd, padX+cellW*i+cellW/2, gridTop+wdRowH-6*S);
   });
 
@@ -3953,13 +4004,13 @@ async function downloadSlotPoster(){
     ctx.font = '700 '+(11*S)+'px "Space Mono", monospace'; ctx.fillStyle = '#26221B';
     ctx.fillText(String(d), cx, cyTop);
     if(info.closed){
-      ctx.font = '700 '+(8.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#8F6420';
+      ctx.font = '700 '+(8.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B5636';
       ctx.fillText(info.label||'', cx, cyTop+14*S);
     } else if(info.full){
       ctx.font = '400 '+(8.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(107,99,86,0.55)';
       ctx.fillText(info.label||'已約滿', cx, cyTop+14*S);
     } else {
-      ctx.font = '700 '+(8.5*S)+'px "Space Mono", monospace'; ctx.fillStyle = isWeekend ? '#BF8B3D' : '#7A5C2E';
+      ctx.font = '700 '+(8.5*S)+'px "Space Mono", monospace'; ctx.fillStyle = isWeekend ? '#8A6E47' : '#6B5636';
       info.slots.slice(0,3).forEach((t,i)=>{ ctx.fillText(t, cx, cyTop+14*S+i*11*S); });
     }
   }
@@ -3971,17 +4022,17 @@ async function downloadSlotPoster(){
   const ctaW = ctx.measureText(ctaText).width + 40*S;
   const ctaH = 44*S;
   roundRect(ctx, W/2-ctaW/2, cy, ctaW, ctaH, ctaH/2);
-  ctx.fillStyle = '#7A5C2E'; ctx.fill();
+  ctx.fillStyle = '#A08860'; ctx.fill();
   ctx.fillStyle = '#FFFDF8'; ctx.fillText(ctaText, W/2, cy+ctaH/2+4*S);
   cy += ctaH + 12*S;
 
-  ctx.font = '400 '+(9.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B6356';
+  ctx.font = '400 '+(9.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#9C8563';
   ctx.fillText('時段皆可微調，歡迎私訊　劃掉＝已約滿', W/2, cy);
   cy += 16*S + 12*S;
 
   // 底部：QR code（靠右）＋ 說明文字，跟預覽的 bottom-row 一致
   const qrSize = 56*S;
-  ctx.textAlign = 'left'; ctx.font = '400 '+(9*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B6356';
+  ctx.textAlign = 'left'; ctx.font = '400 '+(9*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#9C8563';
   ctx.fillText('掃碼預約', padX, cy+qrSize-6*S);
   if(qrImg){
     roundRect(ctx, W-padX-qrSize, cy, qrSize, qrSize, 6*S);
@@ -5158,14 +5209,14 @@ function drawPoster(){
   const ctx = canvas.getContext('2d');
   const w = canvas.width, h = canvas.height;
 
-  ctx.fillStyle = '#F7F2E6';
+  ctx.fillStyle = '#FAF6EE';
   ctx.fillRect(0,0,w,h);
   // dotted texture
-  ctx.fillStyle = 'rgba(38,34,27,0.06)';
+  ctx.fillStyle = 'rgba(107,86,54,0.08)';
   for(let y=10; y<h; y+=14){ for(let x=10; x<w; x+=14){ ctx.beginPath(); ctx.arc(x,y,1.2,0,Math.PI*2); ctx.fill(); } }
 
   // header band
-  ctx.fillStyle = '#7A5C2E';
+  ctx.fillStyle = '#A08860';
   ctx.fillRect(0,0,w,190);
 
   // seal circle
@@ -5192,56 +5243,56 @@ function drawPoster(){
   wrapText(ctx, BUSINESS.name, 40, 100, w-170, 40);
 
   // perforation dashes
-  ctx.strokeStyle = '#DCD0B4';
+  ctx.strokeStyle = '#DDC8A0';
   ctx.setLineDash([6,6]);
   ctx.beginPath(); ctx.moveTo(0,190); ctx.lineTo(w,190); ctx.stroke();
   ctx.setLineDash([]);
 
   // body info
   let y = 250;
-  ctx.fillStyle = '#26221B';
+  ctx.fillStyle = '#6B5636';
   ctx.font = '700 20px "Noto Serif TC", serif';
   ctx.fillText('營業時間', 40, y);
   ctx.font = '400 22px "Space Mono", monospace';
-  ctx.fillStyle = '#5C4720';
+  ctx.fillStyle = '#4A3B24';
   y += 34;
   ctx.fillText(String(BUSINESS.openHour).padStart(2,'0')+':00 – '+String(BUSINESS.closeHour).padStart(2,'0')+':00', 40, y);
   ctx.font = '400 15px "Noto Sans TC", sans-serif';
-  ctx.fillStyle = '#6B6356';
+  ctx.fillStyle = '#9C8563';
   y += 26;
   ctx.fillText(BUSINESS.hoursFull || '', 40, y);
 
   y += 56;
-  ctx.fillStyle = '#26221B';
+  ctx.fillStyle = '#6B5636';
   ctx.font = '700 20px "Noto Serif TC", serif';
   ctx.fillText('服務項目', 40, y);
   y += 14;
   SERVICES.slice(0,4).forEach(s=>{
     y += 38;
     ctx.font = '700 17px "Noto Sans TC", sans-serif';
-    ctx.fillStyle = '#26221B';
+    ctx.fillStyle = '#6B5636';
     ctx.fillText(s.icon+'  '+s.name, 40, y);
     ctx.font = '700 17px "Space Mono", monospace';
-    ctx.fillStyle = '#8F6420';
+    ctx.fillStyle = '#6B5636';
     ctx.textAlign = 'right';
     ctx.fillText('$'+s.price, w-40, y);
     ctx.textAlign = 'left';
   });
 
   // footer
-  ctx.strokeStyle = '#DCD0B4';
+  ctx.strokeStyle = '#DDC8A0';
   ctx.setLineDash([6,6]);
   ctx.beginPath(); ctx.moveTo(0,h-120); ctx.lineTo(w,h-120); ctx.stroke();
   ctx.setLineDash([]);
 
-  ctx.fillStyle = '#6B6356';
+  ctx.fillStyle = '#9C8563';
   ctx.font = '400 15px "Noto Sans TC", sans-serif';
   ctx.fillText('📍 '+(BUSINESS.address||''), 40, h-80);
   ctx.fillText('📞 '+(BUSINESS.phone||''), 40, h-50);
 
   ctx.textAlign = 'right';
   ctx.font = '700 13px "Space Mono", monospace';
-  ctx.fillStyle = '#C9A15A';
+  ctx.fillStyle = '#A08860';
   ctx.fillText('掃描或搜尋店名立即預約', w-40, h-30);
   ctx.textAlign = 'left';
 }
