@@ -15,9 +15,9 @@
    - 確認頁做成完整票根,含撕線與圓形印章動畫
    ============================================================ */
 :root{
-  --paper:#F7F2E6;
-  --paper-2:#F0E9D8;
-  --line:#DCD0B4;
+  --paper:#FBF2E1;
+  --paper-2:#F5E2BF;
+  --line:#E2C99B;
   --ink:#26221B;
   --ink-soft:#6B6356;
   --stamp:#BF8B3D;
@@ -33,7 +33,7 @@
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0; padding:0; width:100%; overflow-x:hidden; overscroll-behavior-x:none;}
 body{
-  background:#E9E2CE;
+  background:#EFDBAE;
   font-family:'Noto Sans TC', sans-serif;
   color:var(--ink);
   display:flex;
@@ -164,6 +164,11 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
   background:var(--stamp); width:20px; height:20px; border-radius:50%;
   display:flex; align-items:center; justify-content:center; flex-shrink:0;
 }
+.svc-cat-header{
+  font-family:'Noto Serif TC', serif; font-size:13.5px; font-weight:700; color:var(--ink-soft);
+  margin:18px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--paper-2);
+}
+.svc-cat-header:first-child{ margin-top:0; }
 
 /* ---- quick actions row on home ---- */
 .quick-row{ display:flex; gap:10px; margin-bottom:24px; }
@@ -217,7 +222,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .ck-item-row{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--paper-2); font-size:13.5px; }
 .svc-body{ flex:1; min-width:0; }
 .svc-body h3{ margin:0 0 4px; font-size:15px; font-weight:700; }
-.svc-body p{ margin:0 0 8px; font-size:12.5px; color:var(--ink-soft); line-height:1.5; }
+.svc-body p{ margin:0 0 8px; font-size:12.5px; color:var(--ink-soft); line-height:1.5; white-space:pre-line; }
 .svc-meta{ display:flex; gap:10px; font-family:'Space Mono', monospace; font-size:11.5px; color:var(--ledger-dark); }
 .svc-price{ font-family:'Space Mono', monospace; font-weight:700; font-size:15px; white-space:nowrap; }
 
@@ -816,7 +821,9 @@ const DEFAULT_BUSINESS = {
   hoursFull: "週一至週日 09:00–18:00",
   address: "請於後台設定實際地址",
   phone: "請於後台設定聯絡電話",
-  bookingPrefix: "GD"
+  bookingPrefix: "GD",
+  serviceCategories: [],
+  productCategories: []
 };
 const DEFAULT_SERVICES = [
   { id:'s1', icon:'🔹', name:'基礎預約', desc:'標準服務內容，適合初次預約的顧客。', duration:30, price:600 },
@@ -1246,10 +1253,21 @@ function selectedServicesTotal(){
 function selectedServicesDuration(){
   return selectedServices().reduce((sum,s)=>sum+(s.duration||0),0);
 }
+/* 依商家設定的分類順序把服務／商品分組；沒有設定任何分類的商家維持原本平鋪列表，
+   有分類但項目未被分到任何一類（或分類已被商家刪除）的，歸到「其他」放在最後 */
+function groupItemsByCategory(items, categories){
+  if(!categories || categories.length===0){
+    return [{ category:null, items }];
+  }
+  const groups = categories.map(c=>({ category:c, items: items.filter(x=>x.category===c) })).filter(g=>g.items.length>0);
+  const uncategorized = items.filter(x=>!x.category || !categories.includes(x.category));
+  if(uncategorized.length>0) groups.push({ category:'其他', items: uncategorized });
+  return groups;
+}
 function renderServiceList(){
   const wrap = document.getElementById('serviceList');
   const multi = BUSINESS.allowMultiService === true;
-  wrap.innerHTML = SERVICES.map(s=>{
+  const renderCard = (s)=>{
     const isSel = multi ? (state.services||[]).some(x=>x.id===s.id) : (state.service&&state.service.id===s.id);
     return `
     <div class="svc-card ${isSel?'selected':''}" onclick="pickService('${s.id}')">
@@ -1261,7 +1279,11 @@ function renderServiceList(){
       </div>
       <div class="svc-price">$${s.price}</div>
     </div>
-  `;}).join('');
+  `;};
+  const groups = groupItemsByCategory(SERVICES, BUSINESS.serviceCategories);
+  wrap.innerHTML = groups.map(g=>
+    (g.category ? `<div class="svc-cat-header">${g.category}</div>` : '') + g.items.map(renderCard).join('')
+  ).join('');
   document.getElementById('svcNextBtn').disabled = selectedServices().length===0;
 }
 function pickService(id){
@@ -1725,7 +1747,7 @@ function renderMyProducts(){
     wrap.innerHTML = `<div class="empty-state"><div class="ic">🛍️</div><h3>目前尚無商品</h3><p>商家上架商品後會顯示在這裡</p></div>`;
     return;
   }
-  wrap.innerHTML = products.map(p=>{
+  const renderCard = (p)=>{
     const hasStock = !(p.stock!==null && p.stock!==undefined && p.stock!=='' && p.stock<=0);
     const qty = prodQty(p.id);
     return `
@@ -1748,7 +1770,11 @@ function renderMyProducts(){
       </div>
       <div class="svc-price">$${p.price}</div>
     </div>`;
-  }).join('');
+  };
+  const groups = groupItemsByCategory(products, BUSINESS.productCategories);
+  wrap.innerHTML = groups.map(g=>
+    (g.category ? `<div class="svc-cat-header">${g.category}</div>` : '') + g.items.map(renderCard).join('')
+  ).join('');
   updateCartBarVisibility();
 }
 function openCheckout(){

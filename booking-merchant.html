@@ -13,9 +13,9 @@
    後台改以「帳本」的視覺邏輯呈現：條列、印章式狀態、分頁帳籤
    ============================================================ */
 :root{
-  --paper:#F7F2E6;
-  --paper-2:#F0E9D8;
-  --line:#DCD0B4;
+  --paper:#FBF2E1;
+  --paper-2:#F5E2BF;
+  --line:#E2C99B;
   --ink:#26221B;
   --ink-soft:#6B6356;
   --stamp:#BF8B3D;
@@ -31,7 +31,7 @@
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0; padding:0; width:100%; overflow-x:hidden; overscroll-behavior-x:none;}
 body{
-  background:#E9E2CE;
+  background:#EFDBAE;
   font-family:'Noto Sans TC', sans-serif;
   color:var(--ink);
   display:flex;
@@ -166,6 +166,32 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
   border:1.5px solid var(--line); background:var(--white); cursor:pointer; color:var(--ink-soft);
 }
 .filter-chip.active{ background:var(--ledger); border-color:var(--ledger); color:var(--white); }
+
+.cat-section{
+  background:var(--white); border:1.5px solid var(--line); border-radius:var(--radius);
+  padding:16px; margin-bottom:16px;
+}
+.cat-hd{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.cat-hd h4{ margin:0 0 4px; font-family:'Noto Serif TC',serif; font-size:15px; }
+.cat-hd p{ margin:0; font-size:11.5px; color:var(--ink-soft); line-height:1.6; }
+.btn-outline-sm{
+  flex-shrink:0; font-size:12px; font-weight:700; padding:8px 14px; border-radius:10px;
+  border:1.5px solid var(--line); background:var(--white); color:var(--ink); cursor:pointer; font-family:inherit;
+}
+.cat-chips{ display:flex; flex-wrap:wrap; gap:8px; }
+.cat-chip{
+  font-size:12.5px; font-weight:700; padding:8px 12px; border-radius:10px;
+  background:var(--paper-2); color:var(--ink); cursor:pointer; border:1.5px solid transparent;
+}
+.cat-chip .cnt{ color:var(--ink-soft); font-weight:400; margin-left:2px; }
+.cat-chip.active{ border-color:var(--ledger); background:var(--white); }
+.cat-manage-row{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:10px 0; border-bottom:1px solid var(--paper-2);
+}
+.cat-manage-row:last-child{ border-bottom:none; }
+.cat-manage-row .nm{ font-size:14px; }
+.cat-manage-row .del{ color:var(--stamp-dark); font-size:18px; cursor:pointer; line-height:1; padding:2px 6px; }
 
 .bk-card{
   background:var(--white); border:1.5px solid var(--line); border-radius:var(--radius);
@@ -358,7 +384,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 }
 .crud-body{ flex:1; min-width:0; }
 .crud-body h4{ margin:0 0 3px; font-size:14.5px; font-weight:700; }
-.crud-body p{ margin:0 0 6px; font-size:12px; color:var(--ink-soft); line-height:1.5; }
+.crud-body p{ margin:0 0 6px; font-size:12px; color:var(--ink-soft); line-height:1.5; white-space:pre-line; }
 .crud-meta{ font-family:'Space Mono', monospace; font-size:11.5px; color:var(--ledger-dark); display:flex; gap:10px; }
 .order-card{ background:var(--white); border:1.5px solid var(--line); border-radius:var(--radius); padding:15px 16px; margin-bottom:12px; }
 .order-card .hd{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
@@ -914,6 +940,16 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         </div>
 
         <div id="svcServicesView">
+          <div class="cat-section">
+            <div class="cat-hd">
+              <div>
+                <h4>服務分類</h4>
+                <p>分類會影響公開預約頁的分段與排序；未分類項目仍會顯示。</p>
+              </div>
+              <button class="btn-outline-sm" onclick="openCategoryManager('service')">管理分類</button>
+            </div>
+            <div class="cat-chips" id="svcCategoryChips"></div>
+          </div>
           <div style="display:flex; justify-content:flex-end; margin-bottom:14px;">
             <button class="add-btn" onclick="openServiceForm()">＋ 新增服務</button>
           </div>
@@ -921,6 +957,16 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         </div>
 
         <div id="svcProductsView" style="display:none;">
+          <div class="cat-section">
+            <div class="cat-hd">
+              <div>
+                <h4>商品分類</h4>
+                <p>分類會影響公開商品頁的分段與排序；未分類項目仍會顯示。</p>
+              </div>
+              <button class="btn-outline-sm" onclick="openCategoryManager('product')">管理分類</button>
+            </div>
+            <div class="cat-chips" id="prdCategoryChips"></div>
+          </div>
           <div style="display:flex; justify-content:flex-end; margin-bottom:14px;">
             <button class="add-btn" onclick="openProductForm()">＋ 新增商品</button>
           </div>
@@ -1052,6 +1098,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         <div class="field"><label for="svcFormIcon">圖示（emoji）</label><input type="text" id="svcFormIcon" maxlength="4" placeholder="🔹"></div>
         <div class="field"><label for="svcFormName">服務名稱</label><input type="text" id="svcFormName" placeholder="例如：基礎預約"></div>
         <div class="field"><label for="svcFormDesc">服務說明</label><textarea id="svcFormDesc" placeholder="簡短描述這項服務"></textarea></div>
+        <div class="field"><label for="svcFormCategory">分類</label><select id="svcFormCategory"><option value="">未分類</option></select></div>
         <div class="field-row">
           <div class="field"><label for="svcFormDuration">時長（分鐘）</label><input type="number" id="svcFormDuration" min="5" step="5"></div>
           <div class="field"><label for="svcFormPrice">價格（NT$）</label><input type="number" id="svcFormPrice" min="0" step="10"></div>
@@ -1083,7 +1130,8 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         </div>
         <div class="field"><label for="prdFormIcon">圖示（emoji，沒有上傳圖片時顯示用）</label><input type="text" id="prdFormIcon" maxlength="4" placeholder="🛍️"></div>
         <div class="field"><label for="prdFormName">商品名稱</label><input type="text" id="prdFormName" placeholder="例如：居家保養組"></div>
-        <div class="field"><label for="prdFormDesc">商品說明</label><textarea id="prdFormDesc" placeholder="簡短描述這項商品"></textarea></div>
+        <div class="field"><label for="prdFormDesc">商品說明</label><textarea id="prdFormDesc" placeholder="簡短描述這項商品，可按 Enter 換行"></textarea></div>
+        <div class="field"><label for="prdFormCategory">分類</label><select id="prdFormCategory"><option value="">未分類</option></select></div>
         <div class="field-row">
           <div class="field"><label for="prdFormPrice">價格（NT$）</label><input type="number" id="prdFormPrice" min="0" step="10"></div>
           <div class="field"><label for="prdFormStock">庫存數量（選填）</label><input type="number" id="prdFormStock" min="0" step="1" placeholder="不填表示不限"></div>
@@ -1312,6 +1360,24 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
     </div>
   </div>
 
+  <!-- ============ CATEGORY MANAGER MODAL ============ -->
+  <div class="modal-backdrop" id="categoryManagerBackdrop" onclick="if(event.target===this)closeCategoryManager()">
+    <div class="modal-card">
+      <h3 id="categoryManagerTitle">管理分類</h3>
+      <div id="categoryManagerList" style="margin-bottom:14px;"></div>
+      <div class="field" style="margin-bottom:0;">
+        <label for="categoryNewInput">新增分類</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="categoryNewInput" placeholder="例如：臉部保養" style="flex:1;" onkeydown="if(event.key==='Enter')addCategory()">
+          <button class="btn btn-primary" style="flex:0 0 auto; padding:0 18px;" onclick="addCategory()">新增</button>
+        </div>
+      </div>
+      <div class="sheet-actions" style="margin-top:18px;">
+        <button class="btn btn-outline" style="width:100%;" onclick="closeCategoryManager()">完成</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ BREAK ENTRY SHEET ============ -->
   <!-- ============ FORMS MOVED TO FULL PAGES BELOW ============ -->
   <div class="toast" id="toast"></div>
@@ -1346,7 +1412,9 @@ const DEFAULT_BUSINESS = {
   address: "請於後台設定實際地址",
   phone: "請於後台設定聯絡電話",
   bookingPrefix: "GD",
-  customerUrl: ""
+  customerUrl: "",
+  serviceCategories: [],
+  productCategories: []
 };
 const DEFAULT_SERVICES = [
   { id:'s1', icon:'🔹', name:'基礎預約', desc:'標準服務內容，適合初次預約的顧客。', duration:30, price:600, order:1 },
@@ -1408,6 +1476,8 @@ function startListeners(){
       const brandEl = document.getElementById('topbarBrandName');
       if(brandEl) brandEl.textContent = BUSINESS.name || '商家後台';
       rerenderActiveScreen();
+      const catModal = document.getElementById('categoryManagerBackdrop');
+      if(catModal && catModal.classList.contains('show')) renderCategoryManagerList();
     }, err=>console.error('business listener', err))
   );
   unsubscribers.push(
@@ -2603,13 +2673,33 @@ function setServicesTab(tab){
   document.getElementById('svcProductsView').style.display = tab==='products' ? 'block' : 'none';
   document.getElementById('svcOrdersView').style.display = tab==='orders' ? 'block' : 'none';
 }
+let svcCategoryFilter = 'all';
+let prdCategoryFilter = 'all';
+function renderCategoryChips(type){
+  const cats = type==='service' ? (BUSINESS.serviceCategories||[]) : (BUSINESS.productCategories||[]);
+  const items = type==='service' ? SERVICES : PRODUCTS;
+  const wrap = document.getElementById(type==='service' ? 'svcCategoryChips' : 'prdCategoryChips');
+  if(!wrap) return;
+  const activeFilter = type==='service' ? svcCategoryFilter : prdCategoryFilter;
+  const setFn = type==='service' ? 'setServiceCategoryFilter' : 'setProductCategoryFilter';
+  const chips = [`<div class="cat-chip ${activeFilter==='all'?'active':''}" onclick="${setFn}('all')">全部<span class="cnt"> ${items.length}</span></div>`]
+    .concat(cats.map(c=>{
+      const count = items.filter(x=>x.category===c).length;
+      return `<div class="cat-chip ${activeFilter===c?'active':''}" onclick="${setFn}('${c.replace(/'/g,"\\'")}')">${c}<span class="cnt"> ${count}</span></div>`;
+    }));
+  wrap.innerHTML = chips.join('');
+}
+function setServiceCategoryFilter(cat){ svcCategoryFilter = cat; renderServicesList(); }
+function setProductCategoryFilter(cat){ prdCategoryFilter = cat; renderProductsList(); }
 function renderServicesList(){
+  renderCategoryChips('service');
   const wrap = document.getElementById('servicesList');
-  if(SERVICES.length===0){
-    wrap.innerHTML = `<div class="empty-state"><div class="ic">🔖</div><h3>尚未新增服務項目</h3><p>新增後，顧客即可在預約頁選擇此服務。</p></div>`;
+  const list = svcCategoryFilter==='all' ? SERVICES : SERVICES.filter(s=>s.category===svcCategoryFilter);
+  if(list.length===0){
+    wrap.innerHTML = `<div class="empty-state"><div class="ic">🔖</div><h3>${SERVICES.length===0?'尚未新增服務項目':'這個分類還沒有服務'}</h3><p>${SERVICES.length===0?'新增後，顧客即可在預約頁選擇此服務。':'切換到其他分類，或新增一項服務到這裡。'}</p></div>`;
     return;
   }
-  wrap.innerHTML = SERVICES.map(s=>`
+  wrap.innerHTML = list.map(s=>`
     <div class="crud-card">
       <div class="crud-ic">${s.icon}</div>
       <div class="crud-body">
@@ -2627,12 +2717,15 @@ function openServiceForm(id){
   const isEdit = !!id;
   document.getElementById('serviceFormTitle').textContent = isEdit ? '編輯服務' : '新增服務';
   document.getElementById('svcDeleteBtn').style.display = isEdit ? 'block' : 'none';
+  const catSel = document.getElementById('svcFormCategory');
+  catSel.innerHTML = '<option value="">未分類</option>' + (BUSINESS.serviceCategories||[]).map(c=>`<option value="${c}">${c}</option>`).join('');
   if(isEdit){
     const s = SERVICES.find(x=>x.id===id);
     document.getElementById('svcFormId').value = s.id;
     document.getElementById('svcFormIcon').value = s.icon;
     document.getElementById('svcFormName').value = s.name;
     document.getElementById('svcFormDesc').value = s.desc||'';
+    catSel.value = s.category || '';
     document.getElementById('svcFormDuration').value = s.duration;
     document.getElementById('svcFormPrice').value = s.price;
     document.getElementById('svcDepositSwitch').classList.toggle('on', s.depositRequired === true);
@@ -2641,6 +2734,7 @@ function openServiceForm(id){
     document.getElementById('svcFormIcon').value = '🔹';
     document.getElementById('svcFormName').value = '';
     document.getElementById('svcFormDesc').value = '';
+    catSel.value = '';
     document.getElementById('svcFormDuration').value = 30;
     document.getElementById('svcFormPrice').value = 0;
     document.getElementById('svcDepositSwitch').classList.remove('on');
@@ -2656,6 +2750,7 @@ async function saveService(){
     icon: document.getElementById('svcFormIcon').value.trim() || '🔹',
     name,
     desc: document.getElementById('svcFormDesc').value.trim(),
+    category: document.getElementById('svcFormCategory').value || '',
     duration: Number(document.getElementById('svcFormDuration').value) || 30,
     price: Number(document.getElementById('svcFormPrice').value) || 0,
     depositRequired: document.getElementById('svcDepositSwitch').classList.contains('on'),
@@ -2683,12 +2778,14 @@ async function deleteService(){
    PRODUCTS CRUD
    ============================================================ */
 function renderProductsList(){
+  renderCategoryChips('product');
   const wrap = document.getElementById('productsList');
-  if(PRODUCTS.length===0){
-    wrap.innerHTML = `<div class="empty-state"><div class="ic">🛍️</div><h3>尚未新增商品項目</h3><p>新增後可用於店內銷售或未來上架使用。</p></div>`;
+  const list = prdCategoryFilter==='all' ? PRODUCTS : PRODUCTS.filter(p=>p.category===prdCategoryFilter);
+  if(list.length===0){
+    wrap.innerHTML = `<div class="empty-state"><div class="ic">🛍️</div><h3>${PRODUCTS.length===0?'尚未新增商品項目':'這個分類還沒有商品'}</h3><p>${PRODUCTS.length===0?'新增後可用於店內銷售或未來上架使用。':'切換到其他分類，或新增一項商品到這裡。'}</p></div>`;
     return;
   }
-  wrap.innerHTML = PRODUCTS.map(p=>`
+  wrap.innerHTML = list.map(p=>`
     <div class="crud-card">
       <div class="crud-ic">${p.image ? `<img src="${p.image}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">` : p.icon}</div>
       <div class="crud-body">
@@ -2855,12 +2952,15 @@ function openProductForm(id){
   const isEdit = !!id;
   document.getElementById('productFormTitle').textContent = isEdit ? '編輯商品' : '新增商品';
   document.getElementById('prdDeleteBtn').style.display = isEdit ? 'block' : 'none';
+  const catSel = document.getElementById('prdFormCategory');
+  catSel.innerHTML = '<option value="">未分類</option>' + (BUSINESS.productCategories||[]).map(c=>`<option value="${c}">${c}</option>`).join('');
   if(isEdit){
     const p = PRODUCTS.find(x=>x.id===id);
     document.getElementById('prdFormId').value = p.id;
     document.getElementById('prdFormIcon').value = p.icon;
     document.getElementById('prdFormName').value = p.name;
     document.getElementById('prdFormDesc').value = p.desc||'';
+    catSel.value = p.category || '';
     document.getElementById('prdFormPrice').value = p.price;
     document.getElementById('prdFormStock').value = (p.stock===null||p.stock===undefined) ? '' : p.stock;
     renderProductImagePreview(p.image);
@@ -2869,6 +2969,7 @@ function openProductForm(id){
     document.getElementById('prdFormIcon').value = '🛍️';
     document.getElementById('prdFormName').value = '';
     document.getElementById('prdFormDesc').value = '';
+    catSel.value = '';
     document.getElementById('prdFormPrice').value = 0;
     document.getElementById('prdFormStock').value = '';
     renderProductImagePreview(null);
@@ -2923,6 +3024,7 @@ async function saveProduct(){
     icon: document.getElementById('prdFormIcon').value.trim() || '🛍️',
     name,
     desc: document.getElementById('prdFormDesc').value.trim(),
+    category: document.getElementById('prdFormCategory').value || '',
     price: Number(document.getElementById('prdFormPrice').value) || 0,
     stock: stockRaw==='' ? null : Number(stockRaw),
     image: image || null,
@@ -2943,6 +3045,59 @@ async function deleteProduct(){
     await db.collection('products').doc(id).delete();
     closeProductForm();
     showToast('商品已刪除');
+  }catch(err){ showToast('刪除失敗，請檢查網路連線後再試'); }
+}
+
+/* ============================================================
+   服務／商品分類管理
+   分類存在 meta/business 文件的 serviceCategories / productCategories 陣列裡，
+   服務、商品各自的 category 欄位存分類名稱字串（空字串＝未分類）
+   ============================================================ */
+let categoryManagerType = 'service';
+function openCategoryManager(type){
+  categoryManagerType = type;
+  document.getElementById('categoryManagerTitle').textContent = type==='service' ? '管理服務分類' : '管理商品分類';
+  document.getElementById('categoryNewInput').value = '';
+  renderCategoryManagerList();
+  document.getElementById('categoryManagerBackdrop').classList.add('show');
+}
+function closeCategoryManager(){
+  document.getElementById('categoryManagerBackdrop').classList.remove('show');
+}
+function renderCategoryManagerList(){
+  const cats = categoryManagerType==='service' ? (BUSINESS.serviceCategories||[]) : (BUSINESS.productCategories||[]);
+  const wrap = document.getElementById('categoryManagerList');
+  if(cats.length===0){
+    wrap.innerHTML = `<p class="field-hint" style="margin:0 0 4px;">尚未新增任何分類。</p>`;
+    return;
+  }
+  wrap.innerHTML = cats.map(c=>`
+    <div class="cat-manage-row">
+      <span class="nm">${c}</span>
+      <span class="del" onclick="deleteCategory('${c.replace(/'/g,"\\'")}')">✕</span>
+    </div>
+  `).join('');
+}
+async function addCategory(){
+  const input = document.getElementById('categoryNewInput');
+  const name = input.value.trim();
+  if(!name){ showToast('請輸入分類名稱'); return; }
+  const field = categoryManagerType==='service' ? 'serviceCategories' : 'productCategories';
+  const cats = BUSINESS[field] || [];
+  if(cats.includes(name)){ showToast('這個分類已經存在'); return; }
+  try{
+    await db.collection('meta').doc('business').update({ [field]: [...cats, name] });
+    input.value = '';
+    showToast('分類已新增');
+  }catch(err){ showToast('新增失敗，請檢查網路連線後再試'); }
+}
+async function deleteCategory(name){
+  if(!confirm(`確定要刪除分類「${name}」嗎？已使用這個分類的項目不會被刪除，只會變成未分類。`)) return;
+  const field = categoryManagerType==='service' ? 'serviceCategories' : 'productCategories';
+  const cats = (BUSINESS[field] || []).filter(c=>c!==name);
+  try{
+    await db.collection('meta').doc('business').update({ [field]: cats });
+    showToast('分類已刪除');
   }catch(err){ showToast('刪除失敗，請檢查網路連線後再試'); }
 }
 
