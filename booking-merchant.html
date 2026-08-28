@@ -13,16 +13,16 @@
    後台改以「帳本」的視覺邏輯呈現：條列、印章式狀態、分頁帳籤
    ============================================================ */
 :root{
-  --paper:#FAF3E6;
-  --paper-2:#F0E4C9;
-  --line:#DCC9A0;
-  --ink:#26221B;
-  --ink-soft:#6B6356;
-  --stamp:#BF8B3D;
-  --stamp-dark:#8F6420;
-  --ledger:#7A5C2E;
-  --ledger-dark:#5C4720;
-  --gold:#C9A15A;
+  --paper:#FAF6EE;
+  --paper-2:#F0E1C4;
+  --line:#DDC8A0;
+  --ink:#6B5636;
+  --ink-soft:#9C8563;
+  --stamp:#8A6E47;
+  --stamp-dark:#6B5636;
+  --ledger:#6B5636;
+  --ledger-dark:#4A3B24;
+  --gold:#A08860;
   --white:#FFFDF8;
   --shadow: 0 8px 24px rgba(38,34,27,0.10);
   --radius: 14px;
@@ -31,7 +31,7 @@
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0; padding:0; width:100%; overflow-x:hidden; overscroll-behavior-x:none;}
 body{
-  background:#E8DAB8;
+  background:#F0E1C4;
   font-family:'Noto Sans TC', sans-serif;
   color:var(--ink);
   display:flex;
@@ -192,6 +192,9 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .cat-manage-row:last-child{ border-bottom:none; }
 .cat-manage-row .nm{ font-size:14px; }
 .cat-manage-row .del{ color:var(--stamp-dark); font-size:18px; cursor:pointer; line-height:1; padding:2px 6px; }
+.cat-add-row{ display:flex; gap:8px; align-items:stretch; }
+.cat-add-row input{ flex:1 1 auto; min-width:0; }
+.cat-add-row button{ flex:0 0 auto; width:auto; white-space:nowrap; padding:0 20px; }
 
 .bk-card{
   background:var(--white); border:1.5px solid var(--line); border-radius:var(--radius);
@@ -378,26 +381,19 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 /* ---- CRUD cards (services / staff) ---- */
 .crud-card{
   background:var(--white); border:1.5px solid var(--line); border-radius:var(--radius);
-  padding:15px 16px; margin-bottom:12px;
+  padding:14px 16px; margin-bottom:12px; display:flex; gap:12px; align-items:flex-start;
 }
-.crud-card-top{ display:flex; gap:12px; align-items:flex-start; }
 .crud-ic{
-  width:40px; height:40px; border-radius:10px; background:var(--paper-2); flex-shrink:0;
-  display:flex; align-items:center; justify-content:center; font-size:19px; overflow:hidden;
+  width:38px; height:38px; border-radius:10px; background:var(--paper-2); flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:18px; overflow:hidden;
 }
 .crud-body{ flex:1; min-width:0; }
-.crud-body .nm-row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:3px; }
-.crud-body h4{ margin:0; font-size:14.5px; font-weight:700; }
-.crud-tag{ font-size:10.5px; font-weight:700; color:var(--stamp); background:var(--paper-2); padding:2px 8px; border-radius:99px; }
-.crud-body p{ margin:0 0 6px; font-size:12px; color:var(--ink-soft); line-height:1.5; white-space:pre-line; }
-.crud-meta{ font-family:'Space Mono', monospace; font-size:11.5px; color:var(--ledger-dark); display:flex; gap:10px; }
-.crud-status-row{ margin-top:2px; }
-.crud-actions-row{ display:flex; gap:8px; margin-top:12px; }
-.crud-actions-row button{
-  flex:1; font-size:12.5px; font-weight:700; padding:9px 0; border-radius:10px;
-  border:1.5px solid var(--line); background:var(--white); color:var(--ink); cursor:pointer; font-family:inherit;
-}
-.crud-actions-row button.warn{ color:var(--stamp-dark); border-color:var(--stamp-dark); background:transparent; }
+.crud-body .nm-row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px; }
+.crud-body h4{ margin:0; font-size:14px; font-weight:700; }
+.crud-tag{ font-size:10px; font-weight:700; color:var(--stamp); background:var(--paper-2); padding:2px 7px; border-radius:99px; }
+.crud-body p{ margin:0 0 5px; font-size:11.5px; color:var(--ink-soft); line-height:1.45; white-space:pre-line; }
+.crud-meta{ font-family:'Space Mono', monospace; font-size:11px; color:var(--ledger-dark); display:flex; gap:8px; margin-bottom:5px; }
+.crud-status-row{ margin-top:0; }
 .order-card{ background:var(--white); border:1.5px solid var(--line); border-radius:var(--radius); padding:15px 16px; margin-bottom:12px; }
 .order-card .hd{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
 .order-card .code{ font-family:'Space Mono',monospace; font-size:12px; color:var(--ink-soft); }
@@ -583,7 +579,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 }
 .poster-gen-foot{ padding:16px 20px calc(20px + env(safe-area-inset-bottom)); flex-shrink:0; border-top:1px solid var(--paper-2); }
 .slot-poster{
-  background:#F3E6C8;
+  background:#F0E1C4;
   border-radius:20px; padding:26px 16px 18px; text-align:center;
 }
 .slot-poster .logo{
@@ -1447,9 +1443,9 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
       <div id="categoryManagerList" style="margin-bottom:14px;"></div>
       <div class="field" style="margin-bottom:0;">
         <label for="categoryNewInput">新增分類</label>
-        <div style="display:flex; gap:8px;">
-          <input type="text" id="categoryNewInput" placeholder="例如：臉部保養" style="flex:1;" onkeydown="if(event.key==='Enter')addCategory()">
-          <button class="btn btn-primary" style="flex:0 0 auto; padding:0 18px;" onclick="addCategory()">新增</button>
+        <div class="cat-add-row">
+          <input type="text" id="categoryNewInput" placeholder="例如：臉部保養" onkeydown="if(event.key==='Enter')addCategory()">
+          <button class="btn btn-primary" onclick="addCategory()">新增</button>
         </div>
       </div>
       <div class="sheet-actions" style="margin-top:18px;">
@@ -2786,21 +2782,19 @@ function renderServicesList(){
     const active = s.active !== false;
     return `
     <div class="crud-card">
-      <div class="crud-card-top">
-        <div class="crud-ic">${s.icon}</div>
-        <div class="crud-body">
-          <div class="nm-row">
-            <h4>${s.name}</h4>
-            ${s.tag ? `<span class="crud-tag">${s.tag}</span>` : ''}
-          </div>
-          <p>${s.desc||''}</p>
-          <div class="crud-meta"><span>⏱ ${s.duration} 分</span><span>$${s.price}</span></div>
-          <div class="crud-status-row"><span class="status-pill ${active?'status-active':'status-inactive'}">${active?'上架中':'已下架'}</span></div>
+      <div class="crud-ic">${s.icon}</div>
+      <div class="crud-body">
+        <div class="nm-row">
+          <h4>${s.name}</h4>
+          ${s.tag ? `<span class="crud-tag">${s.tag}</span>` : ''}
         </div>
+        <p>${s.desc||''}</p>
+        <div class="crud-meta"><span>⏱ ${s.duration} 分</span><span>$${s.price}</span></div>
+        <div class="crud-status-row"><span class="status-pill ${active?'status-active':'status-inactive'}">${active?'上架中':'已下架'}</span></div>
       </div>
-      <div class="crud-actions-row">
-        <button onclick="openServiceForm('${s.id}')">編輯</button>
-        <button class="${active?'warn':''}" onclick="toggleServiceActive('${s.id}')">${active?'下架':'上架'}</button>
+      <div class="crud-actions">
+        <div class="ic-btn" onclick="openServiceForm('${s.id}')" title="編輯">✎</div>
+        <div class="ic-btn" onclick="toggleServiceActive('${s.id}')" title="${active?'下架':'上架'}">${active?'⬇':'⬆'}</div>
       </div>
     </div>
   `;}).join('');
@@ -2998,18 +2992,16 @@ function renderProductsList(){
     const active = p.active !== false;
     return `
     <div class="crud-card">
-      <div class="crud-card-top">
-        <div class="crud-ic">${p.image ? `<img src="${p.image}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">` : p.icon}</div>
-        <div class="crud-body">
-          <div class="nm-row"><h4>${p.name}</h4></div>
-          <p>${p.desc||''}</p>
-          <div class="crud-meta"><span>$${p.price}</span>${p.stock!==null && p.stock!==undefined && p.stock!=='' ? `<span>庫存 ${p.stock}</span>` : ''}</div>
-          <div class="crud-status-row"><span class="status-pill ${active?'status-active':'status-inactive'}">${active?'上架中':'已下架'}</span></div>
-        </div>
+      <div class="crud-ic">${p.image ? `<img src="${p.image}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">` : p.icon}</div>
+      <div class="crud-body">
+        <div class="nm-row"><h4>${p.name}</h4></div>
+        <p>${p.desc||''}</p>
+        <div class="crud-meta"><span>$${p.price}</span>${p.stock!==null && p.stock!==undefined && p.stock!=='' ? `<span>庫存 ${p.stock}</span>` : ''}</div>
+        <div class="crud-status-row"><span class="status-pill ${active?'status-active':'status-inactive'}">${active?'上架中':'已下架'}</span></div>
       </div>
-      <div class="crud-actions-row">
-        <button onclick="openProductForm('${p.id}')">編輯</button>
-        <button class="${active?'warn':''}" onclick="toggleProductActive('${p.id}')">${active?'下架':'上架'}</button>
+      <div class="crud-actions">
+        <div class="ic-btn" onclick="openProductForm('${p.id}')" title="編輯">✎</div>
+        <div class="ic-btn" onclick="toggleProductActive('${p.id}')" title="${active?'下架':'上架'}">${active?'⬇':'⬆'}</div>
       </div>
     </div>
   `;}).join('');
@@ -3739,7 +3731,7 @@ async function downloadSlotPoster(){
   ctx.textAlign = 'center';
 
   // 背景：淺奶茶色平塗，不用漸層
-  ctx.fillStyle = '#F3E6C8'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = '#F0E1C4'; ctx.fillRect(0,0,W,H);
 
   let cy = 26*S;
   // logo（帶白色圓環，跟預覽的 box-shadow 效果一致）
