@@ -1494,7 +1494,8 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
     <div class="modal-card">
       <h3 id="orderFormTitle">新增訂單</h3>
       <div class="field"><label for="orderCustName">顧客姓名</label><input type="text" id="orderCustName" placeholder="請輸入顧客姓名"></div>
-      <div class="field"><label for="orderCustPhone">手機號碼</label><input type="text" id="orderCustPhone" placeholder="0912-345-678"></div>
+      <div class="field"><label for="orderCustPhone">手機號碼</label><input type="text" id="orderCustPhone" placeholder="0912-345-678" oninput="handleOrderPhoneInput()"></div>
+      <div class="field-hint" id="orderCustMatchHint"></div>
       <div class="field"><label for="orderCustNote">備註（選填）</label><input type="text" id="orderCustNote" placeholder="例如：儲值贈品、面交自取…"></div>
       <div class="cust-section-hd" style="margin-top:18px;"><h4>商品項目</h4></div>
       <div id="orderItemsList"></div>
@@ -3658,9 +3659,27 @@ function openOrderForm(orderId){
   document.getElementById('orderCustName').value = o ? o.customer.name : '';
   document.getElementById('orderCustPhone').value = o ? o.customer.phone : '';
   document.getElementById('orderCustNote').value = o ? (o.customer.note||'') : '';
+  document.getElementById('orderCustMatchHint').textContent = '';
   orderFormItems = o ? o.items.map(it=>({...it})) : [];
   renderOrderFormItems();
   document.getElementById('orderFormBackdrop').classList.add('show');
+}
+/* 手機號碼打完（或改完）自動比對現有顧客資料：
+   有找到就帶入姓名（不會覆蓋已經手動填寫的姓名），並顯示提示；
+   沒找到就提醒商家這筆訂單會建立一位新顧客 */
+function handleOrderPhoneInput(){
+  const phoneRaw = (document.getElementById('orderCustPhone').value||'').trim();
+  const hint = document.getElementById('orderCustMatchHint');
+  const nameField = document.getElementById('orderCustName');
+  if(!phoneRaw){ hint.textContent = ''; return; }
+  const norm = s => (s||'').replace(/[-\s]/g,'');
+  const match = loadCustomers().find(c=>norm(c.phone)===norm(phoneRaw));
+  if(match){
+    if(!nameField.value.trim()) nameField.value = match.name || '';
+    hint.textContent = `✓ 已找到既有顧客「${match.name||'（未提供姓名）'}」，將會關聯到同一份顧客資料`;
+  } else {
+    hint.textContent = '此電話目前沒有對應的顧客資料，儲存後會視為新顧客（若之後該電話有註冊會員或訂位，系統會自動對應）';
+  }
 }
 function closeOrderForm(){
   document.getElementById('orderFormBackdrop').classList.remove('show');
@@ -3726,7 +3745,8 @@ async function saveOrderForm(){
       await db.collection('orders').doc(orderFormId).update({ customer:{name,phone,note}, items, totalAmount, status, updatedAt: new Date().toISOString() });
       showToast('訂單已更新');
     } else {
-      const cust = loadCustomers().find(c=>c.phone===phone);
+      const norm = s => (s||'').replace(/[-\s]/g,'');
+      const cust = loadCustomers().find(c=>norm(c.phone)===norm(phone));
       await db.collection('orders').add({
         code: genOrderCode(), customerId: cust?cust.id:null, customer:{name,phone,note},
         items, totalAmount, status: computeOrderStatus(items), createdAt: new Date().toISOString()
