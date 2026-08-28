@@ -4153,7 +4153,16 @@ function renderOrderFormItems(){
   if(orderFormItems.length===0){
     wrap.innerHTML = `<div class="field-hint">尚未加入任何商品，請按下方「新增品項」。</div>`;
   } else {
-    wrap.innerHTML = orderFormItems.map((it,i)=>`
+    wrap.innerHTML = orderFormItems.map((it,i)=>{
+      if(it.isPackagePlan){
+        return `
+      <div class="order-item-row">
+        <div class="field"><label>套組方案（不可編輯）</label><input type="text" value="${it.name}" disabled style="background:var(--paper-2); color:var(--ink-soft);"></div>
+        <div class="field price"><label>金額</label><input type="text" value="$${it.price}" disabled style="background:var(--paper-2); color:var(--ink-soft);"></div>
+      </div>
+      <div class="field-hint" style="margin:-4px 0 10px;">套組方案本身的堂數／金額請到「顧客→套組堂數」調整，這裡只能調整下面的贈品品項。</div>`;
+      }
+      return `
       <div class="order-item-row">
         <div class="field"><label>商品</label>
           <select onchange="setOrderItemProduct(${i}, this.value)">
@@ -4164,7 +4173,8 @@ function renderOrderFormItems(){
         <div class="field price"><label>單價</label><input type="number" min="0" value="${it.price}" onchange="setOrderItemPrice(${i}, this.value)"></div>
         <button class="rm-btn" onclick="removeOrderItemRow(${i})">✕</button>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
   const total = orderFormItems.reduce((s,it)=>s+it.price*it.qty, 0);
   document.getElementById('orderFormTotal').textContent = '$'+total.toLocaleString();
@@ -4193,13 +4203,20 @@ async function saveOrderForm(){
   const note = (document.getElementById('orderCustNote').value||'').trim();
   if(!name || !phone){ showToast('請填寫顧客姓名與手機號碼'); return; }
   if(orderFormItems.length===0){ showToast('請至少加入一項商品'); return; }
-  const items = orderFormItems.map(it=>({ productId: it.productId, name: it.name, price: it.price, qty: it.qty, subtotal: it.price*it.qty, shippedQty: it.shippedQty||0 }));
+  const items = orderFormItems.map(it=>({ productId: it.productId, name: it.name, price: it.price, qty: it.qty, subtotal: it.price*it.qty, shippedQty: it.shippedQty||0, ...(it.isPackagePlan ? {isPackagePlan:true} : {}) }));
   const totalAmount = items.reduce((s,it)=>s+it.subtotal, 0);
   try{
     if(orderFormId){
       const status = computeOrderStatus(items);
+      const original = ALL_ORDERS.find(o=>o.id===orderFormId);
       await db.collection('orders').doc(orderFormId).update({ customer:{name,phone,note}, items, totalAmount, status, updatedAt: new Date().toISOString() });
       showToast('訂單已更新');
+      // 編輯後如果剛好變成「已完成」（例如把套組贈品的出貨數量補齊），
+      // 一樣要檢查有沒有漏發套組堂數，邏輯跟「標記全部出貨」按鈕共用同一個防呆
+      if(status==='done' && original && original.packagePlanId && !original.packageGranted){
+        const grant = await grantPackagePlanToCustomer({ ...original, items, totalAmount });
+        showToast('訂單已更新，'+grant.msg);
+      }
     } else {
       const norm = s => (s||'').replace(/[-\s]/g,'');
       const cust = loadCustomers().find(c=>norm(c.phone)===norm(phone));
@@ -4221,9 +4238,14 @@ function setOrderFilter(status){
 }
 /* 依每個品項的已出貨數量，推算訂單整體狀態：
    完全沒出貨＝待處理、全部出貨完＝已完成、出了一部分＝部分出貨 */
+/* 套組方案那筆品項不是「要出貨的實體商品」，堂數是收款時就發放了，出貨狀態
+   只看真正要寄送的品項（例如綁定的贈品）；如果整筆訂單只有套組方案、沒有任何
+   要出貨的贈品，直接視為完成，不會卡在「待出貨」 */
 function computeOrderStatus(items){
-  const totalQty = items.reduce((s,it)=>s+it.qty, 0);
-  const shippedQty = items.reduce((s,it)=>s+(it.shippedQty||0), 0);
+  const shippable = items.filter(it=>!it.isPackagePlan);
+  if(shippable.length===0) return 'done';
+  const totalQty = shippable.reduce((s,it)=>s+it.qty, 0);
+  const shippedQty = shippable.reduce((s,it)=>s+(it.shippedQty||0), 0);
   if(shippedQty<=0) return 'pending';
   if(shippedQty>=totalQty) return 'done';
   return 'partial';
@@ -4363,6 +4385,15 @@ function renderOrdersList(){
       <div class="contact">📱 ${o.customer.phone}</div>
       <div class="ship-items">
         ${o.items.map((it,i)=>{
+          if(it.isPackagePlan){
+            return `
+          <div class="ship-item-row">
+            <div class="si-info">
+              <div class="si-name">${it.name}　$${it.subtotal}</div>
+              <div class="si-progress full">套組方案（不用出貨，收款後自動發放堂數）</div>
+            </div>
+          </div>`;
+          }
           const shipped = it.shippedQty||0;
           const full = shipped>=it.qty;
           const progressCls = full ? 'full' : (shipped>0 ? 'partial' : '');
@@ -4414,13 +4445,11 @@ async function updateOrderItemShipped(orderId, itemIndex, delta){
     showToast('更新出貨進度失敗，請檢查網路連線後再試');
   }
 }
-/* 顧客線上購買套組方案的訂單，堂數什麼時候發放：改成「商家確認收款」的當下就發放，
-   不用等到「標記全部出貨」——因為方案綁定的贈品可能需要跟廠商預購、缺貨，商家不會希望
-   被贈品的出貨進度卡住而遲遲不敢把堂數給顧客。贈品訂單一樣會自動建立，商家可以之後
-   再處理出貨（要延遲出貨、或改成別的商品，都可以在那筆贈品訂單自己編輯/取消/刪除）。
-   用 packageGranted 旗標避免重複發放（例如收款記錄改了兩次、或又被標記一次已完成）。
-   回傳 {ok, msg} 讓呼叫端自己組合要顯示的 toast 文字，這裡不直接顯示 toast，
-   避免跟呼叫端原本的「收款已儲存」「訂單狀態已更新」互相蓋掉。 */
+/* 顧客線上購買套組方案，商家「記錄收款」的那一刻觸發：把堂數加進顧客帳戶。
+   贈品現在是跟套組方案同一筆訂單裡的品項（不是另外開一筆），所以這裡不用再另外
+   建立贈品訂單——贈品要不要預購、什麼時候出貨，商家可以在這筆訂單裡照正常出貨
+   流程處理，跟堂數有沒有發放完全脫鉤，不會互相卡住。用 packageGranted 旗標避免
+   重複發放。回傳 {ok, msg} 讓呼叫端自己組合要顯示的 toast 文字。 */
 async function grantPackagePlanToCustomer(order){
   const plan = ALL_PACKAGE_PLANS.find(p=>p.id===order.packagePlanId);
   if(!plan){ return { ok:false, msg:'找不到對應的套組方案，請手動幫顧客加堂數' }; }
@@ -4434,16 +4463,7 @@ async function grantPackagePlanToCustomer(order){
     const packages = [...(cust.packages||[]), { id:'pkg_'+Date.now(), name: plan.name, total: plan.totalSessions, used:0, note:'顧客線上購買', paidAmount: order.totalAmount||plan.price, createdAt: new Date().toISOString() }];
     await custRef.update({ packages });
     await db.collection('orders').doc(order.id).update({ packageGranted: true });
-    if(plan.giftProductId){
-      await db.collection('orders').add({
-        code: genOrderCode(), customerId: custId,
-        customer: { name: order.customer.name||'', phone: order.customer.phone||'', note: '套組贈品：'+plan.name },
-        items: [{ productId: plan.giftProductId, name: plan.giftProductName, price: 0, qty: plan.giftQty||1, subtotal: 0, shippedQty: 0 }],
-        totalAmount: 0, status: 'pending', createdAt: new Date().toISOString()
-      });
-      return { ok:true, msg:'堂數已加進顧客帳戶，贈品也已建立訂單，可視需要安排出貨或預購' };
-    }
-    return { ok:true, msg:'堂數已加進顧客帳戶' };
+    return { ok:true, msg: plan.giftProductId ? '堂數已加進顧客帳戶，贈品出貨請照這筆訂單原本的流程處理（可延後或預購）' : '堂數已加進顧客帳戶' };
   }catch(err){ return { ok:false, msg:'堂數發放失敗，請手動幫顧客加套組' }; }
 }
 async function updateOrderStatus(id, status){

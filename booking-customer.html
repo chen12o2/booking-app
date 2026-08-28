@@ -1949,25 +1949,52 @@ function renderPackagePlansShop(){
 /* 顧客線上購買套組方案：先送出一筆「待處理」訂單（跟一般商品訂單共用同一套機制），
    商家在後台確認收款、標記完成後，系統才會自動把堂數加進顧客帳戶——
    這裡不會直接發放堂數，因為金流仍是商家人工對帳，要等商家確認收到錢才算數 */
+/* 顧客線上購買套組方案：先送出一筆「待處理」訂單（跟一般商品訂單共用同一套機制）。
+   如果方案有綁贈品，贈品會併入「同一筆」訂單裡（不是另外開一筆），這樣商家在這筆
+   訂單裡就能直接編輯、換貨或延後出貨贈品（例如贈品要預購），不會卡住堂數的發放——
+   堂數是商家「記錄收款」的那一刻就發放，不用等贈品出貨完成，兩件事互不阻擋。 */
 async function purchasePackagePlan(planId){
   const plan = PACKAGE_PLANS.find(p=>p.id===planId);
   if(!plan) return;
   const uid = currentCustomerId();
   if(!uid){ showToast('請先登入會員帳號才能購買套組'); lockCustApp(); return; }
   const cust = currentCustomer();
+  const items = [{ productId: null, name: plan.name+'（套組方案）', price: plan.price, qty: 1, subtotal: plan.price, shippedQty: 0, isPackagePlan: true }];
+  if(plan.giftProductId){
+    items.push({ productId: plan.giftProductId, name: plan.giftProductName+'（套組贈品）', price: 0, qty: plan.giftQty||1, subtotal: 0, shippedQty: 0 });
+  }
+  const orderRef = db.collection('orders').doc();
   try{
-    await db.collection('orders').add({
-      code: genOrderCode(), customerId: uid,
-      customer: { name: (cust&&cust.name)||'', phone: (cust&&cust.phone)||'', email:(cust&&cust.email)||'', note: '線上購買套組方案' },
-      items: [{ productId: null, name: plan.name+'（套組方案）', price: plan.price, qty: 1, subtotal: plan.price, shippedQty: 0 }],
-      packagePlanId: plan.id,
-      totalAmount: plan.price,
-      status: 'pending',
-      createdAt: new Date().toISOString()
-    });
+    if(plan.giftProductId){
+      // 贈品是實體商品，一樣要照正常出貨流程扣庫存，避免超賣；套組方案本身不是庫存商品，不用扣
+      await db.runTransaction(async (tx)=>{
+        const giftRef = db.collection('products').doc(plan.giftProductId);
+        const snap = await tx.get(giftRef);
+        const data = snap.data();
+        const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
+        if(hasStock && data.stock < (plan.giftQty||1)){
+          throw new Error('STOCK_SHORT');
+        }
+        if(hasStock){ tx.update(giftRef, { stock: data.stock - (plan.giftQty||1) }); }
+        tx.set(orderRef, {
+          code: genOrderCode(), customerId: uid,
+          customer: { name: (cust&&cust.name)||'', phone: (cust&&cust.phone)||'', email:(cust&&cust.email)||'', note: '線上購買套組方案' },
+          items, packagePlanId: plan.id, totalAmount: plan.price, status: 'pending', createdAt: new Date().toISOString()
+        });
+      });
+    } else {
+      await orderRef.set({
+        code: genOrderCode(), customerId: uid,
+        customer: { name: (cust&&cust.name)||'', phone: (cust&&cust.phone)||'', email:(cust&&cust.email)||'', note: '線上購買套組方案' },
+        items, packagePlanId: plan.id, totalAmount: plan.price, status: 'pending', createdAt: new Date().toISOString()
+      });
+    }
     showToast('已送出購買申請，請依商家指示付款，商家確認收款後堂數會自動加進您的帳戶');
     setProductsTab('orders');
-  }catch(err){ showToast('送出失敗，請檢查網路連線後再試'); }
+  }catch(err){
+    if(String(err&&err.message)==='STOCK_SHORT'){ showToast('贈品目前庫存不足，請聯絡商家確認'); }
+    else{ showToast('送出失敗，請檢查網路連線後再試'); }
+  }
 }
 function renderMyProducts(){
   const wrap = document.getElementById('myProductsList');
