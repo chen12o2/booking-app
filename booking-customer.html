@@ -536,6 +536,11 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         </div>
       </div>
 
+      <div class="about-card" id="homeNoticeCard" style="display:none;">
+        <div style="font-weight:700; margin-bottom:8px; font-family:'Noto Serif TC',serif;">📋 預約須知</div>
+        <p id="homeNoticeText" style="margin:0; font-size:13px; color:var(--ink-soft); white-space:pre-line; line-height:1.7;"></p>
+      </div>
+
       <div class="section-title"><span class="num">✓</span>熱門服務</div>
       <div id="homeSvcPreview"></div>
     </section>
@@ -560,7 +565,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
       <div class="date-strip" id="dateStrip"></div>
       <div class="section-title"><span class="num">4</span>選擇時段</div>
       <div class="time-grid" id="timeGrid"></div>
-      <button class="btn btn-primary" id="dtNextBtn" disabled onclick="goStep('info')">下一步</button>
+      <button class="btn btn-primary" id="dtNextBtn" disabled onclick="dtNext()">下一步</button>
     </section>
 
     <!-- ============ STEP 4: CUSTOMER INFO ============ -->
@@ -1160,6 +1165,7 @@ function isSlotBuffered(dateKey, label, durationMin){
   const start = toMinutes(label);
   const end = start + (durationMin || SLOT_MIN());
   return UPCOMING_BOOKINGS.some(b=>{
+    if(rescheduleBookingId && b.id===rescheduleBookingId) return false;
     if(b.date !== dateKey) return false;
     const bDur = bookingServices(b).reduce((sum,s)=>sum+(s.duration||0),0) || SLOT_MIN();
     const bStart = toMinutes(b.time) - buffer;
@@ -1180,12 +1186,12 @@ function goScreen(id, opts={}){
   if(navKey){ document.querySelector('.nav-item[data-nav="'+navKey+'"]').classList.add('active'); }
 
   const titles = {
-    home:'預約', service:'選擇服務', staff:'選擇服務人員', datetime:'選擇時間',
+    home:'預約', service:'選擇服務', staff:'選擇服務人員', datetime: rescheduleBookingId ? '選擇新時段' : '選擇時間',
     info:'聯絡資訊', confirm:'預約完成', mybookings:'我的預約', products:'商品', about:'商家資訊', servicesbrowse:'服務項目'
   };
   document.getElementById('topbarTitle').textContent = titles[id] || '預約';
 
-  const steps = {service:'STEP 1/5', staff:'STEP 2/5', datetime:'STEP 3/5', info:'STEP 4/5'};
+  const steps = {service:'STEP 1/5', staff:'STEP 2/5', datetime: rescheduleBookingId ? '改期' : 'STEP 3/5', info:'STEP 4/5'};
   document.getElementById('stepTag').textContent = steps[id] || '';
 
   const backable = ['service','staff','datetime','info'];
@@ -1215,6 +1221,7 @@ function goBack(){
 function startBooking(){
   state = { service:null, staff:STAFF[0], date:null, time:null };
   infoPrefilled = false;
+  rescheduleBookingId = null;
   goScreen('service');
 }
 
@@ -1228,6 +1235,14 @@ function renderHome(){
   document.getElementById('bizHoursHero').textContent = fmtHoursShort(BUSINESS);
   document.getElementById('bizSvcCountHero').textContent = SERVICES.length + ' 項';
   renderLogo();
+
+  const noticeCard = document.getElementById('homeNoticeCard');
+  if(BUSINESS.notice && BUSINESS.notice.trim()){
+    noticeCard.style.display = 'block';
+    document.getElementById('homeNoticeText').textContent = BUSINESS.notice;
+  } else {
+    noticeCard.style.display = 'none';
+  }
 
   const wrap = document.getElementById('homeSvcPreview');
   wrap.innerHTML = SERVICES.slice(0,3).map(s=>`
@@ -1337,6 +1352,7 @@ function startBookingWithService(id){
   if(!s) return;
   state = { service:s, services:[s], staff:STAFF[0], date:null, time:null };
   infoPrefilled = false;
+  rescheduleBookingId = null;
   goScreen('staff');
 }
 
@@ -1694,6 +1710,7 @@ function ticketHtml(b, big){
       <div class="ticket-row"><span class="lbl">預約人</span><span class="val">${b.customer.name}</span></div>
       <div class="ticket-row"><span class="lbl">費用</span><span class="val">$${bookingTotal(b)}</span></div>
       <div class="ticket-row"><span class="lbl">狀態</span><span class="val"><span class="status-pill ${statusClass(b.status)}">${statusLabel(b.status)}</span></span></div>
+      ${b.cancelRequested ? `<div class="ticket-row"><span class="lbl"></span><span class="val" style="font-size:11px; color:var(--ink-soft);">已送出取消申請，待商家確認</span></div>` : ''}
       <div class="ticket-code mono">${b.code}</div>
     </div>
   `;
@@ -1716,21 +1733,29 @@ function renderMyBookings(){
       </div>`;
     return;
   }
-  wrap.innerHTML = list.map(b=>`
+  wrap.innerHTML = list.map(b=>{
+    const canAct = (b.status==='upcoming'||b.status==='pending') && !b.cancelRequested;
+    return `
     <div class="ticket" style="margin-bottom:14px;">
       ${ticketHtml(b,false)}
       <div style="padding:0 20px 18px;">
+        ${b.cancelRequested ? `<div class="field-hint" style="margin-bottom:10px;">已送出取消申請，正在等待店家確認，尚未正式取消</div>` : ''}
+        ${canAct ? `<div class="field-hint" style="margin-bottom:10px;">送出預約後，記得將下方的分享預約資訊傳給官方，這樣才算完成送出預約噢～</div>` : ''}
         <div class="ticket-actions">
           <button class="btn btn-outline" onclick="downloadIcs(${JSON.stringify(b).replace(/"/g,'&quot;')})">加入行事曆</button>
-          ${(b.status==='upcoming'||b.status==='pending') ? `<button class="btn btn-ghost" onclick="cancelBooking('${b.id}')">取消預約</button>` : ''}
+          ${canAct ? `<button class="btn btn-outline" onclick="shareBooking(${JSON.stringify(b).replace(/"/g,'&quot;')})">分享預約資訊</button>` : ''}
+          ${canAct ? `<button class="btn btn-outline" onclick="startReschedule('${b.id}')">改期</button>` : ''}
+          ${canAct ? `<button class="btn btn-ghost" onclick="cancelBooking('${b.id}')">取消預約</button>` : ''}
         </div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 async function cancelBooking(id){
   const b = MY_BOOKINGS.find(x=>x.id===id);
   if(!b) return;
+  if(b.cancelRequested){ showToast('取消申請已送出，正在等待店家確認'); return; }
   const deadlineHours = Number(BUSINESS.cancelDeadlineHours) || 0;
   if(deadlineHours > 0){
     const [y,m,d] = b.date.split('-').map(Number);
@@ -1743,11 +1768,47 @@ async function cancelBooking(id){
     }
   }
   try{
-    await db.collection('bookings').doc(id).update({ status:'cancelled', updatedAt: new Date().toISOString() });
-    showToast('已取消該筆預約');
+    await db.collection('bookings').doc(id).update({ cancelRequested:true, cancelRequestedAt: new Date().toISOString() });
+    showToast('已送出取消申請，待店家確認後才會正式取消');
   }catch(err){
-    showToast('取消失敗，請檢查網路連線後再試');
+    showToast('送出失敗，請檢查網路連線後再試');
   }
+}
+/* 顧客自助改期：沿用既有的「選日期／選時段」畫面，選好新時段後直接更新這筆預約的
+   date/time（不是另外新開一筆），原本佔用的舊時段就會自然釋出，因為時段是否被占用
+   是即時從 bookings 目前的 date/time 算出來的，不是另外存一份佔用清單。 */
+let rescheduleBookingId = null;
+function startReschedule(id){
+  const b = MY_BOOKINGS.find(x=>x.id===id);
+  if(!b) return;
+  if(b.cancelRequested){ showToast('這筆預約已送出取消申請，無法改期'); return; }
+  const deadlineHours = Number(BUSINESS.cancelDeadlineHours) || 0;
+  if(deadlineHours > 0){
+    const [y,m,d] = b.date.split('-').map(Number);
+    const [hh,mm] = b.time.split(':').map(Number);
+    const apptTime = new Date(y,m-1,d,hh,mm);
+    const deadline = new Date(apptTime.getTime() - deadlineHours*3600000);
+    if(new Date() > deadline){
+      showToast(`已超過可改期時間（須於預約前 ${deadlineHours} 小時改期），請直接聯絡店家`);
+      return;
+    }
+  }
+  rescheduleBookingId = id;
+  state = { service: b.service||null, services: b.services||(b.service?[b.service]:[]), staff: b.staff||STAFF[0], date:null, time:null };
+  infoPrefilled = false;
+  goScreen('datetime');
+}
+async function submitReschedule(){
+  if(!state.date || !state.time || !rescheduleBookingId) return;
+  try{
+    await db.collection('bookings').doc(rescheduleBookingId).update({ date: state.date, time: state.time, updatedAt: new Date().toISOString() });
+    showToast('已改期成功');
+    rescheduleBookingId = null;
+    goScreen('mybookings');
+  }catch(err){ showToast('改期失敗，請檢查網路連線後再試'); }
+}
+function dtNext(){
+  if(rescheduleBookingId){ submitReschedule(); } else { goStep('info'); }
 }
 
 /* ============================================================

@@ -222,6 +222,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .status-upcoming{ background:#E3F0E5; color:#2F6844; }
 .status-done{ background:#E3F0E5; color:#2F6844; }
 .status-cancelled{ background:#F7E5E1; color:var(--stamp-dark); }
+.status-cancel-req{ background:#FBF3E1; color:#8A6A1E; }
 .status-noshow{ background:#F7E5E1; color:var(--stamp-dark); }
 .status-pending{ background:#FBF3E1; color:#8A6A1E; }
 .status-partial{ background:#E8EEF5; color:#3E6A96; }
@@ -1673,7 +1674,7 @@ function updateNavBadges(){
   const bEl = document.getElementById('navBadgeBookings');
   const oEl = document.getElementById('navBadgeOrders');
   if(bEl){
-    const count = ALL_BOOKINGS.filter(b=>b.status==='pending').length;
+    const count = ALL_BOOKINGS.filter(b=>b.status==='pending' || b.cancelRequested).length;
     bEl.style.display = count>0 ? 'flex' : 'none';
     bEl.textContent = count>99 ? '99+' : String(count);
   }
@@ -1964,7 +1965,7 @@ function bookingCardHtml(b){
           <h3>${svcLabel}</h3>
           <div class="sub">${cust.name} · ${cust.phone}</div>
         </div>
-        <span class="status-pill ${statusClass(b.status)}">${statusLabel(b.status)}</span>
+        <span class="status-pill ${b.cancelRequested?'status-cancel-req':statusClass(b.status)}">${b.cancelRequested?'取消申請中':statusLabel(b.status)}</span>
       </div>
       <div class="bk-meta">
         <span>📅 <b>${b.date} ${b.time}</b></span>
@@ -2378,7 +2379,7 @@ function openBookingSheet(id){
   const svcs = bookingServices(b);
   const birthdayDisp = cust.birthday ? cust.birthday.replace(/-/g,'/') : '';
   body.innerHTML = `
-    <div class="bkt-code">${b.code} <span class="status-pill ${statusClass(b.status)}" style="margin-left:6px;">${statusLabel(b.status)}</span></div>
+    <div class="bkt-code">${b.code} <span class="status-pill ${b.cancelRequested?'status-cancel-req':statusClass(b.status)}" style="margin-left:6px;">${b.cancelRequested?'取消申請中':statusLabel(b.status)}</span></div>
     <div class="bkt-header">
       <div class="bkt-avatar">${(cust.name||'？').slice(0,1)}</div>
       <div class="bkt-who">
@@ -2421,7 +2422,19 @@ function openBookingSheet(id){
     <div id="rescheduleBox"></div>
   `;
 
-  if(b.status==='pending'){
+  if(b.cancelRequested){
+    const hint = document.createElement('div');
+    hint.className = 'field-hint';
+    hint.style.marginBottom = '10px';
+    hint.textContent = '顧客已送出取消申請，請確認是否同意取消';
+    body.appendChild(hint);
+    const row = document.createElement('div');
+    row.className = 'action-pill-row';
+    row.innerHTML = `
+      <button class="pill-btn pill-danger-outline" onclick="approveCancelRequest('${b.id}')">同意取消</button>
+      <button class="pill-btn pill-outline" onclick="declineCancelRequest('${b.id}')">駁回申請</button>`;
+    body.appendChild(row);
+  } else if(b.status==='pending'){
     const row = document.createElement('div');
     row.className = 'action-pill-row';
     row.innerHTML = `
@@ -2711,6 +2724,22 @@ async function updateBookingStatus(id, status){
     }
     closeBookingSheet();
     showToast('狀態已更新');
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
+/* 顧客自助取消現在改成「送出取消申請」，要商家在這裡按下「同意取消」才會真的把狀態改成
+   已取消（時段才會釋出）；駁回的話只是清掉申請旗標，預約本身狀態不變、時段繼續保留。 */
+async function approveCancelRequest(id){
+  try{
+    await db.collection('bookings').doc(id).update({ status:'cancelled', cancelRequested:false, updatedAt: new Date().toISOString() });
+    closeBookingSheet();
+    showToast('已同意取消，時段將自動釋出');
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
+async function declineCancelRequest(id){
+  try{
+    await db.collection('bookings').doc(id).update({ cancelRequested:false });
+    closeBookingSheet();
+    showToast('已駁回取消申請，預約維持原狀');
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
 function toggleRescheduleBox(id){
@@ -4362,7 +4391,7 @@ function renderShopfrontScreen(){
   document.getElementById('setNotice').value = BUSINESS.notice || '';
   document.getElementById('setPrefix').value = BUSINESS.bookingPrefix;
   document.getElementById('calLinkInput2').value = BUSINESS.customerUrl || '';
-  document.getElementById('hideAddrSwitch').classList.toggle('on', BUSINESS.hideAddress === true);
+  document.getElementById('hideAddrSwitch').classList.toggle('on', BUSINESS.hideAddress !== false);
   renderLogo();
   drawPoster();
 }
@@ -4651,7 +4680,8 @@ function renderDistrictOptions(selected){
 }
 function onCityChange(){ renderDistrictOptions(''); }
 async function toggleHideAddr(){
-  const next = !(BUSINESS.hideAddress === true);
+  const currentlyOn = BUSINESS.hideAddress !== false;
+  const next = !currentlyOn;
   document.getElementById('hideAddrSwitch').classList.toggle('on', next);
   try{
     await db.collection('meta').doc('business').set({ hideAddress: next }, { merge:true });
