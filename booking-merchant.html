@@ -182,7 +182,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .cat-chips-row{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
 .cat-chip{
   font-size:12.5px; font-weight:700; padding:8px 12px; border-radius:10px;
-  background:var(--paper-2); color:var(--ink); cursor:pointer; border:1.5px solid transparent;
+  background:#F3E9D2; color:var(--ink); cursor:pointer; border:1.5px solid transparent;
 }
 .cat-chip .cnt{ color:var(--ink-soft); font-weight:400; margin-left:2px; }
 .cat-chip.active{ border-color:var(--ledger); background:var(--white); }
@@ -446,13 +446,14 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .order-card .actions button{ flex:1; padding:9px 10px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; border:1.5px solid var(--line); background:var(--white); color:var(--ink); }
 .order-card .actions button.primary{ background:var(--gold); border-color:var(--ledger); color:var(--white); }
 .order-card .actions button.danger{ color:var(--stamp-dark); border-color:var(--stamp); }
-.crud-actions{ display:flex; gap:8px; flex-shrink:0; }
+.crud-actions{ display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0; }
 .crud-actions .ic-btn{ width:28px; height:28px; border-radius:50%; border:1.5px solid var(--line); background:var(--white); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px; }
+.crud-actions .toggle-link{ font-size:12px; font-weight:700; color:var(--ink-soft); cursor:pointer; padding:2px 4px; }
 .crud-reorder{ display:flex; flex-direction:column; gap:2px; flex-shrink:0; padding-top:2px; }
 .crud-reorder button{
   width:24px; height:20px; border:none; border-radius:6px; background:none;
   color:var(--ink-soft); cursor:pointer; font-size:11px; line-height:1; padding:0;
-  display:flex; align-items:center; justify-content:center; touch-action:manipulation;
+  display:flex; align-items:center; justify-content:center;
 }
 .crud-reorder button:disabled{ opacity:.3; cursor:default; }
 
@@ -2858,23 +2859,6 @@ function setServiceStatusFilter(st){ svcStatusFilter = st; renderServicesList();
 function setProductStatusFilter(st){ prdStatusFilter = st; renderProductsList(); }
 /* 依商家設定的分類順序把清單排好；不影響 SERVICES/PRODUCTS 本身的儲存順序，
    只是「目前畫面上看到的順序」，排序按鈕跟分組標題都是照這個順序來算 */
-/* 排序按鈕支援「按住不放」連續移動：按一下移動一格，按住超過 0.45 秒後開始每 120ms 自動連續移動，
-   放開才停止。用 document 層級監聽 pointerup 來停止計時器，這樣即使按鈕本身在每次移動後被重繪
-   （整份清單 innerHTML 重建）而從畫面上「換了一個新的按鈕元素」，放開手指時還是能確實停下來。 */
-let holdMoveTimer = null, holdMoveInterval = null;
-function holdMoveStart(fn){
-  fn();
-  clearTimeout(holdMoveTimer); clearInterval(holdMoveInterval);
-  holdMoveTimer = setTimeout(()=>{ holdMoveInterval = setInterval(fn, 120); }, 450);
-  const stop = ()=>{
-    clearTimeout(holdMoveTimer); clearInterval(holdMoveInterval);
-    holdMoveTimer = null; holdMoveInterval = null;
-    document.removeEventListener('pointerup', stop);
-    document.removeEventListener('pointercancel', stop);
-  };
-  document.addEventListener('pointerup', stop);
-  document.addEventListener('pointercancel', stop);
-}
 function getDisplayedServiceList(){
   const byStatus = s => svcStatusFilter==='all' ? true : (svcStatusFilter==='active' ? s.active!==false : s.active===false);
   const pool = SERVICES.filter(byStatus);
@@ -2912,8 +2896,8 @@ function renderServicesList(){
     html += `
     <div class="crud-card">
       <div class="crud-reorder">
-        <button ${isFirst?'disabled':''} onpointerdown="holdMoveStart(function(){moveServiceInList('${s.id}',-1)})">︿</button>
-        <button ${isLast?'disabled':''} onpointerdown="holdMoveStart(function(){moveServiceInList('${s.id}',1)})">﹀</button>
+        <button ${isFirst?'disabled':''} onclick="moveServiceInList('${s.id}',-1)">︿</button>
+        <button ${isLast?'disabled':''} onclick="moveServiceInList('${s.id}',1)">﹀</button>
       </div>
       <div class="crud-ic">${s.icon}</div>
       <div class="crud-body">
@@ -2927,7 +2911,7 @@ function renderServicesList(){
       </div>
       <div class="crud-actions">
         <div class="ic-btn" onclick="openServiceForm('${s.id}')" title="編輯">✎</div>
-        <div class="ic-btn" onclick="toggleServiceActive('${s.id}')" title="${active?'下架':'上架'}">${active?'⬇':'⬆'}</div>
+        <div class="toggle-link" onclick="toggleServiceActive('${s.id}')">${active?'下架':'上架'}</div>
       </div>
     </div>
   `;
@@ -3175,8 +3159,8 @@ function renderProductsList(){
     html += `
     <div class="crud-card">
       <div class="crud-reorder">
-        <button ${isFirst?'disabled':''} onpointerdown="holdMoveStart(function(){moveProductInList('${p.id}',-1)})">︿</button>
-        <button ${isLast?'disabled':''} onpointerdown="holdMoveStart(function(){moveProductInList('${p.id}',1)})">﹀</button>
+        <button ${isFirst?'disabled':''} onclick="moveProductInList('${p.id}',-1)">︿</button>
+        <button ${isLast?'disabled':''} onclick="moveProductInList('${p.id}',1)">﹀</button>
       </div>
       <div class="crud-ic">${p.image ? `<img src="${p.image}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">` : p.icon}</div>
       <div class="crud-body">
@@ -3187,7 +3171,7 @@ function renderProductsList(){
       </div>
       <div class="crud-actions">
         <div class="ic-btn" onclick="openProductForm('${p.id}')" title="編輯">✎</div>
-        <div class="ic-btn" onclick="toggleProductActive('${p.id}')" title="${active?'下架':'上架'}">${active?'⬇':'⬆'}</div>
+        <div class="toggle-link" onclick="toggleProductActive('${p.id}')">${active?'下架':'上架'}</div>
       </div>
     </div>
   `;
