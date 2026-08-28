@@ -368,6 +368,12 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 
 /* ---- about screen ---- */
 .about-card{ background:var(--white); border:1.5px solid var(--line); border-radius:var(--radius); padding:20px; margin-bottom:16px; }
+.wallet-balance{ font-family:'Space Mono',monospace; font-size:24px; font-weight:700; color:var(--stamp-dark); margin-bottom:4px; }
+.wallet-sub{ font-size:12px; color:var(--ink-soft); }
+.package-card{ background:var(--paper-2); border-radius:10px; padding:12px 14px; margin-top:10px; }
+.package-card .pkg-name{ font-weight:700; font-size:13.5px; margin-bottom:2px; }
+.package-card .pkg-note{ font-size:11.5px; color:var(--ink-soft); margin-bottom:4px; }
+.package-card .pkg-progress{ font-size:12px; color:var(--ink-soft); }
 .about-row{ display:flex; gap:12px; padding:11px 0; border-bottom:1px solid var(--paper-2); font-size:13px; }
 .about-row:last-child{ border-bottom:none; }
 .about-row .ic{ width:20px; text-align:center; flex-shrink:0; }
@@ -630,6 +636,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
     <!-- ============ MY BOOKINGS ============ -->
     <section class="screen" id="screen-mybookings">
       <div class="section-title" style="margin-bottom:14px;"><span class="num">🎫</span>我的預約</div>
+      <div id="myWalletCard" style="display:none;"></div>
       <div id="myBookingsList"></div>
     </section>
 
@@ -943,6 +950,7 @@ function startCustomerListeners(uid){
   unsubscribers.push(
     db.collection('customers').doc(uid).onSnapshot(snap=>{
       CUSTOMER_PROFILE = snap.exists ? { id: snap.id, ...snap.data() } : null;
+      rerenderActiveScreen();
       const phone = ((CUSTOMER_PROFILE && CUSTOMER_PROFILE.phone) || '').trim();
       if(phoneOrdersUnsub){ phoneOrdersUnsub(); phoneOrdersUnsub = null; }
       if(phone){
@@ -1742,6 +1750,30 @@ function ticketHtml(b, big){
 function renderMyBookings(){
   const wrap = document.getElementById('myBookingsList');
   const list = MY_BOOKINGS;
+
+  const walletCard = document.getElementById('myWalletCard');
+  const packages = (CUSTOMER_PROFILE && CUSTOMER_PROFILE.packages) || [];
+  const activePackages = packages.filter(p=>p.used < p.total);
+  if(CUSTOMER_PROFILE && ((CUSTOMER_PROFILE.balance||0) > 0 || activePackages.length > 0)){
+    walletCard.style.display = 'block';
+    walletCard.innerHTML = `
+      <div class="about-card" style="margin-bottom:20px;">
+        ${(CUSTOMER_PROFILE.balance||0) > 0 ? `
+          <div class="wallet-balance">NT$ ${(CUSTOMER_PROFILE.balance||0).toLocaleString()}</div>
+          <div class="wallet-sub">目前儲值餘額</div>
+        ` : ''}
+        ${activePackages.map(p=>`
+          <div class="package-card">
+            <div class="pkg-name">${p.name}</div>
+            ${p.note ? `<div class="pkg-note">${p.note}</div>` : ''}
+            <div class="pkg-progress">已用 ${p.used} / ${p.total} 堂，剩餘 ${p.total - p.used} 堂</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else {
+    walletCard.style.display = 'none';
+  }
 
   if(list.length===0){
     wrap.innerHTML = `
