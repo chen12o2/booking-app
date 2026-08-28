@@ -892,17 +892,22 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
           <p style="margin-top:10px;">在這裡管理您的預約、服務與店家設定。</p>
         </div>
 
+        <div class="about-card" style="padding:14px 12px 8px;">
+          <div class="cal-month-pills" id="dashMonthPills"></div>
+        </div>
+
         <div class="stat-row">
           <div class="stat-card"><div class="lb">今日預約</div><div class="vl" id="statToday">0</div></div>
           <div class="stat-card"><div class="lb">本週預約</div><div class="vl" id="statWeek">0</div></div>
-          <div class="stat-card"><div class="lb">累積營收</div><div class="vl stamp" id="statRevenue">$0</div></div>
+          <div class="stat-card"><div class="lb"><span id="statRevenueLabel">本月營收</span></div><div class="vl stamp" id="statRevenue">$0</div></div>
         </div>
-        <div class="field-hint" style="margin:-4px 0 14px;">累積營收＝已完成預約的服務金額（不論當初用現金、轉帳或儲值金付款都算）。下面這筆是另一個角度：</div>
+        <div class="field-hint" style="margin:-4px 0 14px;">營收＝該月已完成預約的服務金額（不論當初用現金、轉帳或儲值金付款都算）。下面這幾筆是另外的角度，不要跟營收加在一起看：</div>
         <div class="stat-row">
-          <div class="stat-card"><div class="lb">儲值／套組實收</div><div class="vl stamp" id="statWalletCash">$0</div></div>
-          <div class="stat-card"><div class="lb">商品營收</div><div class="vl stamp" id="statProductRevenue">$0</div></div>
+          <div class="stat-card"><div class="lb">儲值餘額</div><div class="vl stamp" id="statWalletCash">$0</div></div>
+          <div class="stat-card"><div class="lb"><span id="statPackageSalesLabel">本月套組銷售</span></div><div class="vl stamp" id="statPackageSales">$0</div></div>
+          <div class="stat-card"><div class="lb"><span id="statProductRevenueLabel">本月商品營收</span></div><div class="vl stamp" id="statProductRevenue">$0</div></div>
         </div>
-        <div class="field-hint" style="margin:-4px 0 14px;">顧客儲值或購買套組當下實際收到的現金，跟上面的「累積營收」是兩個角度，不要加在一起看：一筆錢通常會先在這裡出現一次（收現金當下），之後顧客用儲值金扣款消費時，會反映在「累積營收」裡，但不會在這裡重複出現。商品營收則是另外獨立算的，來自已完成出貨的商品訂單金額，不算在服務的累積營收裡。</div>
+        <div class="field-hint" style="margin:-4px 0 14px;">儲值餘額是顧客目前還留在您這裡、還沒花掉的錢，會即時增減，不分月份；套組銷售、商品營收則跟上面的服務營收一樣，會依您選的月份分開計算，每個月從零重新累計。商品營收在顧客付款當下就會計入，不用等出貨完成。</div>
 
         <div id="birthdayWidget" style="display:none;">
           <div class="section-title"><span class="lead"><span class="num">🎂</span>本月壽星</span></div>
@@ -1973,9 +1978,35 @@ function bookingActualTotal(b){
   return (b.actualAmount!==undefined && b.actualAmount!==null) ? b.actualAmount : bookingTotal(b);
 }
 
+/* 總覽的營收類統計現在是「按月」算，每個月各自從零開始累計，用上面的月份選單切換查看。
+   儲值餘額例外：它是「顧客現在還放在你這裡多少錢」的即時快照，本質上不分月份，永遠顯示最新值。 */
+let dashboardMonth = null; // 'YYYY-MM'，預設當月
+function dashMonthKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function renderDashMonthPills(){
+  const wrap = document.getElementById('dashMonthPills');
+  if(!wrap) return;
+  const now = new Date();
+  if(!dashboardMonth) dashboardMonth = dashMonthKey(now);
+  const months = [];
+  for(let i=-6;i<=5;i++){
+    const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
+    months.push(dashMonthKey(d));
+  }
+  wrap.innerHTML = months.map(m=>{
+    const label = Number(m.split('-')[1]) + '月';
+    return `<div class="cal-month-pill ${m===dashboardMonth?'active':''}" onclick="setDashboardMonth('${m}')">${label}</div>`;
+  }).join('');
+  const activeEl = wrap.querySelector('.cal-month-pill.active');
+  if(activeEl) activeEl.scrollIntoView({block:'nearest', inline:'center'});
+}
+function setDashboardMonth(m){
+  dashboardMonth = m;
+  renderDashboard();
+}
 function renderDashboard(){
   document.getElementById('dashBizName').textContent = BUSINESS.name;
   renderLogo();
+  renderDashMonthPills();
 
   const all = loadBookings();
   const today = new Date(); today.setHours(0,0,0,0);
@@ -1988,18 +2019,29 @@ function renderDashboard(){
     const bd = new Date(y,m-1,d);
     return bd>=today && bd<weekEnd && b.status!=='cancelled';
   }).length;
-  const revenue = all.filter(b=>b.status==='done').reduce((sum,b)=>sum+bookingActualTotal(b),0);
-  const walletCash = loadCustomers().reduce((sum,c)=>{
-    const topups = (c.balanceLog||[]).filter(l=>l.type==='topup').reduce((s,l)=>s+l.amount,0);
-    const pkgPaid = (c.packages||[]).reduce((s,p)=>s+(p.paidAmount||0),0);
-    return sum + topups + pkgPaid;
-  }, 0);
-  const productRevenue = ALL_ORDERS.filter(o=>o.status==='done').reduce((sum,o)=>sum+(o.totalAmount||0),0);
+
+  const inSelectedMonth = dateStr => (dateStr||'').slice(0,7) === dashboardMonth;
+  const revenue = all.filter(b=>b.status==='done' && inSelectedMonth(b.date)).reduce((sum,b)=>sum+bookingActualTotal(b),0);
+  const walletCash = loadCustomers().reduce((sum,c)=>sum+(c.balance||0), 0);
+  const packageSales = loadCustomers().reduce((sum,c)=>
+    sum + (c.packages||[]).filter(p=>inSelectedMonth(p.createdAt)).reduce((s,p)=>s+(p.paidAmount||0),0)
+  , 0);
+  /* 商品營收：只要這筆訂單有記錄收款（不論付款方式），且不是取消單，付款當下就算進去，
+     不用等出貨完成；不論部分出貨或全部出貨都一樣，因為錢已經收了 */
+  const productRevenue = ALL_ORDERS
+    .filter(o=>o.status!=='cancelled' && o.payment && o.payment.method && inSelectedMonth(o.payment.recordedAt))
+    .reduce((sum,o)=>sum+(o.totalAmount||0),0);
+
+  const isCurrentMonth = dashboardMonth === dashMonthKey(new Date());
+  document.getElementById('statRevenueLabel').textContent = isCurrentMonth ? '本月營收' : dashboardMonth+' 營收';
+  document.getElementById('statPackageSalesLabel').textContent = isCurrentMonth ? '本月套組銷售' : dashboardMonth+' 套組銷售';
+  document.getElementById('statProductRevenueLabel').textContent = isCurrentMonth ? '本月商品營收' : dashboardMonth+' 商品營收';
 
   document.getElementById('statToday').textContent = todayCount;
   document.getElementById('statWeek').textContent = weekCount;
   document.getElementById('statRevenue').textContent = '$'+revenue.toLocaleString();
   document.getElementById('statWalletCash').textContent = '$'+walletCash.toLocaleString();
+  document.getElementById('statPackageSales').textContent = '$'+packageSales.toLocaleString();
   document.getElementById('statProductRevenue').textContent = '$'+productRevenue.toLocaleString();
 
   const thisMonth = String(today.getMonth()+1).padStart(2,'0');
