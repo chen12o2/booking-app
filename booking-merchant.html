@@ -179,20 +179,12 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
   border:1.5px solid var(--line); background:var(--white); color:var(--ink); cursor:pointer; font-family:inherit;
 }
 .cat-chips{ display:flex; flex-wrap:wrap; gap:8px; }
-.cat-chips-row{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
 .cat-chip{
   font-size:12.5px; font-weight:700; padding:8px 12px; border-radius:10px;
   background:#F3E9D2; color:var(--ink); cursor:pointer; border:1.5px solid transparent;
 }
 .cat-chip .cnt{ color:var(--ink-soft); font-weight:400; margin-left:2px; }
 .cat-chip.active{ border-color:var(--ledger); background:var(--white); }
-.status-seg{ display:inline-flex; background:var(--paper-2); border-radius:9px; padding:3px; gap:2px; }
-.status-seg button{
-  border:none; background:none; padding:5px 10px; border-radius:7px; font-size:11.5px; font-weight:700;
-  color:var(--ink-soft); cursor:pointer; font-family:inherit;
-}
-.status-seg button .cnt{ font-weight:400; margin-left:2px; }
-.status-seg button.active{ background:var(--white); color:var(--ink); }
 .cat-manage-row{
   display:flex; align-items:center; gap:12px;
   padding:14px; border:1.5px solid var(--line); border-radius:12px; margin-bottom:10px; background:var(--white);
@@ -409,8 +401,9 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .crud-body .nm-row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px; }
 .crud-body h4{ margin:0; font-size:14px; font-weight:700; }
 .crud-tag{ font-size:10px; font-weight:700; color:var(--stamp); background:var(--paper-2); padding:2px 7px; border-radius:99px; }
-.crud-section-header{ font-size:13px; font-weight:700; color:var(--ink-soft); margin:18px 4px 10px; }
-.crud-section-header:first-child{ margin-top:0; }
+.status-section-header{ font-size:14px; font-weight:700; color:var(--ink); margin:20px 4px 4px; }
+.status-section-header:first-child{ margin-top:0; }
+.crud-section-header{ font-size:12.5px; font-weight:600; color:var(--ink-soft); margin:0 4px 8px; }
 .crud-section-header .cnt{ font-weight:400; margin-left:4px; }
 .crud-body p{ margin:0 0 5px; font-size:11.5px; color:var(--ink-soft); line-height:1.45; white-space:pre-line; }
 .crud-meta{ font-family:'Space Mono', monospace; font-size:11px; color:var(--ledger-dark); display:flex; gap:8px; margin-bottom:5px; }
@@ -446,9 +439,8 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .order-card .actions button{ flex:1; padding:9px 10px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; border:1.5px solid var(--line); background:var(--white); color:var(--ink); }
 .order-card .actions button.primary{ background:var(--gold); border-color:var(--ledger); color:var(--white); }
 .order-card .actions button.danger{ color:var(--stamp-dark); border-color:var(--stamp); }
-.crud-actions{ display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0; }
+.crud-actions{ display:flex; gap:8px; flex-shrink:0; }
 .crud-actions .ic-btn{ width:28px; height:28px; border-radius:50%; border:1.5px solid var(--line); background:var(--white); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px; }
-.crud-actions .toggle-link{ font-size:12px; font-weight:700; color:var(--ink-soft); cursor:pointer; padding:2px 4px; }
 .crud-reorder{ display:flex; flex-direction:column; gap:2px; flex-shrink:0; padding-top:2px; }
 .crud-reorder button{
   width:24px; height:20px; border:none; border-radius:6px; background:none;
@@ -1004,10 +996,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
               </div>
               <button class="btn-outline-sm" onclick="openCategoryManager('service')">管理分類</button>
             </div>
-            <div class="cat-chips-row">
-              <div class="cat-chips" id="svcCategoryChips"></div>
-              <div class="status-seg" id="svcStatusChips"></div>
-            </div>
+            <div class="cat-chips" id="svcCategoryChips"></div>
           </div>
           <div style="display:flex; justify-content:flex-end; margin-bottom:14px;">
             <button class="add-btn" onclick="openServiceForm()">＋ 新增服務</button>
@@ -1024,10 +1013,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
               </div>
               <button class="btn-outline-sm" onclick="openCategoryManager('product')">管理分類</button>
             </div>
-            <div class="cat-chips-row">
-              <div class="cat-chips" id="prdCategoryChips"></div>
-              <div class="status-seg" id="prdStatusChips"></div>
-            </div>
+            <div class="cat-chips" id="prdCategoryChips"></div>
           </div>
           <div style="display:flex; justify-content:flex-end; margin-bottom:14px;">
             <button class="add-btn" onclick="openProductForm()">＋ 新增商品</button>
@@ -2816,14 +2802,12 @@ function setServicesTab(tab){
   document.getElementById('svcOrdersView').style.display = tab==='orders' ? 'block' : 'none';
 }
 let svcCategoryFilter = 'all';
-let svcStatusFilter = 'all';
 let svcFormAddonIds = [];
 let svcFormAddonMode = 'multi';
 let svcFormDepositType = 'fixed';
 let prdFormType = 'physical';
 let prdFormDepositType = 'fixed';
 let prdCategoryFilter = 'all';
-let prdStatusFilter = 'all';
 function renderCategoryChips(type){
   const cats = type==='service' ? (BUSINESS.serviceCategories||[]) : (BUSINESS.productCategories||[]);
   const items = type==='service' ? SERVICES : PRODUCTS;
@@ -2838,40 +2822,24 @@ function renderCategoryChips(type){
     }));
   wrap.innerHTML = chips.join('');
 }
-function renderStatusChips(type){
-  const items = type==='service' ? SERVICES : PRODUCTS;
-  const wrap = document.getElementById(type==='service' ? 'svcStatusChips' : 'prdStatusChips');
-  if(!wrap) return;
-  const activeFilter = type==='service' ? svcStatusFilter : prdStatusFilter;
-  const setFn = type==='service' ? 'setServiceStatusFilter' : 'setProductStatusFilter';
-  const activeCount = items.filter(x=>x.active!==false).length;
-  const inactiveCount = items.length - activeCount;
-  const chips = [
-    `<button class="${activeFilter==='all'?'active':''}" onclick="${setFn}('all')">全部</button>`,
-    `<button class="${activeFilter==='active'?'active':''}" onclick="${setFn}('active')">上架中<span class="cnt"> ${activeCount}</span></button>`,
-    `<button class="${activeFilter==='inactive'?'active':''}" onclick="${setFn}('inactive')">已下架<span class="cnt"> ${inactiveCount}</span></button>`,
-  ];
-  wrap.innerHTML = chips.join('');
-}
 function setServiceCategoryFilter(cat){ svcCategoryFilter = cat; renderServicesList(); }
 function setProductCategoryFilter(cat){ prdCategoryFilter = cat; renderProductsList(); }
-function setServiceStatusFilter(st){ svcStatusFilter = st; renderServicesList(); }
-function setProductStatusFilter(st){ prdStatusFilter = st; renderProductsList(); }
 /* 依商家設定的分類順序把清單排好；不影響 SERVICES/PRODUCTS 本身的儲存順序，
    只是「目前畫面上看到的順序」，排序按鈕跟分組標題都是照這個順序來算 */
 function getDisplayedServiceList(){
-  const byStatus = s => svcStatusFilter==='all' ? true : (svcStatusFilter==='active' ? s.active!==false : s.active===false);
-  const pool = SERVICES.filter(byStatus);
-  if(svcCategoryFilter!=='all') return pool.filter(s=>s.category===svcCategoryFilter);
+  const pool = svcCategoryFilter==='all' ? SERVICES : SERVICES.filter(s=>s.category===svcCategoryFilter);
   const cats = BUSINESS.serviceCategories||[];
-  const out = [];
-  cats.forEach(c=>{ out.push(...pool.filter(s=>s.category===c)); });
-  out.push(...pool.filter(s=>!s.category || !cats.includes(s.category)));
-  return out;
+  const groupByCat = arr => {
+    if(svcCategoryFilter!=='all') return arr;
+    const out = [];
+    cats.forEach(c=>{ out.push(...arr.filter(s=>s.category===c)); });
+    out.push(...arr.filter(s=>!s.category || !cats.includes(s.category)));
+    return out;
+  };
+  return [...groupByCat(pool.filter(s=>s.active!==false)), ...groupByCat(pool.filter(s=>s.active===false))];
 }
 function renderServicesList(){
   renderCategoryChips('service');
-  renderStatusChips('service');
   const wrap = document.getElementById('servicesList');
   const list = getDisplayedServiceList();
   if(list.length===0){
@@ -2879,20 +2847,26 @@ function renderServicesList(){
     return;
   }
   const cats = BUSINESS.serviceCategories||[];
-  const showHeaders = svcCategoryFilter==='all' && cats.length>0;
+  const showCatHeaders = svcCategoryFilter==='all' && cats.length>0;
   const catOf = s => (s.category && cats.includes(s.category)) ? s.category : '未分類';
-  let lastCat;
+  const statusOf = s => s.active!==false ? '上架中' : '已下架';
+  let lastStatus, lastCat;
   let html = '';
   list.forEach((s,i)=>{
+    const st = statusOf(s);
     const cat = catOf(s);
-    if(showHeaders && cat !== lastCat){
-      const count = list.filter(x=>catOf(x)===cat).length;
+    if(st !== lastStatus){
+      html += `<div class="status-section-header">${st}</div>`;
+      lastStatus = st; lastCat = undefined;
+    }
+    if(showCatHeaders && cat !== lastCat){
+      const count = list.filter(x=>statusOf(x)===st && catOf(x)===cat).length;
       html += `<div class="crud-section-header">${cat}<span class="cnt"> ${count}</span></div>`;
       lastCat = cat;
     }
     const active = s.active !== false;
-    const isFirst = showHeaders ? (i===0 || catOf(list[i-1])!==cat) : (i===0);
-    const isLast = showHeaders ? (i===list.length-1 || catOf(list[i+1])!==cat) : (i===list.length-1);
+    const isFirst = i===0 || statusOf(list[i-1])!==st || (showCatHeaders && catOf(list[i-1])!==cat);
+    const isLast = i===list.length-1 || statusOf(list[i+1])!==st || (showCatHeaders && catOf(list[i+1])!==cat);
     html += `
     <div class="crud-card">
       <div class="crud-reorder">
@@ -2911,7 +2885,7 @@ function renderServicesList(){
       </div>
       <div class="crud-actions">
         <div class="ic-btn" onclick="openServiceForm('${s.id}')" title="編輯">✎</div>
-        <div class="toggle-link" onclick="toggleServiceActive('${s.id}')">${active?'下架':'上架'}</div>
+        <div class="ic-btn" onclick="toggleServiceActive('${s.id}')" title="${active?'下架':'上架'}">${active?'⬇':'⬆'}</div>
       </div>
     </div>
   `;
@@ -3093,7 +3067,6 @@ async function toggleServiceActive(id){
   try{
     await db.collection('services').doc(id).update({ active: nextActive });
     showToast(nextActive ? '已重新上架' : '已下架');
-    svcStatusFilter = nextActive ? 'active' : 'inactive';
     s.active = nextActive;
     renderServicesList();
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
@@ -3123,18 +3096,19 @@ function moveServiceInList(id, delta){
    PRODUCTS CRUD
    ============================================================ */
 function getDisplayedProductList(){
-  const byStatus = p => prdStatusFilter==='all' ? true : (prdStatusFilter==='active' ? p.active!==false : p.active===false);
-  const pool = PRODUCTS.filter(byStatus);
-  if(prdCategoryFilter!=='all') return pool.filter(p=>p.category===prdCategoryFilter);
+  const pool = prdCategoryFilter==='all' ? PRODUCTS : PRODUCTS.filter(p=>p.category===prdCategoryFilter);
   const cats = BUSINESS.productCategories||[];
-  const out = [];
-  cats.forEach(c=>{ out.push(...pool.filter(p=>p.category===c)); });
-  out.push(...pool.filter(p=>!p.category || !cats.includes(p.category)));
-  return out;
+  const groupByCat = arr => {
+    if(prdCategoryFilter!=='all') return arr;
+    const out = [];
+    cats.forEach(c=>{ out.push(...arr.filter(p=>p.category===c)); });
+    out.push(...arr.filter(p=>!p.category || !cats.includes(p.category)));
+    return out;
+  };
+  return [...groupByCat(pool.filter(p=>p.active!==false)), ...groupByCat(pool.filter(p=>p.active===false))];
 }
 function renderProductsList(){
   renderCategoryChips('product');
-  renderStatusChips('product');
   const wrap = document.getElementById('productsList');
   const list = getDisplayedProductList();
   if(list.length===0){
@@ -3142,20 +3116,26 @@ function renderProductsList(){
     return;
   }
   const cats = BUSINESS.productCategories||[];
-  const showHeaders = prdCategoryFilter==='all' && cats.length>0;
+  const showCatHeaders = prdCategoryFilter==='all' && cats.length>0;
   const catOf = p => (p.category && cats.includes(p.category)) ? p.category : '未分類';
-  let lastCat;
+  const statusOf = p => p.active!==false ? '上架中' : '已下架';
+  let lastStatus, lastCat;
   let html = '';
   list.forEach((p,i)=>{
+    const st = statusOf(p);
     const cat = catOf(p);
-    if(showHeaders && cat !== lastCat){
-      const count = list.filter(x=>catOf(x)===cat).length;
+    if(st !== lastStatus){
+      html += `<div class="status-section-header">${st}</div>`;
+      lastStatus = st; lastCat = undefined;
+    }
+    if(showCatHeaders && cat !== lastCat){
+      const count = list.filter(x=>statusOf(x)===st && catOf(x)===cat).length;
       html += `<div class="crud-section-header">${cat}<span class="cnt"> ${count}</span></div>`;
       lastCat = cat;
     }
     const active = p.active !== false;
-    const isFirst = showHeaders ? (i===0 || catOf(list[i-1])!==cat) : (i===0);
-    const isLast = showHeaders ? (i===list.length-1 || catOf(list[i+1])!==cat) : (i===list.length-1);
+    const isFirst = i===0 || statusOf(list[i-1])!==st || (showCatHeaders && catOf(list[i-1])!==cat);
+    const isLast = i===list.length-1 || statusOf(list[i+1])!==st || (showCatHeaders && catOf(list[i+1])!==cat);
     html += `
     <div class="crud-card">
       <div class="crud-reorder">
@@ -3171,7 +3151,7 @@ function renderProductsList(){
       </div>
       <div class="crud-actions">
         <div class="ic-btn" onclick="openProductForm('${p.id}')" title="編輯">✎</div>
-        <div class="toggle-link" onclick="toggleProductActive('${p.id}')">${active?'下架':'上架'}</div>
+        <div class="ic-btn" onclick="toggleProductActive('${p.id}')" title="${active?'下架':'上架'}">${active?'⬇':'⬆'}</div>
       </div>
     </div>
   `;
@@ -3468,7 +3448,6 @@ async function toggleProductActive(id){
   try{
     await db.collection('products').doc(id).update({ active: nextActive });
     showToast(nextActive ? '已重新上架' : '已下架');
-    prdStatusFilter = nextActive ? 'active' : 'inactive';
     p.active = nextActive;
     renderProductsList();
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
