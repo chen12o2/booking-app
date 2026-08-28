@@ -332,9 +332,12 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .wallet-card{ background:var(--white); border:1.5px solid var(--line); border-radius:12px; padding:16px; }
 .wallet-balance{ font-family:'Space Mono',monospace; font-size:26px; font-weight:700; color:var(--stamp-dark); margin-bottom:12px; }
 .wallet-actions{ display:flex; gap:8px; }
-.wallet-log-row{ display:flex; justify-content:space-between; font-size:12px; padding:8px 0; border-top:1px solid var(--line); color:var(--ink-soft); }
+.wallet-log-row{ display:flex; align-items:center; gap:8px; font-size:12px; padding:8px 0; border-top:1px solid var(--line); color:var(--ink-soft); }
+.wallet-log-row > span:first-child{ flex:1; min-width:0; }
 .wallet-log-row .pos{ color:#2F6844; font-weight:700; font-family:'Space Mono',monospace; }
 .wallet-log-row .neg{ color:var(--stamp-dark); font-weight:700; font-family:'Space Mono',monospace; }
+.wallet-log-actions{ display:flex; gap:8px; flex-shrink:0; }
+.wallet-log-actions a{ font-size:11px; text-decoration:underline; cursor:pointer; color:var(--ink-soft); }
 .package-card{ background:var(--white); border:1.5px solid var(--line); border-radius:12px; padding:14px 15px; margin-bottom:10px; }
 .package-card .pkg-name{ font-weight:700; font-size:13.5px; margin-bottom:2px; }
 .package-card .pkg-note{ font-size:11.5px; color:var(--ink-soft); margin-bottom:6px; }
@@ -430,6 +433,11 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .order-card .who{ font-size:13.5px; font-weight:700; margin-bottom:4px; }
 .order-card .contact{ font-size:12px; color:var(--ink-soft); margin-bottom:8px; }
 .order-card .items{ font-size:13px; color:var(--ink); margin-bottom:8px; line-height:1.7; }
+.order-item-row{ display:flex; gap:8px; align-items:flex-end; margin-bottom:10px; }
+.order-item-row .field{ margin-bottom:0; }
+.order-item-row .field.qty{ max-width:64px; }
+.order-item-row .field.price{ max-width:90px; }
+.order-item-row .rm-btn{ width:32px; height:32px; border-radius:8px; border:1.5px solid var(--line); background:var(--white); color:var(--stamp-dark); cursor:pointer; flex-shrink:0; }
 .ship-items{ margin-bottom:8px; }
 .ship-item-row{
   display:flex; align-items:center; justify-content:space-between; gap:10px;
@@ -1048,6 +1056,9 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         </div>
 
         <div id="svcOrdersView" style="display:none;">
+          <div style="display:flex; justify-content:flex-end; margin-bottom:14px;">
+            <button class="add-btn" onclick="openOrderForm()">＋ 新增訂單</button>
+          </div>
           <div class="filter-row" id="orderFilterRow" style="margin-bottom:14px;">
             <div class="filter-chip active" data-status="all" onclick="setOrderFilter('all')">全部</div>
             <div class="filter-chip" data-status="pending" onclick="setOrderFilter('pending')">待處理</div>
@@ -1474,6 +1485,24 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
       <div class="sheet-actions" style="margin-top:18px;">
         <button class="btn btn-outline" onclick="closeAdjustAmount()">取消</button>
         <button class="btn btn-primary" onclick="confirmAdjustAmount()">儲存實收</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ORDER FORM MODAL（新增／編輯訂單，商家手動操作用） ============ -->
+  <div class="modal-backdrop" id="orderFormBackdrop" onclick="if(event.target===this)closeOrderForm()">
+    <div class="modal-card">
+      <h3 id="orderFormTitle">新增訂單</h3>
+      <div class="field"><label for="orderCustName">顧客姓名</label><input type="text" id="orderCustName" placeholder="請輸入顧客姓名"></div>
+      <div class="field"><label for="orderCustPhone">手機號碼</label><input type="text" id="orderCustPhone" placeholder="0912-345-678"></div>
+      <div class="field"><label for="orderCustNote">備註（選填）</label><input type="text" id="orderCustNote" placeholder="例如：儲值贈品、面交自取…"></div>
+      <div class="cust-section-hd" style="margin-top:18px;"><h4>商品項目</h4></div>
+      <div id="orderItemsList"></div>
+      <button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="addOrderItemRow()">＋ 新增品項</button>
+      <div class="field-hint" style="text-align:right; margin-top:10px; font-size:14px;">總計：<b id="orderFormTotal">$0</b></div>
+      <div class="sheet-actions" style="margin-top:14px;">
+        <button class="btn btn-outline" onclick="closeOrderForm()">取消</button>
+        <button class="btn btn-primary" onclick="saveOrderForm()">儲存訂單</button>
       </div>
     </div>
   </div>
@@ -2174,9 +2203,14 @@ function renderCustomerDetailScreen(){
         <button class="btn btn-outline btn-sm" onclick="toggleWalletForm('deduct')">－ 扣款使用</button>
       </div>
       <div id="walletForm"></div>
-      ${(c.balanceLog||[]).length ? [...(c.balanceLog||[])].reverse().slice(0,8).map(l=>`
-        <div class="wallet-log-row"><span>${(l.date||'').slice(0,10)}${l.note?('・'+l.note):''}</span><span class="${l.amount>=0?'pos':'neg'}">${l.amount>=0?'+':''}${l.amount}</span></div>
+      ${(c.balanceLog||[]).length ? (c.balanceLog||[]).map((l,i)=>({...l, _idx:i})).reverse().slice(0,8).map(l=>`
+        <div class="wallet-log-row">
+          <span>${(l.date||'').slice(0,10)}${l.note?('・'+l.note):''}</span>
+          <span class="${l.amount>=0?'pos':'neg'}">${l.amount>=0?'+':''}${l.amount}</span>
+          <span class="wallet-log-actions"><a onclick="editBalanceLogEntry(${l._idx})">修改</a><a onclick="deleteBalanceLogEntry(${l._idx})">刪除</a></span>
+        </div>
       `).join('') : ''}
+      <div id="walletLogEditBox"></div>
     </div>
 
     <div class="cust-section-hd" style="margin-top:22px;"><h4>套組堂數</h4><a onclick="togglePackageForm()">＋ 新增套組</a></div>
@@ -2235,14 +2269,95 @@ async function saveInternalNote(id){
   }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
 }
 /* ---- 儲值金：金額制，消費直接扣餘額；每次異動都記一筆 log，方便對帳 ---- */
+let walletFormKind = null;
 function toggleWalletForm(kind){
+  walletFormKind = (walletFormKind===kind) ? null : kind;
+  renderWalletForm();
+}
+function renderWalletForm(){
   const box = document.getElementById('walletForm');
-  if(box.innerHTML){ box.innerHTML=''; return; }
+  if(!walletFormKind){ box.innerHTML=''; return; }
+  const kind = walletFormKind;
+  const gifts = BUSINESS.giftPresets || [];
   box.innerHTML = `
     <div class="field" style="margin-top:10px;"><label>${kind==='topup'?'儲值金額':'扣款金額'}</label><input type="number" id="walletAmount" placeholder="例如 3000"></div>
+    ${kind==='topup' ? `
+    <div class="field">
+      <label>贈送（選填）</label>
+      <select id="walletGiftSelect" onchange="handleGiftSelectChange()">
+        <option value="">不贈送</option>
+        ${gifts.map(g=>`<option value="${g.id}">${g.label}</option>`).join('')}
+        <option value="__new__">＋ 新增贈送選項…</option>
+      </select>
+    </div>
+    <div id="walletGiftNewForm"></div>
+    ` : ''}
     <div class="field"><label>備註（選填）</label><input type="text" id="walletNote" placeholder="${kind==='topup'?'例如：儲5000送500':'例如：本次消費折抵'}"></div>
     <button class="btn btn-primary" style="width:100%;" onclick="submitWalletForm('${kind}')">確認${kind==='topup'?'儲值':'扣款'}</button>
   `;
+}
+function handleGiftSelectChange(){
+  const sel = document.getElementById('walletGiftSelect');
+  const box = document.getElementById('walletGiftNewForm');
+  if(sel.value==='__new__'){
+    box.innerHTML = `
+      <div class="field"><label>贈送類型</label>
+        <select id="newGiftType" onchange="renderNewGiftFields()">
+          <option value="cash">贈送金額</option>
+          <option value="product">贈送商品</option>
+        </select>
+      </div>
+      <div id="newGiftFields"></div>
+      <div class="field"><label>選項名稱</label><input type="text" id="newGiftLabel" placeholder="例如：儲5000送500"></div>
+      <button class="btn btn-outline btn-sm" onclick="saveNewGiftPreset()">儲存這個贈送選項</button>
+    `;
+    renderNewGiftFields();
+  } else {
+    box.innerHTML = '';
+  }
+}
+function renderNewGiftFields(){
+  const type = document.getElementById('newGiftType').value;
+  const wrap = document.getElementById('newGiftFields');
+  if(type==='cash'){
+    wrap.innerHTML = `<div class="field"><label>贈送金額</label><input type="number" id="newGiftAmount" placeholder="例如 500"></div>`;
+  } else {
+    if(PRODUCTS.length===0){
+      wrap.innerHTML = `<div class="field-hint">尚未設定任何商品，請先到「服務→商品項目」新增。</div>`;
+      return;
+    }
+    wrap.innerHTML = `
+      <div class="field"><label>贈送商品</label>
+        <select id="newGiftProduct">${PRODUCTS.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>數量</label><input type="number" id="newGiftQty" value="1" min="1"></div>
+    `;
+  }
+}
+async function saveNewGiftPreset(){
+  const type = document.getElementById('newGiftType').value;
+  const label = (document.getElementById('newGiftLabel').value||'').trim();
+  if(!label){ showToast('請填寫選項名稱'); return; }
+  const preset = { id:'gift_'+Date.now(), type, label };
+  if(type==='cash'){
+    const amt = Number(document.getElementById('newGiftAmount').value);
+    if(!amt || amt<=0){ showToast('請輸入正確的贈送金額'); return; }
+    preset.amount = amt;
+  } else {
+    const p = PRODUCTS.find(x=>x.id===document.getElementById('newGiftProduct')?.value);
+    if(!p){ showToast('請先新增商品才能設定贈送商品'); return; }
+    preset.productId = p.id;
+    preset.productName = p.name;
+    preset.qty = Math.max(1, Number(document.getElementById('newGiftQty').value)||1);
+  }
+  const presets = [...(BUSINESS.giftPresets||[]), preset];
+  try{
+    await db.collection('meta').doc('business').set({ giftPresets: presets }, { merge:true });
+    BUSINESS.giftPresets = presets;
+    showToast('已新增贈送選項');
+    renderWalletForm();
+    setTimeout(()=>{ const sel=document.getElementById('walletGiftSelect'); if(sel) sel.value = preset.id; }, 0);
+  }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
 }
 async function submitWalletForm(kind){
   const amt = Number(document.getElementById('walletAmount').value);
@@ -2252,38 +2367,151 @@ async function submitWalletForm(kind){
   if(!c) return;
   if(kind==='deduct' && (c.balance||0) < amt){ showToast('餘額不足'); return; }
   const delta = kind==='topup' ? amt : -amt;
-  const newBalance = (c.balance||0) + delta;
+  let newBalance = (c.balance||0) + delta;
   const log = [...(c.balanceLog||[]), { date: new Date().toISOString(), amount: delta, note, type: kind==='topup'?'topup':'manual_deduct' }];
+
+  let giftPreset = null;
+  if(kind==='topup'){
+    const giftSel = document.getElementById('walletGiftSelect');
+    const giftId = giftSel ? giftSel.value : '';
+    if(giftId && giftId!=='__new__'){
+      giftPreset = (BUSINESS.giftPresets||[]).find(g=>g.id===giftId) || null;
+    }
+  }
+  if(giftPreset && giftPreset.type==='cash'){
+    newBalance += giftPreset.amount;
+    log.push({ date: new Date().toISOString(), amount: giftPreset.amount, note: '贈送：'+giftPreset.label, type:'gift' });
+  }
+
   try{
     await db.collection('customers').doc(c.id).update({ balance: newBalance, balanceLog: log });
-    showToast(kind==='topup' ? '已儲值' : '已扣款');
+    if(giftPreset && giftPreset.type==='product'){
+      await db.collection('orders').add({
+        code: genOrderCode(), customerId: c.id,
+        customer: { name: c.name||'', phone: c.phone||'', note: '儲值贈品：'+giftPreset.label },
+        items: [{ productId: giftPreset.productId, name: giftPreset.productName, price: 0, qty: giftPreset.qty||1, subtotal: 0, shippedQty: 0 }],
+        totalAmount: 0, status: 'pending', createdAt: new Date().toISOString()
+      });
+      showToast('已儲值，贈送商品已建立訂單，請至「商品訂單」安排出貨');
+    } else {
+      showToast(kind==='topup' ? '已儲值' : '已扣款');
+    }
+    walletFormKind = null;
+    renderCustomerDetailScreen();
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
+/* ---- 儲值紀錄填錯了可以修改或刪除：餘額一律用「所有紀錄加總」重新算一次，
+   不是直接改餘額欄位，這樣才不會因為改錯一筆就跟原本的加總對不起來 ---- */
+function editBalanceLogEntry(idx){
+  const c = loadCustomers().find(x=>x.id===currentCustomerDetailId);
+  if(!c) return;
+  const entry = (c.balanceLog||[])[idx];
+  if(!entry) return;
+  const box = document.getElementById('walletLogEditBox');
+  box.innerHTML = `
+    <div class="cust-section-hd" style="margin-top:14px;"><h4>修改這筆異動</h4></div>
+    <div class="field"><label>金額（正數＝加值，負數＝扣款）</label><input type="number" id="logEditAmount" value="${entry.amount}"></div>
+    <div class="field"><label>備註</label><input type="text" id="logEditNote" value="${(entry.note||'').replace(/"/g,'&quot;')}"></div>
+    <div class="sheet-actions">
+      <button class="btn btn-outline" onclick="document.getElementById('walletLogEditBox').innerHTML=''">取消</button>
+      <button class="btn btn-primary" onclick="saveBalanceLogEdit(${idx})">儲存修改</button>
+    </div>
+  `;
+}
+async function saveBalanceLogEdit(idx){
+  const c = loadCustomers().find(x=>x.id===currentCustomerDetailId);
+  if(!c) return;
+  const amount = Number(document.getElementById('logEditAmount').value);
+  if(isNaN(amount) || amount===0){ showToast('請輸入正確的金額'); return; }
+  const note = (document.getElementById('logEditNote').value||'').trim();
+  const log = [...(c.balanceLog||[])];
+  if(!log[idx]) return;
+  log[idx] = { ...log[idx], amount, note };
+  const newBalance = log.reduce((s,l)=>s+(l.amount||0), 0);
+  try{
+    await db.collection('customers').doc(c.id).update({ balance: newBalance, balanceLog: log });
+    showToast('已修改');
+    renderCustomerDetailScreen();
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
+async function deleteBalanceLogEntry(idx){
+  if(!confirm('確定要刪除這筆異動紀錄嗎？餘額會依剩餘紀錄重新計算。')) return;
+  const c = loadCustomers().find(x=>x.id===currentCustomerDetailId);
+  if(!c) return;
+  const log = [...(c.balanceLog||[])];
+  if(!log[idx]) return;
+  log.splice(idx,1);
+  const newBalance = log.reduce((s,l)=>s+(l.amount||0), 0);
+  try{
+    await db.collection('customers').doc(c.id).update({ balance: newBalance, balanceLog: log });
+    showToast('已刪除');
     renderCustomerDetailScreen();
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
 /* ---- 套組：堂數制，跟金額無關，用掉一堂扣一堂 ---- */
+let packageFormOpen = false;
 function togglePackageForm(){
+  packageFormOpen = !packageFormOpen;
+  renderPackageForm();
+}
+function renderPackageForm(){
   const box = document.getElementById('packageForm');
-  if(box.innerHTML){ box.innerHTML=''; return; }
+  if(!packageFormOpen){ box.innerHTML=''; return; }
+  const names = BUSINESS.packageNamePresets || [];
   box.innerHTML = `
-    <div class="field" style="margin-top:10px;"><label>套組名稱</label><input type="text" id="pkgName" placeholder="例如：熱蠟腋下 5 堂送 1 堂"></div>
+    <div class="field" style="margin-top:10px;">
+      <label>套組名稱</label>
+      <select id="pkgNameSelect" onchange="handlePkgNameSelectChange()">
+        <option value="">請選擇</option>
+        ${names.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('')}
+        <option value="__new__">＋ 新增名稱…</option>
+      </select>
+    </div>
+    <div id="pkgNameNewForm"></div>
     <div class="field"><label>總堂數</label><input type="number" id="pkgTotal" placeholder="例如 6"></div>
     <div class="field"><label>實收金額</label><input type="number" id="pkgPaidAmount" placeholder="這次顧客實際付了多少錢（計入營業額）"></div>
     <div class="field"><label>備註（選填）</label><input type="text" id="pkgNote" placeholder="例如：加贈舒緩乳一瓶"></div>
     <button class="btn btn-primary" style="width:100%;" onclick="submitPackageForm()">新增套組</button>
   `;
 }
+function handlePkgNameSelectChange(){
+  const sel = document.getElementById('pkgNameSelect');
+  const box = document.getElementById('pkgNameNewForm');
+  if(sel.value==='__new__'){
+    box.innerHTML = `
+      <div class="field"><label>新的套組名稱</label><input type="text" id="pkgNewNameInput" placeholder="例如：熱蠟腋下 5 堂送 1 堂"></div>
+      <button class="btn btn-outline btn-sm" onclick="savePkgNamePreset()">儲存這個名稱</button>
+    `;
+  } else {
+    box.innerHTML = '';
+  }
+}
+async function savePkgNamePreset(){
+  const name = (document.getElementById('pkgNewNameInput').value||'').trim();
+  if(!name){ showToast('請輸入名稱'); return; }
+  const names = [...new Set([...(BUSINESS.packageNamePresets||[]), name])];
+  try{
+    await db.collection('meta').doc('business').set({ packageNamePresets: names }, { merge:true });
+    BUSINESS.packageNamePresets = names;
+    showToast('已新增套組名稱');
+    renderPackageForm();
+    setTimeout(()=>{ const sel=document.getElementById('pkgNameSelect'); if(sel) sel.value = name; }, 0);
+  }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
+}
 async function submitPackageForm(){
-  const name = (document.getElementById('pkgName').value||'').trim();
+  const nameSel = document.getElementById('pkgNameSelect');
+  const name = nameSel ? nameSel.value : '';
   const total = Number(document.getElementById('pkgTotal').value);
   const paidAmount = Number(document.getElementById('pkgPaidAmount').value) || 0;
   const note = (document.getElementById('pkgNote').value||'').trim();
-  if(!name || !total || total<=0){ showToast('請填寫套組名稱與總堂數'); return; }
+  if(!name || name==='__new__' || !total || total<=0){ showToast('請選擇套組名稱並填寫總堂數'); return; }
   const c = loadCustomers().find(x=>x.id===currentCustomerDetailId);
   if(!c) return;
   const packages = [...(c.packages||[]), { id:'pkg_'+Date.now(), name, total, used:0, note, paidAmount, createdAt: new Date().toISOString() }];
   try{
     await db.collection('customers').doc(c.id).update({ packages });
     showToast('已新增套組');
+    packageFormOpen = false;
     renderCustomerDetailScreen();
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
@@ -3413,6 +3641,101 @@ function renderProductsList(){
   wrap.innerHTML = html;
 }
 /* ---- 商品訂單管理 ---- */
+function genOrderCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for(let i=0;i<6;i++){ s += chars[Math.floor(Math.random()*chars.length)]; }
+  return 'ORD-'+s;
+}
+/* 商家手動新增／編輯訂單用的表單（跟顧客端結帳送出的訂單共用同一個 orders 集合／資料結構，
+   差別只是這裡是商家自己在後台建立，不是顧客在前台下單） */
+let orderFormId = null;
+let orderFormItems = [];
+function openOrderForm(orderId){
+  orderFormId = orderId || null;
+  const o = orderId ? ALL_ORDERS.find(x=>x.id===orderId) : null;
+  document.getElementById('orderFormTitle').textContent = orderId ? '編輯訂單' : '新增訂單';
+  document.getElementById('orderCustName').value = o ? o.customer.name : '';
+  document.getElementById('orderCustPhone').value = o ? o.customer.phone : '';
+  document.getElementById('orderCustNote').value = o ? (o.customer.note||'') : '';
+  orderFormItems = o ? o.items.map(it=>({...it})) : [];
+  renderOrderFormItems();
+  document.getElementById('orderFormBackdrop').classList.add('show');
+}
+function closeOrderForm(){
+  document.getElementById('orderFormBackdrop').classList.remove('show');
+  orderFormId = null;
+  orderFormItems = [];
+}
+function addOrderItemRow(){
+  if(PRODUCTS.length===0){ showToast('請先到「服務→商品項目」新增商品'); return; }
+  const p = PRODUCTS[0];
+  orderFormItems.push({ productId: p.id, name: p.name, price: p.price, qty: 1, shippedQty: 0 });
+  renderOrderFormItems();
+}
+function renderOrderFormItems(){
+  const wrap = document.getElementById('orderItemsList');
+  if(orderFormItems.length===0){
+    wrap.innerHTML = `<div class="field-hint">尚未加入任何商品，請按下方「新增品項」。</div>`;
+  } else {
+    wrap.innerHTML = orderFormItems.map((it,i)=>`
+      <div class="order-item-row">
+        <div class="field"><label>商品</label>
+          <select onchange="setOrderItemProduct(${i}, this.value)">
+            ${PRODUCTS.map(p=>`<option value="${p.id}" ${p.id===it.productId?'selected':''}>${p.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field qty"><label>數量</label><input type="number" min="1" value="${it.qty}" onchange="setOrderItemQty(${i}, this.value)"></div>
+        <div class="field price"><label>單價</label><input type="number" min="0" value="${it.price}" onchange="setOrderItemPrice(${i}, this.value)"></div>
+        <button class="rm-btn" onclick="removeOrderItemRow(${i})">✕</button>
+      </div>
+    `).join('');
+  }
+  const total = orderFormItems.reduce((s,it)=>s+it.price*it.qty, 0);
+  document.getElementById('orderFormTotal').textContent = '$'+total.toLocaleString();
+}
+function setOrderItemProduct(i, productId){
+  const p = PRODUCTS.find(x=>x.id===productId);
+  if(!p) return;
+  orderFormItems[i] = { ...orderFormItems[i], productId: p.id, name: p.name, price: p.price };
+  renderOrderFormItems();
+}
+function setOrderItemQty(i, val){
+  orderFormItems[i].qty = Math.max(1, Number(val)||1);
+  renderOrderFormItems();
+}
+function setOrderItemPrice(i, val){
+  orderFormItems[i].price = Math.max(0, Number(val)||0);
+  renderOrderFormItems();
+}
+function removeOrderItemRow(i){
+  orderFormItems.splice(i,1);
+  renderOrderFormItems();
+}
+async function saveOrderForm(){
+  const name = (document.getElementById('orderCustName').value||'').trim();
+  const phone = (document.getElementById('orderCustPhone').value||'').trim();
+  const note = (document.getElementById('orderCustNote').value||'').trim();
+  if(!name || !phone){ showToast('請填寫顧客姓名與手機號碼'); return; }
+  if(orderFormItems.length===0){ showToast('請至少加入一項商品'); return; }
+  const items = orderFormItems.map(it=>({ productId: it.productId, name: it.name, price: it.price, qty: it.qty, subtotal: it.price*it.qty, shippedQty: it.shippedQty||0 }));
+  const totalAmount = items.reduce((s,it)=>s+it.subtotal, 0);
+  try{
+    if(orderFormId){
+      const status = computeOrderStatus(items);
+      await db.collection('orders').doc(orderFormId).update({ customer:{name,phone,note}, items, totalAmount, status, updatedAt: new Date().toISOString() });
+      showToast('訂單已更新');
+    } else {
+      const cust = loadCustomers().find(c=>c.phone===phone);
+      await db.collection('orders').add({
+        code: genOrderCode(), customerId: cust?cust.id:null, customer:{name,phone,note},
+        items, totalAmount, status: computeOrderStatus(items), createdAt: new Date().toISOString()
+      });
+      showToast('訂單已新增');
+    }
+    closeOrderForm();
+  }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
+}
 function setOrderFilter(status){
   orderFilter = status;
   document.querySelectorAll('#orderFilterRow .filter-chip').forEach(el=>{
@@ -3475,6 +3798,7 @@ function renderOrdersList(){
       <div class="bkt-danger-row"><a onclick="deleteOrderRecord('${o.id}')">刪除這筆紀錄</a></div>` : `
       <div class="actions">
         ${o.status!=='done' ? `<button class="primary" onclick="updateOrderStatus('${o.id}','done')">標記全部出貨</button>` : ''}
+        <button onclick="openOrderForm('${o.id}')">編輯內容</button>
         <button class="danger" onclick="updateOrderStatus('${o.id}','cancelled')">取消訂單</button>
       </div>`}
     </div>
