@@ -1780,6 +1780,8 @@ async function submitOrder(){
   const phone = document.getElementById('ckPhone').value.trim();
   if(!name){ showToast('請輸入姓名'); return; }
   if(!phone){ showToast('請輸入手機號碼'); return; }
+  const uid = currentCustomerId();
+  if(!uid){ showToast('請先登入會員帳號才能送出訂單'); closeCheckout(); lockCustApp(); return; }
   const items = Object.entries(cart).map(([pid,qty])=>{
     const p = PRODUCTS.find(x=>x.id===pid);
     return p ? { productId:pid, name:p.name, price:p.price, qty, subtotal:p.price*qty, shippedQty:0 } : null;
@@ -1787,7 +1789,7 @@ async function submitOrder(){
   if(items.length===0){ showToast('購物車是空的'); return; }
   const order = {
     code: genOrderCode(),
-    customerId: currentCustomerId() || null,
+    customerId: uid,
     customer: { name, phone, email: (currentCustomer()&&currentCustomer().email) || '', note: document.getElementById('ckNote').value.trim() },
     items,
     totalAmount: items.reduce((s,it)=>s+it.subtotal,0),

@@ -545,37 +545,37 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 }
 .poster-gen-foot{ padding:16px 20px calc(20px + env(safe-area-inset-bottom)); flex-shrink:0; border-top:1px solid var(--paper-2); }
 .slot-poster{
-  background:linear-gradient(165deg, #4A3520 0%, #2B1D10 100%);
+  background:radial-gradient(120% 60% at 50% 0%, #FDF6EC 0%, #F7E4CB 55%, #F0D2A8 100%);
   border-radius:20px; padding:26px 16px 18px; text-align:center;
 }
 .slot-poster .logo{
-  width:64px; height:64px; border-radius:50%; margin:0 auto 10px; overflow:hidden; background:#3A2A18;
+  width:64px; height:64px; border-radius:50%; margin:0 auto 10px; overflow:hidden; background:var(--paper);
   display:flex; align-items:center; justify-content:center; font-size:26px;
-  box-shadow:0 0 0 3px rgba(255,253,248,0.85), 0 2px 10px rgba(0,0,0,0.35);
+  box-shadow:0 0 0 3px var(--white), 0 2px 8px rgba(122,92,46,0.18);
 }
 .slot-poster .logo img{ width:100%; height:100%; object-fit:cover; }
-.slot-poster .en-month{ font-family:'Noto Sans TC',sans-serif; font-size:38px; font-weight:900; color:#F3D9A4; margin:4px 0 2px; letter-spacing:.5px; }
-.slot-poster .sub{ font-size:10.5px; letter-spacing:1.5px; color:rgba(255,253,248,0.6); margin-bottom:12px; }
-.slot-poster .biz{ font-size:14px; font-weight:700; color:#FFFDF8; }
-.slot-poster .handle{ font-size:11px; font-weight:700; color:#E8B75C; margin-bottom:10px; }
-.slot-poster .divider{ border-top:1px solid rgba(255,253,248,0.18); margin:6px 0 12px; }
+.slot-poster .en-month{ font-family:'Noto Sans TC',sans-serif; font-size:38px; font-weight:900; color:var(--ledger); margin:4px 0 2px; letter-spacing:.5px; }
+.slot-poster .sub{ font-size:10.5px; letter-spacing:1.5px; color:var(--ink-soft); margin-bottom:12px; }
+.slot-poster .biz{ font-size:14px; font-weight:700; color:var(--ink); }
+.slot-poster .handle{ font-size:11px; font-weight:700; color:var(--stamp); margin-bottom:10px; }
+.slot-poster .divider{ border-top:1px solid rgba(122,92,46,0.2); margin:6px 0 12px; }
 .slot-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; background:transparent; padding:0; }
-.slot-grid .wd{ font-size:10px; color:rgba(255,253,248,0.55); text-align:center; padding-bottom:6px; font-weight:700; }
-.slot-grid .wd.weekend{ color:#E8935C; }
+.slot-grid .wd{ font-size:10px; color:var(--ink-soft); text-align:center; padding-bottom:6px; font-weight:700; }
+.slot-grid .wd.weekend{ color:var(--stamp); }
 .slot-grid .day{ font-size:10px; text-align:center; padding:2px 0; min-height:56px; }
 .slot-grid .day.blank{ visibility:hidden; }
-.slot-grid .day .dnum{ font-weight:700; font-size:11px; margin-bottom:2px; color:#FFFDF8; }
-.slot-grid .day .tm{ font-family:'Space Mono',monospace; font-weight:700; font-size:8.5px; color:#E0B36B; line-height:1.55; }
-.slot-grid .day.weekend .tm{ color:#E8935C; }
-.slot-grid .day.full .tm{ text-decoration:line-through; opacity:.5; font-weight:400; color:rgba(255,253,248,0.45); }
-.slot-grid .day.closed .tm{ color:#D98B5C; font-weight:700; }
+.slot-grid .day .dnum{ font-weight:700; font-size:11px; margin-bottom:2px; color:var(--ink); }
+.slot-grid .day .tm{ font-family:'Space Mono',monospace; font-weight:700; font-size:8.5px; color:var(--ledger); line-height:1.55; }
+.slot-grid .day.weekend .tm{ color:var(--stamp); }
+.slot-grid .day.full .tm{ text-decoration:line-through; opacity:.5; font-weight:400; color:var(--ink-soft); }
+.slot-grid .day.closed .tm{ color:var(--stamp-dark); font-weight:700; }
 .slot-poster .cta{
-  display:inline-block; background:#F3D9A4; color:#2B1D10; font-size:12.5px; font-weight:700;
+  display:inline-block; background:var(--ledger); color:var(--white); font-size:12.5px; font-weight:700;
   padding:11px 20px; border-radius:99px; margin:16px 0 6px;
 }
-.slot-poster .microtext{ font-size:9.5px; color:rgba(255,253,248,0.55); margin-bottom:12px; }
+.slot-poster .microtext{ font-size:9.5px; color:var(--ink-soft); margin-bottom:12px; }
 .slot-poster .bottom-row{ display:flex; align-items:flex-end; justify-content:space-between; }
-.slot-poster .qr-cap{ font-size:9px; color:rgba(255,253,248,0.55); }
+.slot-poster .qr-cap{ font-size:9px; color:var(--ink-soft); }
 .slot-poster .qr-row img{ width:56px; height:56px; border-radius:6px; background:var(--white); padding:3px; }
 .avail-poster{
   border-radius:14px; overflow:hidden; border:1.5px solid var(--line);
@@ -707,8 +707,10 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .nav-item.active{ color:var(--stamp); }
 .nav-item .ic{ font-size:17px; position:relative; display:inline-block; }
 .nav-item .ic .nav-badge{
-  position:absolute; top:-3px; right:-6px; width:8px; height:8px; border-radius:50%;
-  background:var(--stamp-dark); border:1.5px solid var(--white);
+  position:absolute; top:-6px; right:-10px; min-width:16px; height:16px; padding:0 3px; border-radius:99px;
+  background:var(--stamp-dark); border:1.5px solid var(--white); color:var(--white);
+  font-size:9px; font-weight:700; font-family:'Space Mono',monospace;
+  display:none; align-items:center; justify-content:center; line-height:1;
 }
 
 /* toast */
@@ -1430,8 +1432,6 @@ function startListeners(){
     db.collection('orders').onSnapshot(snap=>{
       ALL_ORDERS = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=> new Date(b.createdAt||0) - new Date(a.createdAt||0));
       rerenderActiveScreen();
-      const activeId = (document.querySelector('#mainApp .screen.active')||{}).id;
-      if(activeId==='screen-services'){ setNavLastSeen('orders'); }
       updateNavBadges();
     }, err=>console.error('orders listener', err))
   );
@@ -1439,8 +1439,6 @@ function startListeners(){
     db.collection('bookings').onSnapshot(snap=>{
       ALL_BOOKINGS = snap.docs.map(d=>({ id:d.id, ...d.data() }));
       rerenderActiveScreen();
-      const activeId = (document.querySelector('#mainApp .screen.active')||{}).id;
-      if(activeId==='screen-bookings' || activeId==='screen-booking-detail'){ setNavLastSeen('bookings'); }
       updateNavBadges();
     }, err=>console.error('bookings listener', err))
   );
@@ -1468,32 +1466,23 @@ function rerenderActiveScreen(){
 }
 
 /* ============================================================
-   底部導覽列新異動小紅點
-   用瀏覽器 localStorage 記錄「上次看過某個分頁的時間」，跟預約／訂單目前
-   最新的異動時間（updatedAt，沒有的話退回 createdAt）比較，比較新就顯示紅點；
-   點進該分頁時視為已讀，把 lastSeen 更新成現在、紅點消失
+   底部導覽列新異動紅色數字小標示
+   直接統計「還沒標示完成」的預約／訂單筆數（不是用瀏覽記錄），
+   所以只要還有未確認的預約、或還沒全部出貨的訂單，數字就會一直顯示，
+   商家把它標示完成（確認／拒絕預約、全部出貨或取消訂單）後才會消失或減少
    ============================================================ */
-function getNavLastSeen(key){
-  try{ return localStorage.getItem('navLastSeen_'+key) || ''; }catch(e){ return ''; }
-}
-function setNavLastSeen(key){
-  try{ localStorage.setItem('navLastSeen_'+key, new Date().toISOString()); }catch(e){}
-}
-function latestActivityTime(list){
-  let max = '';
-  list.forEach(x=>{ const t = x.updatedAt || x.createdAt || ''; if(t > max) max = t; });
-  return max;
-}
 function updateNavBadges(){
   const bEl = document.getElementById('navBadgeBookings');
   const oEl = document.getElementById('navBadgeOrders');
   if(bEl){
-    const latest = latestActivityTime(ALL_BOOKINGS);
-    bEl.style.display = (latest && latest > getNavLastSeen('bookings')) ? 'block' : 'none';
+    const count = ALL_BOOKINGS.filter(b=>b.status==='pending').length;
+    bEl.style.display = count>0 ? 'flex' : 'none';
+    bEl.textContent = count>99 ? '99+' : String(count);
   }
   if(oEl){
-    const latest = latestActivityTime(ALL_ORDERS);
-    oEl.style.display = (latest && latest > getNavLastSeen('orders')) ? 'block' : 'none';
+    const count = ALL_ORDERS.filter(o=>o.status==='pending'||o.status==='partial').length;
+    oEl.style.display = count>0 ? 'flex' : 'none';
+    oEl.textContent = count>99 ? '99+' : String(count);
   }
 }
 
@@ -1693,10 +1682,10 @@ function goScreen(id, opts={}){
   window.scrollTo(0,0);
 
   if(id==='dashboard') renderDashboard();
-  if(id==='bookings'){ setCalView(calView); renderBookingsList(); setNavLastSeen('bookings'); updateNavBadges(); }
+  if(id==='bookings'){ setCalView(calView); renderBookingsList(); updateNavBadges(); }
   if(id==='calendar'){ renderCalLink(); renderSharePage(); }
   if(id==='customers') renderCustomersList();
-  if(id==='services') { renderServicesList(); renderProductsList(); renderOrdersList(); setServicesTab(servicesTab); setNavLastSeen('orders'); updateNavBadges(); }
+  if(id==='services') { renderServicesList(); renderProductsList(); renderOrdersList(); setServicesTab(servicesTab); updateNavBadges(); }
   if(id==='staff') renderStaffListView();
   if(id==='shopfront') renderShopfrontScreen();
   if(id==='customer-detail') renderCustomerDetailScreen();
@@ -3370,21 +3359,21 @@ async function downloadSlotPoster(){
   const ctx = canvas.getContext('2d');
   ctx.textAlign = 'center';
 
-  // 背景：深棕色調，跟頁面本身的米杏色系拉開差異，讓分享出去的圖更醒目
-  const grad = ctx.createLinearGradient(W*0.15, 0, W*0.85, H);
-  grad.addColorStop(0, '#4A3520'); grad.addColorStop(1, '#2B1D10');
+  // 背景：米杏色放射狀漸層，跟參考圖一致的暖色調
+  const grad = ctx.createRadialGradient(W/2, 0, 0, W/2, 0, H*0.9);
+  grad.addColorStop(0, '#FDF6EC'); grad.addColorStop(0.55, '#F7E4CB'); grad.addColorStop(1, '#F0D2A8');
   ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
 
   let cy = 26*S;
   // logo（帶白色圓環，跟預覽的 box-shadow 效果一致）
   const logoR = 32*S;
   ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 8*S; ctx.shadowOffsetY = 1*S;
+  ctx.shadowColor = 'rgba(122,92,46,0.2)'; ctx.shadowBlur = 6*S; ctx.shadowOffsetY = 1*S;
   ctx.beginPath(); ctx.arc(W/2, cy+logoR, logoR+3*S, 0, Math.PI*2);
-  ctx.fillStyle = 'rgba(255,253,248,0.85)'; ctx.fill();
+  ctx.fillStyle = '#FFFDF8'; ctx.fill();
   ctx.restore();
   ctx.beginPath(); ctx.arc(W/2, cy+logoR, logoR, 0, Math.PI*2);
-  ctx.fillStyle = '#3A2A18'; ctx.fill();
+  ctx.fillStyle = '#F7F2E6'; ctx.fill();
   if(logoImg){
     ctx.save(); ctx.beginPath(); ctx.arc(W/2, cy+logoR, logoR, 0, Math.PI*2); ctx.clip();
     ctx.drawImage(logoImg, W/2-logoR, cy, logoR*2, logoR*2);
@@ -3394,21 +3383,21 @@ async function downloadSlotPoster(){
   }
   cy += logoR*2 + 10*S;
 
-  ctx.fillStyle = '#F3D9A4'; ctx.font = '900 '+(38*S)+'px "Noto Sans TC", sans-serif';
+  ctx.fillStyle = '#7A5C2E'; ctx.font = '900 '+(38*S)+'px "Noto Sans TC", sans-serif';
   cy += 34*S;
   ctx.fillText(EN_MONTHS[m], W/2, cy);
   cy += 4*S + 11*S;
-  ctx.fillStyle = 'rgba(255,253,248,0.6)'; ctx.font = '400 '+(10.5*S)+'px "Noto Sans TC", sans-serif';
+  ctx.fillStyle = '#6B6356'; ctx.font = '400 '+(10.5*S)+'px "Noto Sans TC", sans-serif';
   ctx.fillText(y+' ・ '+(m+1)+'月可約時段', W/2, cy);
   cy += 12*S + 14*S;
-  ctx.fillStyle = '#FFFDF8'; ctx.font = '700 '+(14*S)+'px "Noto Sans TC", sans-serif';
+  ctx.fillStyle = '#26221B'; ctx.font = '700 '+(14*S)+'px "Noto Sans TC", sans-serif';
   ctx.fillText(BUSINESS.name||'', W/2, cy);
   cy += 4*S + 11*S;
-  ctx.fillStyle = '#E8B75C'; ctx.font = '700 '+(11*S)+'px "Space Mono", monospace';
+  ctx.fillStyle = '#BF8B3D'; ctx.font = '700 '+(11*S)+'px "Space Mono", monospace';
   ctx.fillText(handle, W/2, cy);
   cy += 10*S;
   // 分隔線
-  ctx.strokeStyle = 'rgba(255,253,248,0.18)'; ctx.lineWidth = 1*S;
+  ctx.strokeStyle = 'rgba(122,92,46,0.2)'; ctx.lineWidth = 1*S;
   ctx.beginPath(); ctx.moveTo(padX, cy); ctx.lineTo(W-padX, cy); ctx.stroke();
   cy += 12*S;
 
@@ -3417,7 +3406,7 @@ async function downloadSlotPoster(){
   const cellW = innerW / 7;
   ctx.font = '700 '+(10*S)+'px "Noto Sans TC", sans-serif';
   wdNames.forEach((wd,i)=>{
-    ctx.fillStyle = (i===0||i===6) ? '#E8935C' : 'rgba(255,253,248,0.55)';
+    ctx.fillStyle = (i===0||i===6) ? '#BF8B3D' : '#6B6356';
     ctx.fillText(wd, padX+cellW*i+cellW/2, gridTop+wdRowH-6*S);
   });
 
@@ -3429,16 +3418,16 @@ async function downloadSlotPoster(){
     const cx = padX + cellW*col + cellW/2, cyTop = cellsTop + row*cellH + 12*S;
     const dateKey = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const info = availableSlotsForDate(dateKey);
-    ctx.font = '700 '+(11*S)+'px "Space Mono", monospace'; ctx.fillStyle = '#FFFDF8';
+    ctx.font = '700 '+(11*S)+'px "Space Mono", monospace'; ctx.fillStyle = '#26221B';
     ctx.fillText(String(d), cx, cyTop);
     if(info.closed){
-      ctx.font = '700 '+(8.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#D98B5C';
+      ctx.font = '700 '+(8.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#8F6420';
       ctx.fillText(info.label||'', cx, cyTop+14*S);
     } else if(info.full){
-      ctx.font = '400 '+(8.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(255,253,248,0.45)';
+      ctx.font = '400 '+(8.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(107,99,86,0.55)';
       ctx.fillText(info.label||'已約滿', cx, cyTop+14*S);
     } else {
-      ctx.font = '700 '+(8.5*S)+'px "Space Mono", monospace'; ctx.fillStyle = isWeekend ? '#E8935C' : '#E0B36B';
+      ctx.font = '700 '+(8.5*S)+'px "Space Mono", monospace'; ctx.fillStyle = isWeekend ? '#BF8B3D' : '#7A5C2E';
       info.slots.slice(0,3).forEach((t,i)=>{ ctx.fillText(t, cx, cyTop+14*S+i*11*S); });
     }
   }
@@ -3450,17 +3439,17 @@ async function downloadSlotPoster(){
   const ctaW = ctx.measureText(ctaText).width + 40*S;
   const ctaH = 44*S;
   roundRect(ctx, W/2-ctaW/2, cy, ctaW, ctaH, ctaH/2);
-  ctx.fillStyle = '#F3D9A4'; ctx.fill();
-  ctx.fillStyle = '#2B1D10'; ctx.fillText(ctaText, W/2, cy+ctaH/2+4*S);
+  ctx.fillStyle = '#7A5C2E'; ctx.fill();
+  ctx.fillStyle = '#FFFDF8'; ctx.fillText(ctaText, W/2, cy+ctaH/2+4*S);
   cy += ctaH + 12*S;
 
-  ctx.font = '400 '+(9.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(255,253,248,0.55)';
+  ctx.font = '400 '+(9.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B6356';
   ctx.fillText('時段皆可微調，歡迎私訊　劃掉＝已約滿', W/2, cy);
   cy += 16*S + 12*S;
 
   // 底部：QR code（靠右）＋ 說明文字，跟預覽的 bottom-row 一致
   const qrSize = 56*S;
-  ctx.textAlign = 'left'; ctx.font = '400 '+(9*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(255,253,248,0.55)';
+  ctx.textAlign = 'left'; ctx.font = '400 '+(9*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#6B6356';
   ctx.fillText('掃碼預約', padX, cy+qrSize-6*S);
   if(qrImg){
     roundRect(ctx, W-padX-qrSize, cy, qrSize, qrSize, 6*S);
