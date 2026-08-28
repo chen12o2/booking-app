@@ -274,6 +274,18 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
   color:var(--ink-soft); font-size:13px; font-weight:700; cursor:pointer; text-align:center; font-family:inherit;
 }
 .toggle-opt.active{ background:var(--stamp); border-color:var(--stamp); color:var(--white); }
+.pkg-redeem-card{
+  display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:12px;
+  border:1.5px solid var(--line); background:var(--white); cursor:pointer; margin-bottom:16px;
+}
+.pkg-redeem-card.checked{ border-color:var(--stamp); background:var(--paper-2); }
+.pkg-redeem-box{
+  width:22px; height:22px; border-radius:6px; border:1.5px solid var(--line); background:var(--white);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:14px; font-weight:700; color:var(--white);
+}
+.pkg-redeem-card.checked .pkg-redeem-box{ background:var(--stamp); border-color:var(--stamp); }
+.pkg-redeem-text .tt{ font-size:13.5px; font-weight:700; color:var(--ink); }
+.pkg-redeem-text .sub{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
 .field label{ display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; }
 .field input, .field textarea, .field select{
   width:100%; border:1.5px solid var(--line); border-radius:10px; padding:12px 13px;
@@ -593,6 +605,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 
       <div class="mini-summary" id="infoSummary"></div>
       <div id="packageRedeemBox"></div>
+      <div id="bookingPayMethodBox"></div>
       <div id="depositNotice"></div>
 
       <div class="field">
@@ -1279,6 +1292,7 @@ function startBooking(){
   state = { service:null, staff:STAFF[0], date:null, time:null };
   infoPrefilled = false;
   rescheduleBookingId = null;
+  bookingPayMethod = 'cash';
   goScreen('service');
 }
 
@@ -1410,6 +1424,7 @@ function startBookingWithService(id){
   state = { service:s, services:[s], staff:STAFF[0], date:null, time:null };
   infoPrefilled = false;
   rescheduleBookingId = null;
+  bookingPayMethod = 'cash';
   goScreen('staff');
 }
 
@@ -1603,19 +1618,53 @@ function renderPackageRedeemOption(svcs){
   if(matching.length===0){ box.innerHTML=''; state.usePackageId=null; return; }
   const pkg = matching[0];
   if(state.usePackageId && !matching.find(p=>p.id===state.usePackageId)){ state.usePackageId = null; }
+  const checked = state.usePackageId===pkg.id;
   box.innerHTML = `
-    <div class="field" style="margin-top:4px; margin-bottom:14px;">
-      <label class="check-row">
-        <input type="checkbox" id="usePackageCheck" ${state.usePackageId===pkg.id?'checked':''} onchange="togglePackageRedeem('${pkg.id}')">
-        使用套組折抵這堂（${pkg.name}，剩餘 ${pkg.total-pkg.used} 堂）
-      </label>
+    <div class="pkg-redeem-card ${checked?'checked':''}" onclick="togglePackageRedeem('${pkg.id}')">
+      <div class="pkg-redeem-box">${checked?'✓':''}</div>
+      <div class="pkg-redeem-text">
+        <div class="tt">使用套組折抵這堂</div>
+        <div class="sub">${pkg.name}・剩餘 ${pkg.total-pkg.used} 堂</div>
+      </div>
     </div>
   `;
 }
 function togglePackageRedeem(pkgId){
-  const checked = document.getElementById('usePackageCheck').checked;
-  state.usePackageId = checked ? pkgId : null;
+  state.usePackageId = (state.usePackageId===pkgId) ? null : pkgId;
   renderInfoSummary();
+}
+/* 付款方式：不管是預約服務、買商品還是買套組方案，只要這筆需要顧客付錢，
+   都問一次要怎麼付——跟結帳頁、套組購買共用同一套邏輯，選儲值金就直接扣款，
+   選其他的則等商家之後在後台記錄收款。如果這堂是用套組折抵付的，就不用再問一次
+   付款方式了（已經算是付過了），所以有勾套組折抵時這個區塊會直接不顯示。 */
+let bookingPayMethod = 'cash';
+function renderBookingPayMethodBox(){
+  const box = document.getElementById('bookingPayMethodBox');
+  if(!box) return;
+  if(state.usePackageId){ box.innerHTML=''; return; }
+  box.innerHTML = `
+    <div class="field">
+      <label>付款方式</label>
+      <div class="toggle-pair">
+        <button class="toggle-opt ${bookingPayMethod==='cash'?'active':''}" onclick="setBookingPayMethod('cash')">現金</button>
+        <button class="toggle-opt ${bookingPayMethod==='transfer'?'active':''}" onclick="setBookingPayMethod('transfer')">轉帳</button>
+        <button class="toggle-opt ${bookingPayMethod==='linepay'?'active':''}" onclick="setBookingPayMethod('linepay')">LinePay</button>
+        <button class="toggle-opt ${bookingPayMethod==='wallet'?'active':''}" onclick="setBookingPayMethod('wallet')">儲值金</button>
+      </div>
+      <div class="field-hint">${bookingPayMethodHint()}</div>
+    </div>
+  `;
+}
+function setBookingPayMethod(method){
+  bookingPayMethod = method;
+  renderBookingPayMethodBox();
+}
+function bookingPayMethodHint(){
+  if(bookingPayMethod!=='wallet') return '';
+  const profile = currentCustomer();
+  const balance = profile ? (profile.balance||0) : 0;
+  const total = selectedServicesTotal();
+  return `您目前儲值餘額 NT$${balance.toLocaleString()}，這筆需要 NT$${total}${total>balance?'（餘額不足，請改選其他付款方式或先儲值）':'，送出後立即扣款，不用等店家確認'}`;
 }
 function renderDepositNotice(svcs){
   const wrap = document.getElementById('depositNotice');
@@ -1652,6 +1701,7 @@ function renderInfoSummary(){
     <div class="row"><span class="lbl">預估費用</span><span class="val">${state.usePackageId ? '套組折抵（本次免付費）' : '$'+selectedServicesTotal()}</span></div>
   `;
   renderPackageRedeemOption(svcs);
+  renderBookingPayMethodBox();
   renderDepositNotice(svcs);
   applyFieldPolicy();
 
@@ -1751,6 +1801,22 @@ async function submitBooking(){
     booking.actualAmount = pkg.paidAmount ? Math.round(pkg.paidAmount/pkg.total) : 0;
   }
 
+  // 沒有用套組折抵的話，就照顧客選的付款方式處理：儲值金當場檢查餘額、記錄付款；
+  // 現金/轉帳/LinePay 只是先記下顧客說要怎麼付，實際收款還是要等商家在後台確認
+  if(!usedPackage){
+    if(bookingPayMethod==='wallet'){
+      const profile = currentCustomer();
+      const total = selectedServicesTotal();
+      if((profile&&profile.balance||0) < total){
+        showToast('儲值餘額不足，請改選其他付款方式或先儲值');
+        return;
+      }
+      booking.payment = { method:'wallet', walletAmount: total, recordedAt: new Date().toISOString(), note:'顧客結帳時使用儲值金付款' };
+    } else {
+      booking.customerDeclaredMethod = bookingPayMethod;
+    }
+  }
+
   try{
     const ref = await db.collection('bookings').add(booking);
     if(usedPackage){
@@ -1758,7 +1824,14 @@ async function submitBooking(){
       const packages = (profile.packages||[]).map(p=> p.id===usedPackage.id ? {...p, used:p.used+1} : p);
       await db.collection('customers').doc(uid).update({ packages });
       state.usePackageId = null;
+    } else if(bookingPayMethod==='wallet'){
+      const profile = currentCustomer();
+      const total = selectedServicesTotal();
+      const newBalance = (profile.balance||0) - total;
+      const log = [...(profile.balanceLog||[]), { date:new Date().toISOString(), amount:-total, note:'消費扣款（'+code+'）', type:'booking_deduct' }];
+      await db.collection('customers').doc(uid).update({ balance:newBalance, balanceLog: log });
     }
+    bookingPayMethod = 'cash';
     lastBooking = { id: ref.id, ...booking };
     sendMerchantNotifyEmail(lastBooking);
     if(lastBooking.status === 'upcoming'){ sendCustomerConfirmEmail(lastBooking); }

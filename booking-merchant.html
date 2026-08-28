@@ -1557,12 +1557,12 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
       <h3>收款</h3>
       <p class="field-hint" style="margin-bottom:14px;">記錄這筆款項實際是怎麼收到的，方便日後核對。</p>
       <div class="toggle-pair" style="margin-bottom:14px;">
-        <button class="toggle-opt" id="payMethodCash" onclick="setPayMethod('cash')">現金</button>
-        <button class="toggle-opt" id="payMethodTransfer" onclick="setPayMethod('transfer')">轉帳</button>
-        <button class="toggle-opt" id="payMethodLinepay" onclick="setPayMethod('linepay')">LinePay</button>
-        <button class="toggle-opt" id="payMethodWallet" onclick="setPayMethod('wallet')">儲值金</button>
-        <button class="toggle-opt" id="payMethodPackage" onclick="setPayMethod('package')">套組折抵</button>
-        <button class="toggle-opt" id="payMethodOther" onclick="setPayMethod('other')">其他</button>
+        <button class="toggle-opt" id="payMethodCash" onclick="handlePayMethodClick('cash')">現金</button>
+        <button class="toggle-opt" id="payMethodTransfer" onclick="handlePayMethodClick('transfer')">轉帳</button>
+        <button class="toggle-opt" id="payMethodLinepay" onclick="handlePayMethodClick('linepay')">LinePay</button>
+        <button class="toggle-opt" id="payMethodWallet" onclick="handlePayMethodClick('wallet')">儲值金</button>
+        <button class="toggle-opt" id="payMethodPackage" onclick="handlePayMethodClick('package')">套組折抵</button>
+        <button class="toggle-opt" id="payMethodOther" onclick="handlePayMethodClick('other')">其他</button>
       </div>
       <div id="payMethodExtraFields"></div>
       <div class="field">
@@ -3332,6 +3332,13 @@ function payReconcileCustomer(obj){
   if(!obj) return null;
   return obj.customerId ? loadCustomers().find(c=>c.id===obj.customerId) : loadCustomers().find(c=>c.phone===obj.customer.phone);
 }
+/* 付款方式按鈕：再點一次目前已選的那個 = 取消選擇（清空收款方式），
+   這樣如果選錯了、或想把「已經記錄過的收款」清掉重填，都可以直接點兩下處理，
+   不用被迫選一個不對的方式才能繼續 */
+function handlePayMethodClick(method){
+  const current = document.getElementById('payMethodExtraFields').dataset.method || '';
+  setPayMethod(current===method ? '' : method);
+}
 function setPayMethod(method){
   ['cash','transfer','linepay','wallet','package','other'].forEach(m=>{
     document.getElementById('payMethod'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active', m===method);
@@ -3399,12 +3406,12 @@ async function confirmPayReconcile(){
   if(!payReconcileTarget) return;
   const obj = payReconcileObj();
   if(!obj) return;
-  const method = document.getElementById('payMethodExtraFields').dataset.method || 'cash';
-  const payment = {
+  const method = document.getElementById('payMethodExtraFields').dataset.method || '';
+  const payment = method ? {
     method,
     note: document.getElementById('payNoteInput').value.trim(),
     recordedAt: new Date().toISOString()
-  };
+  } : null;
   if(method==='transfer'){
     payment.bank = (document.getElementById('payBankInput')?.value||'').trim();
     payment.last5 = (document.getElementById('payLast5Input')?.value||'').trim();
@@ -3415,7 +3422,8 @@ async function confirmPayReconcile(){
   const cust = payReconcileCustomer(obj);
 
   /* 計算這次操作對儲值餘額造成的「淨變化」：如果原本就是用儲值金付款，先把那筆加回去；
-     如果這次改成用儲值金付，再扣一次。兩者合併成單一筆異動寫入，避免同一份顧客文件被
+     如果這次改成用儲值金付（或維持儲值金），再扣一次。如果這次是清空收款（method 是空的），
+     就只有「加回去」那一半，等於整筆退款。兩者合併成單一筆異動寫入，避免同一份顧客文件被
      寫兩次時後面蓋掉前面。套組折抵是堂數，跟儲值金分開處理，但最後也會合併進同一次
      顧客文件更新裡，同一批次不對同一份文件呼叫兩次 update。 */
   let balanceDelta = 0;
@@ -3476,8 +3484,8 @@ async function confirmPayReconcile(){
     }
     batch.update(db.collection(collectionName).doc(payReconcileTarget.id), updateData);
     await batch.commit();
-    let toastMsg = '收款已儲存';
-    if(payReconcileTarget.type==='order' && obj.packagePlanId && !obj.packageGranted){
+    let toastMsg = method ? '收款已儲存' : '已清除收款紀錄';
+    if(method && payReconcileTarget.type==='order' && obj.packagePlanId && !obj.packageGranted){
       const grant = await grantPackagePlanToCustomer(obj);
       toastMsg = '收款已儲存，'+grant.msg;
     }
@@ -4510,31 +4518,45 @@ async function updateOrderStatus(id, status){
     // 從「已取消」恢復成「待處理」→ 也只針對還沒出貨的部分重新扣庫存（要重新檢查夠不夠），
     // 已出貨的數量維持原樣，訂單狀態依出貨進度重新計算
     if(status==='cancelled' && order.status!=='cancelled'){
+      // 套組方案那筆品項 productId 是 null（它不是實體商品，沒有庫存可言），
+      // 建立 Firestore 文件參照前要先濾掉，不然 doc(null) 會直接丟例外、整個更新失敗
+      const stockItems = order.items.filter(it=>it.productId);
+      const custRef = (order.payment && order.payment.method==='wallet' && order.customerId) ? db.collection('customers').doc(order.customerId) : null;
       await db.runTransaction(async (tx)=>{
-        const refs = order.items.map(it=>db.collection('products').doc(it.productId));
+        const refs = stockItems.map(it=>db.collection('products').doc(it.productId));
         const snaps = await Promise.all(refs.map(r=>tx.get(r)));
-        for(let i=0;i<order.items.length;i++){
+        const custSnap = custRef ? await tx.get(custRef) : null;
+        for(let i=0;i<stockItems.length;i++){
           const data = snaps[i].data();
           const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
-          const remain = order.items[i].qty - (order.items[i].shippedQty||0);
+          const remain = stockItems[i].qty - (stockItems[i].shippedQty||0);
           if(hasStock && remain>0){ tx.update(refs[i], { stock: data.stock + remain }); }
+        }
+        // 訂單原本是用儲值金付款的，取消訂單要把扣掉的錢還回去，不然顧客的錢就這樣憑空消失了
+        if(custRef && custSnap && custSnap.exists){
+          const custData = custSnap.data();
+          const refundAmount = order.payment.walletAmount || 0;
+          const newBalance = (custData.balance||0) + refundAmount;
+          const log = [...(custData.balanceLog||[]), { date:new Date().toISOString(), amount:refundAmount, note:'取消訂單退回（'+order.code+'）', type:'order_refund' }];
+          tx.update(custRef, { balance:newBalance, balanceLog: log });
         }
         tx.update(orderRef, { status, updatedAt: nowIso });
       });
     } else if(status==='pending' && order.status==='cancelled'){
+      const stockItems = order.items.filter(it=>it.productId);
       await db.runTransaction(async (tx)=>{
-        const refs = order.items.map(it=>db.collection('products').doc(it.productId));
+        const refs = stockItems.map(it=>db.collection('products').doc(it.productId));
         const snaps = await Promise.all(refs.map(r=>tx.get(r)));
-        for(let i=0;i<order.items.length;i++){
+        for(let i=0;i<stockItems.length;i++){
           const data = snaps[i].data();
           const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
-          const remain = order.items[i].qty - (order.items[i].shippedQty||0);
-          if(hasStock && remain>0 && data.stock < remain){ throw new Error('STOCK_SHORT:'+order.items[i].name); }
+          const remain = stockItems[i].qty - (stockItems[i].shippedQty||0);
+          if(hasStock && remain>0 && data.stock < remain){ throw new Error('STOCK_SHORT:'+stockItems[i].name); }
         }
-        for(let i=0;i<order.items.length;i++){
+        for(let i=0;i<stockItems.length;i++){
           const data = snaps[i].data();
           const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
-          const remain = order.items[i].qty - (order.items[i].shippedQty||0);
+          const remain = stockItems[i].qty - (stockItems[i].shippedQty||0);
           if(hasStock && remain>0){ tx.update(refs[i], { stock: data.stock - remain }); }
         }
         tx.update(orderRef, { status: computeOrderStatus(order.items), updatedAt: nowIso });
