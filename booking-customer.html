@@ -15,9 +15,9 @@
    - 確認頁做成完整票根,含撕線與圓形印章動畫
    ============================================================ */
 :root{
-  --paper:#FBF2E1;
-  --paper-2:#F5E2BF;
-  --line:#E2C99B;
+  --paper:#FAF3E6;
+  --paper-2:#F0E4C9;
+  --line:#DCC9A0;
   --ink:#26221B;
   --ink-soft:#6B6356;
   --stamp:#BF8B3D;
@@ -33,7 +33,7 @@
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0; padding:0; width:100%; overflow-x:hidden; overscroll-behavior-x:none;}
 body{
-  background:#EFDBAE;
+  background:#E8DAB8;
   font-family:'Noto Sans TC', sans-serif;
   color:var(--ink);
   display:flex;
@@ -877,7 +877,7 @@ function startPublicListeners(){
   );
   unsubscribers.push(
     db.collection('services').onSnapshot(snap=>{
-      SERVICES = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(a.order??9999)-(b.order??9999));
+      SERVICES = snap.docs.map(d=>({ id:d.id, ...d.data() })).filter(s=>s.active!==false).sort((a,b)=>(a.order??9999)-(b.order??9999));
       if(SERVICES.length===0) SERVICES = [...DEFAULT_SERVICES];
       rerenderActiveScreen();
     }, err=>console.error('services listener', err))
@@ -892,7 +892,7 @@ function startPublicListeners(){
   );
   unsubscribers.push(
     db.collection('products').onSnapshot(snap=>{
-      PRODUCTS = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(a.order??9999)-(b.order??9999));
+      PRODUCTS = snap.docs.map(d=>({ id:d.id, ...d.data() })).filter(p=>p.active!==false).sort((a,b)=>(a.order??9999)-(b.order??9999));
       rerenderActiveScreen();
     }, err=>console.error('products listener', err))
   );
@@ -1463,14 +1463,28 @@ function pickTime(label){
 /* ============================================================
    STEP 4: INFO
    ============================================================ */
+/* 計算應付定金：每個需要定金的服務各自算好金額（固定金額或依服務價格的百分比），
+   一筆預約含多個需定金服務時，依商家設定用「加總」或「取最高」合併 */
+function computeDepositAmount(svcs){
+  const amounts = svcs.filter(s=>s.depositRequired).map(s=>{
+    if(s.depositAmountType==='percent'){
+      return Math.round((s.price||0) * (Number(s.depositAmount)||0) / 100);
+    }
+    return Number(s.depositAmount)||0;
+  });
+  if(amounts.length===0) return 0;
+  return BUSINESS.depositMultiServiceCalc==='max' ? Math.max(...amounts) : amounts.reduce((a,b)=>a+b,0);
+}
 function renderDepositNotice(svcs){
   const wrap = document.getElementById('depositNotice');
   if(!wrap) return;
   const needsDeposit = svcs.some(s=>s.depositRequired);
   if(!needsDeposit || !BUSINESS.depositPolicyText){ wrap.innerHTML = ''; return; }
+  const amount = computeDepositAmount(svcs);
   wrap.innerHTML = `
     <div class="deposit-box">
       <div class="tt">💰 這項服務需要收訂金</div>
+      ${amount>0 ? `<div class="amt" style="font-family:'Space Mono',monospace; font-weight:700; font-size:16px; margin:4px 0 10px;">應付定金 NT$ ${amount}</div>` : ''}
       <div class="policy">${BUSINESS.depositPolicyText}</div>
       ${BUSINESS.depositPaymentInfo ? `<div class="pay"><b>收款方式</b><br>${BUSINESS.depositPaymentInfo.replace(/\n/g,'<br>')}</div>` : ''}
       <label class="agree-row">

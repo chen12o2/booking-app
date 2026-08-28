@@ -13,9 +13,9 @@
    後台改以「帳本」的視覺邏輯呈現：條列、印章式狀態、分頁帳籤
    ============================================================ */
 :root{
-  --paper:#FBF2E1;
-  --paper-2:#F5E2BF;
-  --line:#E2C99B;
+  --paper:#FAF3E6;
+  --paper-2:#F0E4C9;
+  --line:#DCC9A0;
   --ink:#26221B;
   --ink-soft:#6B6356;
   --stamp:#BF8B3D;
@@ -31,7 +31,7 @@
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0; padding:0; width:100%; overflow-x:hidden; overscroll-behavior-x:none;}
 body{
-  background:#EFDBAE;
+  background:#E8DAB8;
   font-family:'Noto Sans TC', sans-serif;
   color:var(--ink);
   display:flex;
@@ -212,6 +212,8 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .status-noshow{ background:#F7E5E1; color:var(--stamp-dark); }
 .status-pending{ background:#FBF3E1; color:#8A6A1E; }
 .status-partial{ background:#E8EEF5; color:#3E6A96; }
+.status-active{ background:#EAF2EC; color:var(--ledger-dark); }
+.status-inactive{ background:#EFEAE0; color:var(--ink-soft); }
 
 .empty-state{ text-align:center; padding:60px 20px; color:var(--ink-soft); }
 .empty-state .ic{ font-size:38px; margin-bottom:10px; }
@@ -376,16 +378,26 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 /* ---- CRUD cards (services / staff) ---- */
 .crud-card{
   background:var(--white); border:1.5px solid var(--line); border-radius:var(--radius);
-  padding:15px 16px; margin-bottom:12px; display:flex; gap:12px; align-items:flex-start;
+  padding:15px 16px; margin-bottom:12px;
 }
+.crud-card-top{ display:flex; gap:12px; align-items:flex-start; }
 .crud-ic{
   width:40px; height:40px; border-radius:10px; background:var(--paper-2); flex-shrink:0;
   display:flex; align-items:center; justify-content:center; font-size:19px; overflow:hidden;
 }
 .crud-body{ flex:1; min-width:0; }
-.crud-body h4{ margin:0 0 3px; font-size:14.5px; font-weight:700; }
+.crud-body .nm-row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:3px; }
+.crud-body h4{ margin:0; font-size:14.5px; font-weight:700; }
+.crud-tag{ font-size:10.5px; font-weight:700; color:var(--stamp); background:var(--paper-2); padding:2px 8px; border-radius:99px; }
 .crud-body p{ margin:0 0 6px; font-size:12px; color:var(--ink-soft); line-height:1.5; white-space:pre-line; }
 .crud-meta{ font-family:'Space Mono', monospace; font-size:11.5px; color:var(--ledger-dark); display:flex; gap:10px; }
+.crud-status-row{ margin-top:2px; }
+.crud-actions-row{ display:flex; gap:8px; margin-top:12px; }
+.crud-actions-row button{
+  flex:1; font-size:12.5px; font-weight:700; padding:9px 0; border-radius:10px;
+  border:1.5px solid var(--line); background:var(--white); color:var(--ink); cursor:pointer; font-family:inherit;
+}
+.crud-actions-row button.warn{ color:var(--stamp-dark); border-color:var(--stamp-dark); background:transparent; }
 .order-card{ background:var(--white); border:1.5px solid var(--line); border-radius:var(--radius); padding:15px 16px; margin-bottom:12px; }
 .order-card .hd{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
 .order-card .code{ font-family:'Space Mono',monospace; font-size:12px; color:var(--ink-soft); }
@@ -571,7 +583,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 }
 .poster-gen-foot{ padding:16px 20px calc(20px + env(safe-area-inset-bottom)); flex-shrink:0; border-top:1px solid var(--paper-2); }
 .slot-poster{
-  background:radial-gradient(120% 60% at 50% 0%, #FDF6EC 0%, #F7E4CB 55%, #F0D2A8 100%);
+  background:#F3E6C8;
   border-radius:20px; padding:26px 16px 18px; text-align:center;
 }
 .slot-poster .logo{
@@ -637,6 +649,25 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .toggle-opt.active{ background:var(--stamp); border-color:var(--stamp); color:var(--white); }
 .live-save-badge{ font-size:10.5px; color:var(--ledger-dark); background:#EAF2EC; padding:3px 9px; border-radius:99px; }
 .need-save-badge{ font-size:10.5px; color:var(--ink-soft); background:var(--paper-2); padding:3px 9px; border-radius:99px; }
+
+.form-card{
+  background:var(--paper-2); border:1.5px solid var(--line); border-radius:12px; padding:14px; margin-bottom:16px;
+}
+.form-card > .toggle-row-inline{ background:transparent; border:none; padding:0; margin-bottom:0; }
+.form-card .detail{ margin-top:14px; padding-top:14px; border-top:1px solid var(--line); }
+.addon-current-list{ background:var(--white); border-radius:10px; overflow:hidden; }
+.addon-check-row{
+  display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--paper-2); cursor:pointer;
+}
+.addon-check-row:last-child{ border-bottom:none; }
+.addon-check-row input[type=checkbox]{ width:17px; height:17px; flex-shrink:0; accent-color:var(--stamp); }
+.addon-check-row .nm{ flex:1; font-size:13.5px; }
+.addon-check-row .meta{ font-size:11.5px; color:var(--ink-soft); font-family:'Space Mono',monospace; }
+.addon-check-row .del{ color:var(--stamp-dark); font-size:16px; cursor:pointer; padding:0 2px; flex-shrink:0; }
+.addon-empty{ background:var(--white); border-radius:10px; padding:14px; font-size:12.5px; color:var(--ink-soft); text-align:center; }
+.addon-new-box{ background:var(--white); border:1.5px dashed var(--line); border-radius:10px; padding:14px; margin-top:12px; }
+.addon-new-box .field{ margin-bottom:10px; }
+.addon-new-box .field:last-of-type{ margin-bottom:0; }
 .break-row{
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   background:var(--white); border:1.5px solid var(--line); border-radius:10px; padding:11px 14px; margin-bottom:8px;
@@ -1103,13 +1134,62 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
           <div class="field"><label for="svcFormDuration">時長（分鐘）</label><input type="number" id="svcFormDuration" min="5" step="5"></div>
           <div class="field"><label for="svcFormPrice">價格（NT$）</label><input type="number" id="svcFormPrice" min="0" step="10"></div>
         </div>
-        <div class="toggle-row-inline">
-          <div>
-            <div class="tt">需收定金</div>
-            <div class="ds">開啟後，顧客預約這項服務時會看到定金說明與收款資訊（需先在「設定→定金」建立規則）。</div>
+        <div class="field"><label for="svcFormTag">標籤（選填，例如 熱門／新客）</label><input type="text" id="svcFormTag" maxlength="10" placeholder="例如：熱門"></div>
+
+        <div class="section-title" style="margin-bottom:14px; font-size:13px; color:var(--ink-soft);"><span class="lead">加購</span></div>
+        <div class="form-card">
+          <div class="toggle-row-inline">
+            <div><div class="tt">開放加購</div></div>
+            <div class="switch" id="svcAddonSwitch" onclick="toggleSvcAddonCard()"><div class="knob"></div></div>
           </div>
-          <div class="switch" id="svcDepositSwitch" onclick="this.classList.toggle('on')"><div class="knob"></div></div>
+          <div class="detail" id="svcAddonDetail" style="display:none;">
+            <div class="field" style="margin-bottom:14px;">
+              <label>加購選法</label>
+              <div class="toggle-pair">
+                <button type="button" class="toggle-opt" id="svcAddonModeMulti" onclick="setSvcAddonMode('multi')">可複選</button>
+                <button type="button" class="toggle-opt" id="svcAddonModeSingle" onclick="setSvcAddonMode('single')">只能選一個</button>
+              </div>
+              <div class="field-hint">顧客可選的加購數量</div>
+            </div>
+            <div class="field-hint" style="margin-bottom:14px;">改加購的價格/時長會影響所有套用它的服務；已成立的預約金額不變。</div>
+            <div class="field" style="margin-bottom:0;">
+              <label>目前的加購</label>
+              <div id="svcAddonCurrentList"></div>
+            </div>
+            <div class="addon-new-box">
+              <div class="field"><label style="font-size:11.5px;">新增加購項目</label><input type="text" id="svcAddonNewName" placeholder="加購名稱（必填）"></div>
+              <div class="field-row">
+                <div class="field"><input type="number" id="svcAddonNewDuration" min="0" step="5" placeholder="時長（選填）"></div>
+                <div class="field"><input type="number" id="svcAddonNewPrice" min="0" step="10" placeholder="價格（選填）"></div>
+              </div>
+              <button type="button" class="btn btn-primary" style="width:100%;" onclick="addNewAddonAndCheck()">＋ 新增並勾選</button>
+            </div>
+          </div>
         </div>
+
+        <div class="section-title" style="margin-bottom:14px; font-size:13px; color:var(--ink-soft);"><span class="lead">定金</span></div>
+        <div class="form-card">
+          <div class="toggle-row-inline">
+            <div><div class="tt">這個服務需要定金</div></div>
+            <div class="switch" id="svcDepositSwitch" onclick="toggleSvcDepositCard()"><div class="knob"></div></div>
+          </div>
+          <div class="detail" id="svcDepositDetail" style="display:none;">
+            <div class="field-hint" style="margin-bottom:14px;">設定金後，系統會自動開啟全店「需我確認後才成立預約」，讓你收到定金再確認。</div>
+            <div class="field" style="margin-bottom:14px;">
+              <label>定金金額</label>
+              <div class="toggle-pair">
+                <button type="button" class="toggle-opt" id="svcDepositTypeFixed" onclick="setSvcDepositType('fixed')">固定 NT$</button>
+                <button type="button" class="toggle-opt" id="svcDepositTypePercent" onclick="setSvcDepositType('percent')">服務比例 %</button>
+              </div>
+            </div>
+            <div class="field" style="margin-bottom:14px;">
+              <label for="svcFormDepositAmount">定金金額</label>
+              <input type="number" id="svcFormDepositAmount" min="0" step="1" placeholder="NT$">
+            </div>
+            <div class="field-hint">定金以顧客下單當下的服務總額計算並鎖定；之後改價不影響已成立的預約。</div>
+          </div>
+        </div>
+
         <div class="sheet-actions" style="margin-bottom:20px;">
           <button class="btn btn-ghost" id="svcDeleteBtn" style="display:none;" onclick="deleteService()">刪除</button>
           <button class="btn btn-primary" onclick="saveService()">儲存</button>
@@ -2674,6 +2754,9 @@ function setServicesTab(tab){
   document.getElementById('svcOrdersView').style.display = tab==='orders' ? 'block' : 'none';
 }
 let svcCategoryFilter = 'all';
+let svcFormAddonIds = [];
+let svcFormAddonMode = 'multi';
+let svcFormDepositType = 'fixed';
 let prdCategoryFilter = 'all';
 function renderCategoryChips(type){
   const cats = type==='service' ? (BUSINESS.serviceCategories||[]) : (BUSINESS.productCategories||[]);
@@ -2699,19 +2782,28 @@ function renderServicesList(){
     wrap.innerHTML = `<div class="empty-state"><div class="ic">🔖</div><h3>${SERVICES.length===0?'尚未新增服務項目':'這個分類還沒有服務'}</h3><p>${SERVICES.length===0?'新增後，顧客即可在預約頁選擇此服務。':'切換到其他分類，或新增一項服務到這裡。'}</p></div>`;
     return;
   }
-  wrap.innerHTML = list.map(s=>`
+  wrap.innerHTML = list.map(s=>{
+    const active = s.active !== false;
+    return `
     <div class="crud-card">
-      <div class="crud-ic">${s.icon}</div>
-      <div class="crud-body">
-        <h4>${s.name}</h4>
-        <p>${s.desc||''}</p>
-        <div class="crud-meta"><span>⏱ ${s.duration} 分</span><span>$${s.price}</span></div>
+      <div class="crud-card-top">
+        <div class="crud-ic">${s.icon}</div>
+        <div class="crud-body">
+          <div class="nm-row">
+            <h4>${s.name}</h4>
+            ${s.tag ? `<span class="crud-tag">${s.tag}</span>` : ''}
+          </div>
+          <p>${s.desc||''}</p>
+          <div class="crud-meta"><span>⏱ ${s.duration} 分</span><span>$${s.price}</span></div>
+          <div class="crud-status-row"><span class="status-pill ${active?'status-active':'status-inactive'}">${active?'上架中':'已下架'}</span></div>
+        </div>
       </div>
-      <div class="crud-actions">
-        <div class="ic-btn" onclick="openServiceForm('${s.id}')">✎</div>
+      <div class="crud-actions-row">
+        <button onclick="openServiceForm('${s.id}')">編輯</button>
+        <button class="${active?'warn':''}" onclick="toggleServiceActive('${s.id}')">${active?'下架':'上架'}</button>
       </div>
     </div>
-  `).join('');
+  `;}).join('');
 }
 function openServiceForm(id){
   const isEdit = !!id;
@@ -2728,7 +2820,15 @@ function openServiceForm(id){
     catSel.value = s.category || '';
     document.getElementById('svcFormDuration').value = s.duration;
     document.getElementById('svcFormPrice').value = s.price;
+    document.getElementById('svcFormTag').value = s.tag || '';
+    svcFormAddonIds = [...(s.addonIds||[])];
+    svcFormAddonMode = s.addonMode || 'multi';
+    document.getElementById('svcAddonSwitch').classList.toggle('on', s.addonsEnabled === true);
+    document.getElementById('svcAddonDetail').style.display = s.addonsEnabled === true ? 'block' : 'none';
+    svcFormDepositType = s.depositAmountType || 'fixed';
     document.getElementById('svcDepositSwitch').classList.toggle('on', s.depositRequired === true);
+    document.getElementById('svcDepositDetail').style.display = s.depositRequired === true ? 'block' : 'none';
+    document.getElementById('svcFormDepositAmount').value = s.depositAmount || '';
   } else {
     document.getElementById('svcFormId').value = '';
     document.getElementById('svcFormIcon').value = '🔹';
@@ -2737,8 +2837,22 @@ function openServiceForm(id){
     catSel.value = '';
     document.getElementById('svcFormDuration').value = 30;
     document.getElementById('svcFormPrice').value = 0;
+    document.getElementById('svcFormTag').value = '';
+    svcFormAddonIds = [];
+    svcFormAddonMode = 'multi';
+    document.getElementById('svcAddonSwitch').classList.remove('on');
+    document.getElementById('svcAddonDetail').style.display = 'none';
+    svcFormDepositType = 'fixed';
     document.getElementById('svcDepositSwitch').classList.remove('on');
+    document.getElementById('svcDepositDetail').style.display = 'none';
+    document.getElementById('svcFormDepositAmount').value = '';
   }
+  setSvcAddonMode(svcFormAddonMode);
+  setSvcDepositType(svcFormDepositType);
+  renderSvcAddonCurrentList();
+  document.getElementById('svcAddonNewName').value = '';
+  document.getElementById('svcAddonNewDuration').value = '';
+  document.getElementById('svcAddonNewPrice').value = '';
   goScreen('service-form');
 }
 function closeServiceForm(){ goScreen('services', {noPush:true}); }
@@ -2746,6 +2860,7 @@ async function saveService(){
   const id = document.getElementById('svcFormId').value;
   const name = document.getElementById('svcFormName').value.trim();
   if(!name){ showToast('請輸入服務名稱'); return; }
+  const depositOn = document.getElementById('svcDepositSwitch').classList.contains('on');
   const svc = {
     icon: document.getElementById('svcFormIcon').value.trim() || '🔹',
     name,
@@ -2753,15 +2868,98 @@ async function saveService(){
     category: document.getElementById('svcFormCategory').value || '',
     duration: Number(document.getElementById('svcFormDuration').value) || 30,
     price: Number(document.getElementById('svcFormPrice').value) || 0,
-    depositRequired: document.getElementById('svcDepositSwitch').classList.contains('on'),
+    tag: document.getElementById('svcFormTag').value.trim(),
+    addonsEnabled: document.getElementById('svcAddonSwitch').classList.contains('on'),
+    addonMode: svcFormAddonMode,
+    addonIds: [...svcFormAddonIds],
+    depositRequired: depositOn,
+    depositAmountType: svcFormDepositType,
+    depositAmount: Number(document.getElementById('svcFormDepositAmount').value) || 0,
     order: id ? (SERVICES.find(s=>s.id===id)?.order ?? SERVICES.length) : SERVICES.length
   };
   try{
     if(id){ await db.collection('services').doc(id).update(svc); }
     else{ await db.collection('services').add(svc); }
+    // 開啟定金的服務，比照提示文字自動開啟全店「需我確認後才成立預約」，讓商家收到定金再確認
+    if(depositOn && BUSINESS.requireConfirm === false){
+      await db.collection('meta').doc('business').set({ requireConfirm: true }, { merge:true });
+    }
     closeServiceForm();
     showToast('服務已儲存');
   }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
+}
+/* ---- 服務表單：加購卡片 ---- */
+function toggleSvcAddonCard(){
+  const sw = document.getElementById('svcAddonSwitch');
+  sw.classList.toggle('on');
+  document.getElementById('svcAddonDetail').style.display = sw.classList.contains('on') ? 'block' : 'none';
+}
+function setSvcAddonMode(mode){
+  svcFormAddonMode = mode;
+  document.getElementById('svcAddonModeMulti').classList.toggle('active', mode==='multi');
+  document.getElementById('svcAddonModeSingle').classList.toggle('active', mode==='single');
+}
+function renderSvcAddonCurrentList(){
+  const wrap = document.getElementById('svcAddonCurrentList');
+  if(!wrap) return;
+  const addons = BUSINESS.addons || [];
+  if(addons.length===0){
+    wrap.innerHTML = `<div class="addon-empty">還沒有加購，新增第一個</div>`;
+    return;
+  }
+  wrap.innerHTML = `<div class="addon-current-list">${addons.map(a=>`
+    <label class="addon-check-row">
+      <input type="checkbox" ${svcFormAddonIds.includes(a.id)?'checked':''} onchange="toggleSvcAddonChecked('${a.id}', this.checked)">
+      <span class="nm">${a.name}</span>
+      <span class="meta">${a.duration?a.duration+' 分':''}${a.duration&&a.price?' · ':''}${a.price?'$'+a.price:''}</span>
+      <span class="del" onclick="event.preventDefault(); deleteAddonGlobal('${a.id}')">✕</span>
+    </label>
+  `).join('')}</div>`;
+}
+function toggleSvcAddonChecked(id, checked){
+  if(checked){ if(!svcFormAddonIds.includes(id)) svcFormAddonIds.push(id); }
+  else { svcFormAddonIds = svcFormAddonIds.filter(x=>x!==id); }
+}
+async function addNewAddonAndCheck(){
+  const name = document.getElementById('svcAddonNewName').value.trim();
+  if(!name){ showToast('請輸入加購名稱'); return; }
+  const duration = Number(document.getElementById('svcAddonNewDuration').value) || 0;
+  const price = Number(document.getElementById('svcAddonNewPrice').value) || 0;
+  const newAddon = { id: 'a_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), name, duration, price };
+  const addons = [...(BUSINESS.addons||[]), newAddon];
+  try{
+    await db.collection('meta').doc('business').set({ addons }, { merge:true });
+    BUSINESS.addons = addons;
+    svcFormAddonIds.push(newAddon.id);
+    document.getElementById('svcAddonNewName').value = '';
+    document.getElementById('svcAddonNewDuration').value = '';
+    document.getElementById('svcAddonNewPrice').value = '';
+    renderSvcAddonCurrentList();
+    showToast('加購已新增並勾選');
+  }catch(err){ showToast('新增失敗，請檢查網路連線後再試'); }
+}
+async function deleteAddonGlobal(id){
+  if(!confirm('確定要刪除這個加購項目嗎？已套用它的服務會自動移除這個加購。')) return;
+  const addons = (BUSINESS.addons||[]).filter(a=>a.id!==id);
+  try{
+    await db.collection('meta').doc('business').set({ addons }, { merge:true });
+    BUSINESS.addons = addons;
+    svcFormAddonIds = svcFormAddonIds.filter(x=>x!==id);
+    renderSvcAddonCurrentList();
+    showToast('加購已刪除');
+  }catch(err){ showToast('刪除失敗，請檢查網路連線後再試'); }
+}
+/* ---- 服務表單：定金卡片 ---- */
+function toggleSvcDepositCard(){
+  const sw = document.getElementById('svcDepositSwitch');
+  sw.classList.toggle('on');
+  document.getElementById('svcDepositDetail').style.display = sw.classList.contains('on') ? 'block' : 'none';
+}
+function setSvcDepositType(type){
+  svcFormDepositType = type;
+  document.getElementById('svcDepositTypeFixed').classList.toggle('active', type==='fixed');
+  document.getElementById('svcDepositTypePercent').classList.toggle('active', type==='percent');
+  document.getElementById('svcFormDepositAmount').placeholder = type==='percent' ? '例如：30（代表 30%）' : 'NT$';
 }
 async function deleteService(){
   const id = document.getElementById('svcFormId').value;
@@ -2772,6 +2970,17 @@ async function deleteService(){
     closeServiceForm();
     showToast('服務已刪除');
   }catch(err){ showToast('刪除失敗，請檢查網路連線後再試'); }
+}
+/* 上架／下架：下架的服務、商品不會從資料庫刪除，只是顧客端不會再顯示出來，
+   商家隨時可以再上架 */
+async function toggleServiceActive(id){
+  const s = SERVICES.find(x=>x.id===id);
+  if(!s) return;
+  const nextActive = !(s.active !== false);
+  try{
+    await db.collection('services').doc(id).update({ active: nextActive });
+    showToast(nextActive ? '已重新上架' : '已下架');
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
 
 /* ============================================================
@@ -2785,19 +2994,25 @@ function renderProductsList(){
     wrap.innerHTML = `<div class="empty-state"><div class="ic">🛍️</div><h3>${PRODUCTS.length===0?'尚未新增商品項目':'這個分類還沒有商品'}</h3><p>${PRODUCTS.length===0?'新增後可用於店內銷售或未來上架使用。':'切換到其他分類，或新增一項商品到這裡。'}</p></div>`;
     return;
   }
-  wrap.innerHTML = list.map(p=>`
+  wrap.innerHTML = list.map(p=>{
+    const active = p.active !== false;
+    return `
     <div class="crud-card">
-      <div class="crud-ic">${p.image ? `<img src="${p.image}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">` : p.icon}</div>
-      <div class="crud-body">
-        <h4>${p.name}</h4>
-        <p>${p.desc||''}</p>
-        <div class="crud-meta"><span>$${p.price}</span>${p.stock!==null && p.stock!==undefined && p.stock!=='' ? `<span>庫存 ${p.stock}</span>` : ''}</div>
+      <div class="crud-card-top">
+        <div class="crud-ic">${p.image ? `<img src="${p.image}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">` : p.icon}</div>
+        <div class="crud-body">
+          <div class="nm-row"><h4>${p.name}</h4></div>
+          <p>${p.desc||''}</p>
+          <div class="crud-meta"><span>$${p.price}</span>${p.stock!==null && p.stock!==undefined && p.stock!=='' ? `<span>庫存 ${p.stock}</span>` : ''}</div>
+          <div class="crud-status-row"><span class="status-pill ${active?'status-active':'status-inactive'}">${active?'上架中':'已下架'}</span></div>
+        </div>
       </div>
-      <div class="crud-actions">
-        <div class="ic-btn" onclick="openProductForm('${p.id}')">✎</div>
+      <div class="crud-actions-row">
+        <button onclick="openProductForm('${p.id}')">編輯</button>
+        <button class="${active?'warn':''}" onclick="toggleProductActive('${p.id}')">${active?'下架':'上架'}</button>
       </div>
     </div>
-  `).join('');
+  `;}).join('');
 }
 /* ---- 商品訂單管理 ---- */
 function setOrderFilter(status){
@@ -3046,6 +3261,15 @@ async function deleteProduct(){
     closeProductForm();
     showToast('商品已刪除');
   }catch(err){ showToast('刪除失敗，請檢查網路連線後再試'); }
+}
+async function toggleProductActive(id){
+  const p = PRODUCTS.find(x=>x.id===id);
+  if(!p) return;
+  const nextActive = !(p.active !== false);
+  try{
+    await db.collection('products').doc(id).update({ active: nextActive });
+    showToast(nextActive ? '已重新上架' : '已下架');
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
 
 /* ============================================================
@@ -3514,10 +3738,8 @@ async function downloadSlotPoster(){
   const ctx = canvas.getContext('2d');
   ctx.textAlign = 'center';
 
-  // 背景：米杏色放射狀漸層，跟參考圖一致的暖色調
-  const grad = ctx.createRadialGradient(W/2, 0, 0, W/2, 0, H*0.9);
-  grad.addColorStop(0, '#FDF6EC'); grad.addColorStop(0.55, '#F7E4CB'); grad.addColorStop(1, '#F0D2A8');
-  ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+  // 背景：淺奶茶色平塗，不用漸層
+  ctx.fillStyle = '#F3E6C8'; ctx.fillRect(0,0,W,H);
 
   let cy = 26*S;
   // logo（帶白色圓環，跟預覽的 box-shadow 效果一致）
