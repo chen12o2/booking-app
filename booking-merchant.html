@@ -2269,6 +2269,7 @@ function renderCustomerDetailScreen(){
         <div class="pkg-progress">已用 ${p.used} / ${p.total} 堂${p.paidAmount ? ' ・ 實收 NT$'+p.paidAmount.toLocaleString() : ''}</div>
         <div class="pkg-actions">
           ${p.used < p.total ? `<button class="btn btn-outline btn-sm" onclick="usePackageSession('${p.id}')">使用一堂</button>` : `<span class="status-pill status-inactive">已用完</span>`}
+          <button class="btn btn-outline btn-sm" onclick="openPackageForm('${p.id}')">編輯</button>
           <button class="btn btn-ghost btn-sm" onclick="deletePackage('${p.id}')">刪除</button>
         </div>
       </div>
@@ -2626,28 +2627,40 @@ async function deleteBalanceLogEntry(idx){
 }
 /* ---- 套組：堂數制，跟金額無關，用掉一堂扣一堂 ---- */
 let packageFormOpen = false;
+let packageFormEditId = null;
 function togglePackageForm(){
+  packageFormEditId = null;
   packageFormOpen = !packageFormOpen;
   renderPackageForm();
+}
+function openPackageForm(pkgId){
+  packageFormEditId = pkgId;
+  packageFormOpen = true;
+  renderPackageForm();
+  document.getElementById('packageForm').scrollIntoView({behavior:'smooth', block:'center'});
 }
 function renderPackageForm(){
   const box = document.getElementById('packageForm');
   if(!packageFormOpen){ box.innerHTML=''; return; }
   const names = BUSINESS.packageNamePresets || [];
   const gifts = (BUSINESS.giftPresets||[]).filter(g=>g.type!=='cash');
+  const c = loadCustomers().find(x=>x.id===currentCustomerDetailId);
+  const editing = packageFormEditId ? (c && (c.packages||[]).find(p=>p.id===packageFormEditId)) : null;
   box.innerHTML = `
+    ${editing ? `<div class="cust-section-hd" style="margin-top:10px;"><h4>編輯套組</h4></div>` : ''}
     <div class="field" style="margin-top:10px;">
       <label>套組名稱 <a onclick="togglePkgNameManager()" style="font-size:11px; font-weight:400; text-decoration:underline; cursor:pointer; margin-left:6px;">管理</a></label>
       <select id="pkgNameSelect" onchange="handlePkgNameSelectChange()">
         <option value="">請選擇</option>
-        ${names.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('')}
+        ${names.map(n=>`<option value="${n.replace(/"/g,'&quot;')}" ${editing && editing.name===n ? 'selected':''}>${n}</option>`).join('')}
         <option value="__new__">＋ 新增名稱…</option>
       </select>
     </div>
     <div id="pkgNameManagerBox"></div>
     <div id="pkgNameNewForm"></div>
-    <div class="field"><label>總堂數</label><input type="number" id="pkgTotal" placeholder="例如 6"></div>
-    <div class="field"><label>實收金額</label><input type="number" id="pkgPaidAmount" placeholder="這次顧客實際付了多少錢（計入營業額）"></div>
+    <div class="field"><label>總堂數</label><input type="number" id="pkgTotal" placeholder="例如 6" value="${editing ? editing.total : ''}"></div>
+    <div class="field"><label>實收金額</label><input type="number" id="pkgPaidAmount" placeholder="這次顧客實際付了多少錢（計入營業額）" value="${editing && editing.paidAmount ? editing.paidAmount : ''}"></div>
+    ${editing ? '' : `
     <div class="field">
       <label>贈送（選填） <a onclick="togglePkgGiftManager()" style="font-size:11px; font-weight:400; text-decoration:underline; cursor:pointer; margin-left:6px;">管理</a></label>
       <select id="pkgGiftSelect" onchange="handlePkgGiftSelectChange()">
@@ -2657,9 +2670,15 @@ function renderPackageForm(){
       </select>
     </div>
     <div id="pkgGiftManagerBox"></div>
+    <div class="field-hint" id="pkgGiftPreview"></div>
     <div id="pkgGiftNewForm"></div>
-    <div class="field"><label>備註（選填）</label><input type="text" id="pkgNote" placeholder="例如：加贈舒緩乳一瓶"></div>
-    <button class="btn btn-primary" style="width:100%;" onclick="submitPackageForm()">新增套組</button>
+    `}
+    <div class="field"><label>備註（選填）</label><input type="text" id="pkgNote" placeholder="例如：加贈舒緩乳一瓶" value="${editing ? (editing.note||'').replace(/"/g,'&quot;') : ''}"></div>
+    ${editing ? `<div class="field-hint">編輯不會重新套用贈送選項，如果要補贈可以直接把「總堂數」加上去。已使用堂數（${editing.used}）不會變動。</div>` : ''}
+    <div class="sheet-actions">
+      ${editing ? `<button class="btn btn-outline" onclick="togglePackageForm()">取消</button>` : ''}
+      <button class="btn btn-primary" style="${editing?'':'width:100%;'}" onclick="submitPackageForm()">${editing ? '儲存修改' : '新增套組'}</button>
+    </div>
   `;
   renderPkgNameManager();
   renderPkgGiftManager();
@@ -2728,7 +2747,9 @@ function renderPkgGiftManager(){
 function handlePkgGiftSelectChange(){
   const sel = document.getElementById('pkgGiftSelect');
   const box = document.getElementById('pkgGiftNewForm');
+  const preview = document.getElementById('pkgGiftPreview');
   if(sel.value==='__new__'){
+    if(preview) preview.textContent = '';
     box.innerHTML = `
       <div class="field"><label>贈送類型</label>
         <select id="newPkgGiftType" onchange="renderNewPkgGiftFields()">
@@ -2743,6 +2764,20 @@ function handlePkgGiftSelectChange(){
     renderNewPkgGiftFields();
   } else {
     box.innerHTML = '';
+    if(preview){
+      if(!sel.value){
+        preview.textContent = '';
+      } else {
+        const g = (BUSINESS.giftPresets||[]).find(x=>x.id===sel.value);
+        if(g && g.type==='sessions'){
+          preview.textContent = `儲存後這個套組的總堂數會自動 +${g.qty} 堂。`;
+        } else if(g && g.type==='product'){
+          preview.textContent = `儲存後會自動建立一筆 NT$0 的商品訂單：${g.productName} × ${g.qty}，請記得之後到「商品訂單」安排出貨。`;
+        } else {
+          preview.textContent = '';
+        }
+      }
+    }
   }
 }
 function renderNewPkgGiftFields(){
@@ -2821,6 +2856,18 @@ async function submitPackageForm(){
   if(!name || name==='__new__' || !total || total<=0){ showToast('請選擇套組名稱並填寫總堂數'); return; }
   const c = loadCustomers().find(x=>x.id===currentCustomerDetailId);
   if(!c) return;
+
+  if(packageFormEditId){
+    const packages = (c.packages||[]).map(p=> p.id===packageFormEditId ? { ...p, name, total: Math.max(total, p.used), paidAmount, note } : p);
+    try{
+      await db.collection('customers').doc(c.id).update({ packages });
+      showToast('已儲存修改');
+      packageFormOpen = false;
+      packageFormEditId = null;
+      renderCustomerDetailScreen();
+    }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+    return;
+  }
 
   const giftSel = document.getElementById('pkgGiftSelect');
   const giftId = giftSel ? giftSel.value : '';
