@@ -2302,7 +2302,7 @@ async function shareOrDownloadBlob(blob, filename, downloadedToast){
     try{
       const file = new File([blob], filename, { type: blob.type });
       if(navigator.canShare({ files:[file] })){
-        await navigator.share({ files:[file], title: filename });
+        await navigator.share({ files:[file] });
         return;
       }
     }catch(err){
