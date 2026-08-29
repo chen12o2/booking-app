@@ -653,7 +653,6 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
     <!-- ============ CONFIRMATION ============ -->
     <section class="screen" id="screen-confirm">
       <div class="ticket" id="confirmTicket"></div>
-      <div id="confirmRemind"></div>
       <button class="btn btn-outline" style="width:100%; margin-bottom:10px;" onclick="downloadIcs(lastBooking)">＋ 加入行事曆</button>
       <button class="btn btn-ghost" style="width:100%; margin-bottom:10px;" onclick="shareBooking(lastBooking)">分享預約資訊</button>
       <button class="btn btn-primary" style="width:100%;" onclick="backToHomeAfterConfirm()">回到首頁</button>
@@ -1750,7 +1749,7 @@ function renderInfoSummary(){
     document.getElementById('custName').value = me.name || '';
     document.getElementById('custPhone').value = me.phone || '';
     document.getElementById('custLineId').value = me.lineId || '';
-    document.getElementById('custBirthday').value = me.birthday || '';
+    document.getElementById('custBirthday').value = me.birthday || fmtDateKey(new Date());
     document.getElementById('custGender').value = me.gender || '';
     document.getElementById('custEmail').value = me.email || '';
     infoPrefilled = true;
@@ -1897,11 +1896,11 @@ function sealText(s){
   return { pending:'待<br>確認', upcoming:'已<br>確認', done:'已<br>完成', cancelled:'已<br>取消', noshow:'未<br>到' }[s] || statusLabel(s);
 }
 function renderConfirmTicket(b){
-  document.getElementById('confirmTicket').innerHTML = ticketHtml(b, true);
   const canAct = (b.status==='upcoming'||b.status==='pending') && !b.cancelRequested;
-  document.getElementById('confirmRemind').innerHTML = canAct
-    ? `<div class="ticket-remind">📌 送出預約後，記得將下方的分享預約資訊傳給官方，這樣才算完成送出預約噢～</div>`
+  const remindHtml = canAct
+    ? `<div class="ticket-remind" style="margin-top:14px;">📌 送出預約後，記得將下方的分享預約資訊傳給官方，這樣才算完成送出預約噢～</div>`
     : '';
+  document.getElementById('confirmTicket').innerHTML = ticketHtml(b, true, remindHtml);
 }
 function bookingServices(b){
   if(b.services && b.services.length) return b.services;
@@ -1911,7 +1910,7 @@ function bookingServices(b){
 function bookingTotal(b){
   return bookingServices(b).reduce((sum,s)=>sum+(s.price||0),0);
 }
-function ticketHtml(b, big){
+function ticketHtml(b, big, extraHtml){
   let perfCircles = '';
   for(let i=0;i<10;i++){ perfCircles += '<div class="circle"></div>'; }
   const svcs = bookingServices(b);
@@ -1938,6 +1937,7 @@ function ticketHtml(b, big){
       <div class="ticket-row"><span class="lbl">狀態</span><span class="val"><span class="status-pill ${statusClass(b.status)}">${statusLabel(b.status)}</span></span></div>
       ${b.cancelRequested ? `<div class="ticket-row"><span class="lbl"></span><span class="val" style="font-size:11px; color:var(--ink-soft);">已送出取消申請，待商家確認</span></div>` : ''}
       <div class="ticket-code mono">${b.code}</div>
+      ${extraHtml || ''}
     </div>
   `;
 }
