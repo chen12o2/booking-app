@@ -1322,7 +1322,7 @@ function goStep(id){ goScreen(id); }
    服務人員就用預設的第一位（單人工作室的常見情境） */
 function goStepAfterService(){
   if(BUSINESS.enableStaffSelection === false){
-    if(!state.staff) state.staff = STAFF[0];
+    state.staff = STAFF[0];
     goStep('datetime');
   } else {
     goStep('staff');
@@ -1600,7 +1600,8 @@ function isDateWithinOpenWindow(dateKey){
 }
 function renderTimeGrid(){
   const wrap = document.getElementById('timeGrid');
-  if(!state.date){ wrap.innerHTML=''; return; }
+  const nextBtn = document.getElementById('dtNextBtn');
+  if(!state.date){ wrap.innerHTML=''; if(nextBtn) nextBtn.disabled = true; return; }
   const [wy,wm,wd] = state.date.split('-').map(Number);
   const weekday = new Date(wy,wm-1,wd).getDay();
   const breakEntry = (BUSINESS.breaks || []).find(b=>breakAppliesToDate(b, state.date, weekday) && (b.allDay===true || !b.ranges || b.ranges.length===0));
@@ -1608,6 +1609,7 @@ function renderTimeGrid(){
   if(!hours){
     const msg = breakEntry ? (breakEntry.label || '休息') : '本日公休';
     wrap.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="ic">\u{1F634}</div><h3>${msg}</h3><p>這一天沒有營業，請改選其他日期</p></div>`;
+    if(nextBtn) nextBtn.disabled = true;
     return;
   }
   const [y,m,d] = state.date.split('-').map(Number);
@@ -1631,6 +1633,7 @@ function renderTimeGrid(){
     html += `<div class="time-slot ${disabled?'disabled':sel}" ${disabled?'':`onclick="pickTime('${label}')"`}>${label}</div>`;
   }
   wrap.innerHTML = html || `<div class="empty-state" style="grid-column:1/-1;"><p>這一天目前沒有可預約的時段</p></div>`;
+  if(nextBtn) nextBtn.disabled = !(state.date && state.time);
 }
 function pickTime(label){
   state.time = label;
@@ -2085,6 +2088,7 @@ async function submitReschedule(){
   }catch(err){ showToast('改期失敗，請檢查網路連線後再試'); }
 }
 function dtNext(){
+  if(!state.date || !state.time){ showToast('請選擇日期與時間'); return; }
   if(rescheduleBookingId){ submitReschedule(); } else { goStep('info'); }
 }
 

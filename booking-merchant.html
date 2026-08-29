@@ -68,6 +68,7 @@ body{
   letter-spacing:.5px; display:flex; align-items:center; gap:6px; min-width:0;
 }
 .topbar h1 .topbar-ic{ font-size:15px; flex-shrink:0; }
+.topbar h1 .topbar-ic img{ width:18px; height:18px; border-radius:50%; object-fit:cover; display:block; }
 .topbar h1 #topbarBrandName{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .back-btn{
   width:34px; height:34px; border-radius:50%;
@@ -244,6 +245,16 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
   background:#FBF3E1; border:1.5px solid #E8D49A; border-radius:10px; padding:12px 14px;
   font-size:13px; font-weight:700; color:#8A6A1E; line-height:1.6; margin-bottom:14px;
 }
+.dup-card{
+  background:#FBF3E1; border:1.5px solid #E8D49A; border-radius:12px; padding:14px 16px; margin:10px 0 4px;
+}
+.dup-hd{ font-size:13.5px; font-weight:700; color:#8A6A1E; margin-bottom:4px; }
+.dup-desc{ font-size:11.5px; color:#8A6A1E; line-height:1.6; margin-bottom:12px; }
+.dup-item{ background:var(--white); border:1.5px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:8px; }
+.dup-item:last-child{ margin-bottom:0; }
+.dup-name{ font-size:13.5px; font-weight:700; margin-bottom:2px; }
+.dup-meta{ font-size:11.5px; color:var(--ink-soft); margin-bottom:2px; }
+.dup-actions{ display:flex; gap:8px; margin-top:10px; }
 .status-noshow{ background:#F7E5E1; color:var(--stamp-dark); }
 .status-pending{ background:#FBF3E1; color:#8A6A1E; }
 .status-partial{ background:#E8EEF5; color:#3E6A96; }
@@ -901,7 +912,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 
     <div class="topbar" id="topbar">
       <div id="backBtnWrap"></div>
-      <h1 id="topbarTitle"><span class="topbar-ic">🏷️</span> <span id="topbarBrandName">總覽</span></h1>
+      <h1 id="topbarTitle"><span class="topbar-ic" id="topbarLogo">🏷️</span> <span id="topbarBrandName">總覽</span></h1>
       <span class="tag" onclick="lockApp()" style="cursor:pointer;">🔒 鎖定</span>
     </div>
 
@@ -1776,6 +1787,7 @@ function startListeners(){
       BUSINESS = snap.exists ? {...DEFAULT_BUSINESS, ...snap.data()} : {...DEFAULT_BUSINESS};
       const brandEl = document.getElementById('topbarBrandName');
       if(brandEl) brandEl.textContent = BUSINESS.name || '商家後台';
+      renderLogo();
       rerenderActiveScreen();
       const catModal = document.getElementById('categoryManagerBackdrop');
       if(catModal && catModal.classList.contains('show')) renderCategoryManagerList();
@@ -2457,6 +2469,7 @@ function renderCustomerDetailScreen(){
     ` : ''}
 
     <div class="cust-section-hd"><h4>聯絡資料</h4><a onclick="openCustomerForm('${c.id}')">編輯聯絡資料</a></div>
+    ${renderDuplicateCustomerCard(c)}
 
     <div class="cust-section-hd" style="margin-top:22px;"><h4>儲值金</h4></div>
     <div class="wallet-card">
@@ -2524,6 +2537,67 @@ function renderCustomerDetailScreen(){
       <button class="btn btn-danger" style="width:100%;" onclick="deleteCustomerFromDetail('${c.id}')">刪除客戶</button>
     </div>
   `;
+}
+/* ============================================================
+   重複會員偵測與合併：依電話號碼比對出可能是同一人的其他客戶紀錄，
+   合併後來源客戶會被刪除，預約／訂單會全部改掛到目前這筆客戶名下，
+   儲值金與套組堂數也會一併併入（用加總／合併陣列的方式，不會憑空消失）
+   ============================================================ */
+function findDuplicateCustomers(c){
+  const norm = s => (s||'').replace(/[-\s]/g,'');
+  const myPhone = norm(c.phone);
+  if(!myPhone) return [];
+  return loadCustomers().filter(x=>x.id!==c.id && norm(x.phone)===myPhone);
+}
+function renderDuplicateCustomerCard(c){
+  const dupes = findDuplicateCustomers(c);
+  if(dupes.length===0) return '';
+  return `
+    <div class="dup-card">
+      <div class="dup-hd">可能重複的會員資料</div>
+      <div class="dup-desc">依電話比對到相同資料；確認後可把右側客戶合併到目前這筆。</div>
+      ${dupes.map(d=>`
+        <div class="dup-item">
+          <div class="dup-name">${d.name||'（未提供姓名）'}</div>
+          <div class="dup-meta">${d.phone||'—'}${d.email ? '　'+d.email : ''}</div>
+          <div class="dup-meta">建立於 ${(d.createdAt||'').slice(0,10)}</div>
+          <div class="dup-actions">
+            <button class="btn btn-outline btn-sm" onclick="openCustomerDetail('${d.id}')">查看</button>
+            <button class="btn btn-primary btn-sm" onclick="mergeCustomerInto('${d.id}','${c.id}')">合併到這筆</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+async function mergeCustomerInto(sourceId, targetId){
+  if(!confirm('確認要把這筆客戶合併到目前客戶嗎？來源客戶會被刪除，預約與訂單紀錄會移到目前客戶。')) return;
+  const source = loadCustomers().find(x=>x.id===sourceId);
+  const target = loadCustomers().find(x=>x.id===targetId);
+  if(!source || !target){ showToast('找不到客戶資料，請重新整理後再試'); return; }
+  try{
+    const [bookingsSnap, ordersSnap] = await Promise.all([
+      db.collection('bookings').where('customerId','==',sourceId).get(),
+      db.collection('orders').where('customerId','==',sourceId).get()
+    ]);
+    const batch = db.batch();
+    bookingsSnap.forEach(doc=> batch.update(doc.ref, { customerId: targetId }));
+    ordersSnap.forEach(doc=> batch.update(doc.ref, { customerId: targetId }));
+    // 儲值金／套組來源如果剛好有累積，一併併入目前客戶，不要因為刪除來源而憑空消失
+    batch.update(db.collection('customers').doc(targetId), {
+      balance: (target.balance||0) + (source.balance||0),
+      packages: [...(target.packages||[]), ...(source.packages||[])],
+      balanceLog: [...(target.balanceLog||[]), ...(source.balanceLog||[])]
+    });
+    batch.delete(db.collection('customers').doc(sourceId));
+    await batch.commit();
+    showToast('已合併，來源客戶已刪除');
+    currentCustomerDetailId = targetId;
+    renderCustomerDetailScreen();
+  }catch(err){
+    showToast('合併失敗，請檢查網路連線後再試');
+    console.error(err);
+  }
 }
 async function saveInternalNote(id){
   const note = document.getElementById('custDetailNote').value.trim();
@@ -5576,9 +5650,22 @@ async function downloadSlotPoster(){
 /* 手機瀏覽器（尤其 iOS Safari）常常不支援 <a download> 搭配 data: URL 觸發下載，
    改成開新分頁顯示圖片，讓使用者長按「儲存至照片」；桌面瀏覽器則走正常下載 */
 function downloadCanvasImage(canvas, filename){
-  const dataUrl = canvas.toDataURL('image/png');
-  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
-  if(isIOS){
+  // 改用 Blob URL（跟 CSV 匯出同一套機制）而不是 data URL：
+  // iOS Safari 對 <a download> 搭配 data: URL 常常沒有反應或行為不一致，
+  // 但 Blob URL 就跟一般檔案下載一樣穩定，兩邊都用同一招最保險
+  if(canvas.toBlob){
+    canvas.toBlob(blob=>{
+      if(!blob){ showToast('圖片產生失敗，請再試一次'); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('圖片已下載');
+    }, 'image/png');
+  } else {
+    // 極舊瀏覽器沒有 toBlob 支援時的備援：開新視窗、長按圖片儲存
+    const dataUrl = canvas.toDataURL('image/png');
     const win = window.open('', '_blank');
     if(win){
       win.document.write(`<html><head><title>${filename}</title></head><body style="margin:0; background:#111; display:flex; align-items:center; justify-content:center;"><img src="${dataUrl}" style="max-width:100%; height:auto;"></body></html>`);
@@ -5587,12 +5674,6 @@ function downloadCanvasImage(canvas, filename){
     } else {
       showToast('請允許彈出視窗，或改用長按上方預覽圖儲存');
     }
-  } else {
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    showToast('圖片已下載');
   }
 }
 function roundRect(ctx,x,y,w,h,r){
@@ -6804,10 +6885,12 @@ function renderLogo(){
   const heroEl = document.getElementById('heroLogo');
   const previewEl = document.getElementById('logoPreview');
   const removeBtn = document.getElementById('removeLogoBtn');
+  const topbarEl = document.getElementById('topbarLogo');
   const initial = (BUSINESS.name || '店').slice(0,1);
   if(heroEl){ heroEl.innerHTML = logo ? `<img src="${logo}" alt="Logo">` : initial; }
   if(previewEl){ previewEl.innerHTML = logo ? `<img src="${logo}" alt="Logo">` : '🏷️'; }
   if(removeBtn){ removeBtn.style.display = logo ? 'block' : 'none'; }
+  if(topbarEl){ topbarEl.innerHTML = logo ? `<img src="${logo}" alt="Logo">` : '🏷️'; }
 }
 
 /* ---- canvas 海報產生器 ---- */
