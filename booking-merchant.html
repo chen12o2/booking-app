@@ -504,6 +504,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .cal-month-sep::after{ content:''; flex:1; height:1px; background:var(--line); }
 .cal-day-sep{
   display:flex; align-items:baseline; gap:10px; margin:18px 0 10px;
+  scroll-margin-top: calc(84px + env(safe-area-inset-top));
 }
 .cal-day-sep .wd{ font-size:12px; color:var(--ink-soft); }
 .cal-day-sep .dt{ font-size:16px; font-weight:700; }
