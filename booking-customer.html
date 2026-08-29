@@ -498,6 +498,10 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
             <label for="loginPhone">手機號碼</label>
             <input type="tel" id="loginPhone" placeholder="0912-345-678" oninput="formatPhoneInput(this)">
           </div>
+          <div class="field" id="loginLineIdField">
+            <label for="loginLineId" id="loginLineIdLabel">LINE ID</label>
+            <input type="text" id="loginLineId" placeholder="請輸入您的 LINE ID">
+          </div>
         </div>
         <button class="btn btn-primary" id="loginBtn" onclick="submitCustLogin()">登入</button>
         <div style="display:flex; justify-content:space-between; margin-top:10px;">
@@ -939,6 +943,10 @@ function startPublicListeners(){
       document.title = BUSINESS.name + ' — 線上預約';
       renderLogo();
       rerenderActiveScreen();
+      // 商家資訊（含 LINE ID 必填/選填設定）如果是在顧客還停留在登入/註冊畫面時才讀取完成，
+      // 上面的 rerenderActiveScreen 不會處理到登入畫面，這裡額外補一次
+      const loginScreen = document.getElementById('screen-login');
+      if(loginScreen && loginScreen.classList.contains('active')) renderCustLoginScreen();
     }, err=>console.error('business listener', err))
   );
   unsubscribers.push(
@@ -1063,6 +1071,18 @@ function renderCustLoginScreen(){
   document.getElementById('loginBtn').textContent = setupMode ? '註冊並登入' : '登入';
   document.getElementById('loginToggleMode').textContent = setupMode ? '已經有帳號了？直接登入' : '還沒有帳號？註冊新帳號';
   document.getElementById('forgotPassBtn').style.display = setupMode ? 'none' : 'inline';
+  if(setupMode){
+    // LINE ID 這欄跟預約流程共用同一個「必填/選填/不用填」設定，商家後台改了這裡就要跟著變
+    const lineIdMode = BUSINESS.fieldLineId || 'optional';
+    const fieldEl = document.getElementById('loginLineIdField');
+    const labelEl = document.getElementById('loginLineIdLabel');
+    if(lineIdMode==='off'){
+      fieldEl.style.display = 'none';
+    } else {
+      fieldEl.style.display = 'block';
+      labelEl.textContent = 'LINE ID' + (lineIdMode==='required' ? '' : '（選填）');
+    }
+  }
 }
 async function sendCustPasswordReset(){
   const email = (document.getElementById('loginEmail').value||'').trim();
@@ -1099,15 +1119,18 @@ async function submitCustLogin(){
     const confirmPass = document.getElementById('loginPassConfirm').value;
     const name = document.getElementById('loginName').value.trim();
     const phone = document.getElementById('loginPhone').value.trim();
+    const lineId = document.getElementById('loginLineId').value.trim();
     if(!name){ showToast('請輸入姓名'); return; }
     if(!phone){ showToast('請輸入手機號碼'); return; }
+    const lineIdMode = BUSINESS.fieldLineId || 'optional';
+    if(lineIdMode==='required' && !lineId){ showToast('請輸入 LINE ID'); return; }
     if(!confirmPass){ showToast('請再次輸入密碼以確認'); return; }
     if(pass !== confirmPass){ showToast('兩次輸入的密碼不一致'); return; }
     if(pass.length < 6){ showToast('密碼至少需要 6 個字元'); return; }
     try{
       const cred = await auth.createUserWithEmailAndPassword(email, pass);
       await db.collection('customers').doc(cred.user.uid).set({
-        email, name, phone, lineId:'', birthday:'', note:'', hasAccount:true,
+        email, name, phone, lineId: lineIdMode==='off'?'':lineId, birthday:'', note:'', hasAccount:true,
         createdAt: new Date().toISOString()
       });
       await cred.user.sendEmailVerification();
