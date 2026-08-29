@@ -2292,12 +2292,29 @@ function downloadRevenueReportCsv(){
     return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
   }).join(',')).join('\r\n');
   const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  shareOrDownloadBlob(blob, '營收報表_'+monthKey+'.csv', 'CSV 已下載');
+}
+/* 通用的「分享或下載」流程：優先跳出手機原生分享面板（可直接存到檔案 App、傳 LINE、
+   AirDrop 等），裝置不支援檔案分享時才退回瀏覽器一般下載。圖片下載（downloadCanvasImage）
+   也是同樣邏輯，這裡抽成共用函式給 CSV 等其他檔案類型一起用 */
+async function shareOrDownloadBlob(blob, filename, downloadedToast){
+  if(navigator.canShare){
+    try{
+      const file = new File([blob], filename, { type: blob.type });
+      if(navigator.canShare({ files:[file] })){
+        await navigator.share({ files:[file], title: filename });
+        return;
+      }
+    }catch(err){
+      if(err && err.name === 'AbortError') return; // 使用者自己在分享面板按了取消
+    }
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = '營收報表_'+monthKey+'.csv';
+  a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast('CSV 已下載');
+  showToast(downloadedToast);
 }
 
 /* ============================================================
@@ -5667,33 +5684,12 @@ function dataUrlToBlob(dataUrl){
   for(let i=0;i<bin.length;i++){ arr[i] = bin.charCodeAt(i); }
   return new Blob([arr], { type: mime });
 }
-async function downloadCanvasImage(canvas, filename){
-  // 優先用手機原生的分享面板（跟系統相簿分享同一套體驗）：可以直接「儲存影像」到相簿，
-  // 或分享到 LINE、訊息、AirDrop 等，比瀏覽器把檔案丟進「檔案」App 更符合手機使用習慣。
+function downloadCanvasImage(canvas, filename){
   // 用 toDataURL（同步）取得圖片而不是 toBlob（非同步），是為了保留使用者這次點擊的操作情境，
-  // 避免分享面板因為「瀏覽器判斷不是使用者直接觸發」而被拒絕開啟。
+  // 避免分享面板因為「瀏覽器判斷不是使用者直接觸發」而被拒絕開啟
   const dataUrl = canvas.toDataURL('image/png');
   const blob = dataUrlToBlob(dataUrl);
-  if(navigator.canShare){
-    try{
-      const file = new File([blob], filename, { type:'image/png' });
-      if(navigator.canShare({ files:[file] })){
-        await navigator.share({ files:[file], title: filename });
-        return;
-      }
-    }catch(err){
-      if(err && err.name === 'AbortError') return; // 使用者自己在分享面板按了取消，不用再跳出下載
-      // 其他錯誤（例如裝置不支援分享檔案、或操作情境已逾時）就往下走，改用一般下載方式
-    }
-  }
-  // 備援：一般瀏覽器下載（桌面版、或不支援檔案分享的裝置）；跟 CSV 匯出同一套 Blob URL 機制，
-  // 比舊版用 data URL 直接下載更穩定
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast('圖片已下載');
+  shareOrDownloadBlob(blob, filename, '圖片已下載');
 }
 function roundRect(ctx,x,y,w,h,r){
   ctx.beginPath();
