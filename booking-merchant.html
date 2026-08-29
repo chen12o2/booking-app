@@ -1234,8 +1234,9 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         <div class="field"><label for="mbStaff">服務人員</label><select id="mbStaff" onchange="renderManualTimeOptions()"></select></div>
         <div class="field-row">
           <div class="field"><label for="mbDate">日期</label><input type="date" id="mbDate" onchange="renderManualTimeOptions()"></div>
-          <div class="field"><label for="mbTime">時間</label><select id="mbTime"></select></div>
+          <div class="field"><label for="mbTime">時間</label><input type="time" id="mbTime" onchange="renderManualTimeOptions()"></div>
         </div>
+        <div class="field-hint" id="mbTimeHint" style="margin:-10px 0 16px;"></div>
         <div class="field"><label for="mbNote">備註（選填）</label><textarea id="mbNote"></textarea></div>
 
         <button class="btn btn-primary" style="width:100%; margin-bottom:20px;" onclick="saveManualBooking()">建立預約</button>
@@ -2556,6 +2557,7 @@ function renderCustomerDetailScreen(){
         <div class="ln">生日 ${c.birthday ? c.birthday.replace(/-/g,'/')+(age!==null?'（'+age+' 歲）':'') : '未填寫'} ・ 性別 ${c.gender || '未填寫'}</div>
       </div>
     </div>
+    <button class="btn btn-primary btn-sm" style="width:100%; margin:12px 0 4px;" onclick="openManualBookingForm('${c.id}')">＋ 幫這位顧客新增預約</button>
     ${c.hasAccount && c.email ? `
     <div class="field-hint" style="margin:10px 0 4px;">這位顧客有註冊會員帳號，如果她忘記密碼，可以幫她觸發一封重設密碼信（會寄到 ${c.email}，由她自己在信箱裡設定新密碼，商家無法直接看到或代為設定密碼）。</div>
     <button class="btn btn-outline btn-sm" onclick="sendCustomerPasswordReset('${c.email.replace(/'/g,"\\'")}')">協助寄送重設密碼信</button>
@@ -3358,34 +3360,33 @@ function openManualBookingForm(prefillCustomerId, prefillDate){
   document.getElementById('mbService').innerHTML = SERVICES.map(s=>`<option value="${s.id}">${s.icon} ${s.name}（$${s.price}）</option>`).join('');
   document.getElementById('mbStaff').innerHTML = STAFF_LIST.map(st=>`<option value="${st.id}">${st.name}</option>`).join('');
 
-  // 日期預設今天，除非是從某一天的「本日無預約」卡片點進來的，那就預填那一天
+  // 日期預設今天，除非是從某一天的「本日無預約」卡片點進來的，那就預填那一天；
+  // 時間留白，商家自行輸入，不受營業時間／時段間隔限制（方便臨時幫客人調整時段）
   const today = new Date();
   document.getElementById('mbDate').value = prefillDate || (today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0'));
+  document.getElementById('mbTime').value = '';
   renderManualTimeOptions();
 
   goScreen('manual-booking');
 }
 function closeManualBookingForm(){ goScreen('bookings', {noPush:true}); }
+/* 手動新增預約的時間不套用「時段與可約」那套規則（營業時間／時段間隔／已過時間），
+   商家可以自由輸入任何時間，方便臨時幫客人調整時段；這裡只顯示當天已有哪些預約當參考，
+   如果輸入的時間跟既有預約撞期會給提醒，但不會擋住送出 */
 function renderManualTimeOptions(){
   const dateKey = document.getElementById('mbDate').value;
-  const timeSel = document.getElementById('mbTime');
-  if(!dateKey){ timeSel.innerHTML = ''; return; }
+  const hint = document.getElementById('mbTimeHint');
+  if(!hint) return;
+  if(!dateKey){ hint.textContent = ''; return; }
   const stfId = document.getElementById('mbStaff').value;
-  const now = new Date();
-  const isToday = dateKey === (now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0'));
-  let opts = '';
-  for(let h=BUSINESS.openHour; h<BUSINESS.closeHour; h++){
-    for(let mm=0; mm<60; mm+=BUSINESS.slotMin){
-      const label = String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0');
-      const [y,m,d] = dateKey.split('-').map(Number);
-      const slotDate = new Date(y,m-1,d,h,mm);
-      const isPast = isToday && slotDate < now;
-      const taken = isSlotTaken(dateKey, label, stfId);
-      const disabled = isPast || taken;
-      opts += `<option value="${label}" ${disabled?'disabled':''}>${label}${taken?'（已被預約）':isPast?'（已過時間）':''}</option>`;
-    }
-  }
-  timeSel.innerHTML = opts;
+  const time = document.getElementById('mbTime').value;
+  const dayBookings = loadBookings().filter(b=>(b.status==='upcoming'||b.status==='pending') && b.date===dateKey);
+  const conflict = !!(time && isSlotTaken(dateKey, time, stfId));
+  const listText = dayBookings.length
+    ? '這天已有：' + dayBookings.slice().sort((a,b)=>a.time.localeCompare(b.time)).map(b=>b.time+(b.staff&&b.staff.name?'（'+b.staff.name+'）':'')).join('、')
+    : '這天目前還沒有其他預約。';
+  hint.innerHTML = (conflict ? '⚠️ 這個時段已經有其他預約了，請留意會撞期。<br>' : '') + listText;
+  hint.style.color = conflict ? '#8A6A1E' : '';
 }
 async function saveManualBooking(){
   let custId, name, phone, lineId, birthday, gender, email;
@@ -3417,7 +3418,9 @@ async function saveManualBooking(){
   if(!stfId){ showToast('請選擇服務人員'); return; }
   if(!date){ showToast('請選擇日期'); return; }
   if(!time){ showToast('請選擇時間'); return; }
-  if(isSlotTaken(date, time, stfId)){ showToast('這個時段已經有其他預約，請重新選擇時間'); renderManualTimeOptions(); return; }
+  if(isSlotTaken(date, time, stfId)){
+    if(!confirm('這個時段已經有其他預約了，確定要繼續建立、允許撞期嗎？')) return;
+  }
 
   try{
     if(manualCustMode !== 'existing'){
