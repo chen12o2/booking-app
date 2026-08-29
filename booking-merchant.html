@@ -1097,6 +1097,13 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
       <!-- ============ STAFF ============ -->
       <section class="screen" id="screen-staff">
         <div class="section-title"><span class="lead">服務人員</span><button class="add-btn" onclick="openStaffForm()">＋ 新增人員</button></div>
+        <div class="toggle-row-inline" style="margin-bottom:16px;">
+          <div>
+            <div class="tt">顧客預約時可選擇服務人員</div>
+            <div class="ds">開啟後，顧客預約流程會多一步「選擇服務人員」。只有您自己一人服務時可以關閉，跳過這一步、預約流程更短；未來多請了員工，隨時可以再打開，不影響已經約好的舊預約。</div>
+          </div>
+          <div class="switch" id="enableStaffSelectSwitch" onclick="toggleEnableStaffSelect()"><div class="knob"></div></div>
+        </div>
         <div id="staffList"></div>
       </section>
 
@@ -4864,6 +4871,8 @@ async function deleteCategory(name){
    ============================================================ */
 function renderStaffListView(){
   const wrap = document.getElementById('staffList');
+  const switchEl = document.getElementById('enableStaffSelectSwitch');
+  if(switchEl) switchEl.classList.toggle('on', BUSINESS.enableStaffSelection !== false);
   const editable = STAFF_LIST.filter(s=>s.id!=='any');
   wrap.innerHTML = `
     <div class="crud-card">
@@ -5787,14 +5796,6 @@ function renderSettingsDetailScreen(){
         <div class="switch" id="allowMultiServiceSwitch" onclick="toggleAllowMultiService()"><div class="knob"></div></div>
       </div>
 
-      <div class="toggle-row-inline">
-        <div>
-          <div class="tt">顧客預約時可選擇服務人員</div>
-          <div class="ds">開啟後，顧客預約流程會多一步「選擇服務人員」。只有您自己一人服務時可以關閉，跳過這一步、預約流程更短；未來多請了員工，隨時可以再打開，不影響已經約好的舊預約。</div>
-        </div>
-        <div class="switch" id="enableStaffSelectSwitch" onclick="toggleEnableStaffSelect()"><div class="knob"></div></div>
-      </div>
-
       <div class="section-title" style="margin-bottom:8px; margin-top:20px;"><span class="lead">預約表單欄位</span></div>
       <div class="field-hint" style="margin-bottom:14px;">決定顧客在公開預約頁要不要填這些欄位。「不用填」＝不顯示也不蒐集。（Email 為聯絡與寄信管道，一律必填，不在此調整。）</div>
 
@@ -5848,7 +5849,6 @@ function renderSettingsDetailScreen(){
     `;
     document.getElementById('requireConfirmSwitch').classList.toggle('on', BUSINESS.requireConfirm !== false);
     document.getElementById('allowMultiServiceSwitch').classList.toggle('on', BUSINESS.allowMultiService === true);
-    document.getElementById('enableStaffSelectSwitch').classList.toggle('on', BUSINESS.enableStaffSelection !== false);
     setFieldMode('Phone', BUSINESS.fieldPhone || 'required', true);
     setFieldMode('LineId', BUSINESS.fieldLineId || 'optional', true);
     setFieldMode('Birthday', BUSINESS.fieldBirthday || 'optional', true);
