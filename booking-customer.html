@@ -1810,6 +1810,11 @@ async function submitBooking(){
     if(!agree || !agree.checked){ showToast('請先閱讀並勾選同意取消／退款政策'); return; }
   }
 
+  // 顧客可選服務人員這步若被關閉，一律以「當下最新」的預設人員（STAFF[0]）送出，
+  // 不要沿用流程一開始暫存的 state.staff，避免商家中途調整「設為預設」或
+  // Firestore 資料還沒同步完成時，卡到舊的／不指定的服務人員
+  if(BUSINESS.enableStaffSelection === false){ state.staff = STAFF[0]; }
+
   // 防止在填寫聯絡資訊期間，此時段已被其他顧客搶先預約（含待商家確認中的預約）
   if(isSlotTaken(state.date, state.time, state.staff && state.staff.id)){
     showToast('這個時段剛被其他顧客預約了，請重新選擇時間');
@@ -1868,6 +1873,15 @@ async function submitBooking(){
 
   try{
     const ref = await db.collection('bookings').add(booking);
+    // 生日／性別在註冊時不會收集，只有在預約表單才會問到；順便回寫進會員資料，
+    // 下次預約才能自動帶入，不用每次重填。只在這次有實際填寫時才回寫，
+    // 避免用空值覆蓋掉之前已經存在的資料
+    const profileBackfill = {};
+    if(birthdayMode!=='off' && birthday) profileBackfill.birthday = birthday;
+    if(genderMode!=='off' && gender) profileBackfill.gender = gender;
+    if(Object.keys(profileBackfill).length){
+      db.collection('customers').doc(uid).update(profileBackfill).catch(err=>console.error('回寫會員生日／性別失敗', err));
+    }
     if(usedPackage){
       const profile = currentCustomer();
       const packages = (profile.packages||[]).map(p=> p.id===usedPackage.id ? {...p, used:p.used+1} : p);
