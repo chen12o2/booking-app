@@ -140,6 +140,23 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .stat-card .lb{ font-size:11px; color:var(--ink-soft); margin-bottom:6px; }
 .stat-card .vl{ font-family:'Space Mono', monospace; font-weight:700; font-size:19px; color:var(--ledger-dark); }
 .stat-card .vl.stamp{ color:var(--stamp-dark); }
+.rr-sub{ font-size:10.5px; color:var(--ink-soft); margin-top:4px; line-height:1.4; }
+.rr-month-nav{ display:flex; align-items:center; justify-content:center; gap:18px; margin-bottom:16px; }
+.rr-month-nav button{
+  width:34px; height:34px; border-radius:50%; border:1.5px solid var(--line); background:var(--white);
+  font-size:16px; cursor:pointer; color:var(--ink); display:flex; align-items:center; justify-content:center;
+}
+.rr-month-nav button:active{ transform:scale(0.92); }
+.rr-month-nav span{ font-family:'Noto Serif TC', serif; font-weight:700; font-size:16px; min-width:120px; text-align:center; }
+.rr-card{ background:var(--white); border:1.5px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+.rr-card.rr-void{ opacity:.5; }
+.rr-top{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:2px; }
+.rr-when{ font-family:'Space Mono', monospace; font-size:12px; color:var(--ink-soft); flex-shrink:0; }
+.rr-who{ font-size:13.5px; font-weight:700; text-align:right; }
+.rr-svc{ font-size:12.5px; color:var(--ink-soft); margin-bottom:8px; }
+.rr-bottom{ display:flex; justify-content:space-between; align-items:center; }
+.rr-amt .orig{ text-decoration:line-through; color:var(--ink-soft); font-size:11.5px; margin-right:6px; font-family:'Space Mono',monospace; }
+.rr-amt .actual{ font-family:'Space Mono', monospace; font-weight:700; font-size:14px; }
 
 .hero-ticket{
   background:var(--gold); color:var(--white);
@@ -912,6 +929,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
           <div class="stat-card"><div class="lb">本週預約</div><div class="vl" id="statWeek">0</div></div>
           <div class="stat-card"><div class="lb"><span id="statRevenueLabel">本月營收</span></div><div class="vl stamp" id="statRevenue">$0</div></div>
         </div>
+        <div style="text-align:right; margin:-10px 0 10px;"><span class="add-btn" onclick="openRevenueReport()">查看完整營收報表 →</span></div>
         <div class="field-hint" style="margin:-4px 0 14px;">營收＝該月已完成預約的服務金額（不論當初用現金、轉帳或儲值金付款都算）。下面這幾筆是另外的角度，不要跟營收加在一起看：</div>
         <div class="stat-row">
           <div class="stat-card"><div class="lb">儲值餘額</div><div class="vl stamp" id="statWalletCash">$0</div></div>
@@ -966,6 +984,9 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 
         <!-- 行程：依日期分組的時間軸 -->
         <div id="calTimelineView">
+          <div class="about-card" style="padding:14px 12px 8px; margin-bottom:14px;">
+            <div class="cal-month-pills" id="tlMonthPills"></div>
+          </div>
           <div class="cal-toolbar" style="justify-content:flex-end; gap:8px;">
             <button class="btn-today" onclick="calGoNearest()">最近預約</button>
             <button class="btn-today" onclick="calGoToday()">今天</button>
@@ -1492,6 +1513,39 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         </div>
       </section>
 
+      <!-- ============ REVENUE REPORT (full page) ============ -->
+      <section class="screen" id="screen-revenue-report">
+        <div class="section-title" style="margin-bottom:14px;"><span class="lead">營收報表</span><button class="add-btn" onclick="downloadRevenueReportCsv()">⬇ 下載 CSV</button></div>
+
+        <div class="rr-month-nav">
+          <button onclick="shiftRevenueReportMonth(-1)">‹</button>
+          <span id="rrMonthLabel"></span>
+          <button onclick="shiftRevenueReportMonth(1)">›</button>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-card">
+            <div class="lb">本月實收營收</div>
+            <div class="vl stamp" id="rrRevenue">$0</div>
+            <div class="rr-sub" id="rrRevenueSub"></div>
+          </div>
+          <div class="stat-card">
+            <div class="lb">有效單數</div>
+            <div class="vl" id="rrValidCount">0</div>
+            <div class="rr-sub" id="rrValidSub"></div>
+          </div>
+          <div class="stat-card">
+            <div class="lb">取消／未到</div>
+            <div class="vl" id="rrVoidCount">0／0</div>
+            <div class="rr-sub">不計入營收</div>
+          </div>
+        </div>
+
+        <div id="rrList"></div>
+
+        <div class="field-hint" style="margin-top:6px;">取消／未到列灰顯供對帳，不計入營收（未到定金保留除外）；已修正實收顯示劃線原價。CSV 另含服務人員與預約編號欄。</div>
+      </section>
+
     </main>
 
     <div class="navbar">
@@ -1978,7 +2032,8 @@ function goScreen(id, opts={}){
     'staff':'settings', 'shopfront':'settings', 'settings-detail':'settings', 'staff-form':'settings', 'break-entry':'settings',
     'customer-detail':'customers', 'customer-form':'customers',
     'booking-detail':'bookings', 'manual-booking':'bookings', 'edit-items':'bookings',
-    'service-form':'services', 'product-form':'services', 'poster-gen':'calendar'
+    'service-form':'services', 'product-form':'services', 'poster-gen':'calendar',
+    'revenue-report':'dashboard'
   };
   const navEl = document.querySelector('.nav-item[data-nav="'+(navMap[id]||id)+'"]');
   if(navEl) navEl.classList.add('active');
@@ -1997,7 +2052,8 @@ function goScreen(id, opts={}){
     'staff-form': "closeStaffForm()",
     'break-entry': "closeBreakEntry()",
     'edit-items': "closeEditItems()",
-    'poster-gen': "closePosterGen()"
+    'poster-gen': "closePosterGen()",
+    'revenue-report': "goScreen('dashboard')"
   };
   document.getElementById('backBtnWrap').innerHTML = backHandlers[id] ? '<div class="back-btn" onclick="'+backHandlers[id]+'">←</div>' : '';
 
@@ -2013,6 +2069,7 @@ function goScreen(id, opts={}){
   if(id==='shopfront') renderShopfrontScreen();
   if(id==='customer-detail') renderCustomerDetailScreen();
   if(id==='settings-detail') renderSettingsDetailScreen();
+  if(id==='revenue-report') renderRevenueReport();
   
 }
 
@@ -2131,6 +2188,104 @@ function renderDashboard(){
     return;
   }
   wrap.innerHTML = recent.map(b=>bookingCardHtml(b)).join('');
+}
+
+/* ============================================================
+   REVENUE REPORT（營收報表）：單一月份的完整明細，含 CSV 匯出
+   ============================================================ */
+function openRevenueReport(){
+  rrMonth = dashboardMonth || dashMonthKey(new Date());
+  goScreen('revenue-report');
+}
+let rrMonth = null; // 'YYYY-MM'
+function shiftRevenueReportMonth(dir){
+  if(!rrMonth) rrMonth = dashMonthKey(new Date());
+  const [y,m] = rrMonth.split('-').map(Number);
+  rrMonth = dashMonthKey(new Date(y, m-1+dir, 1));
+  renderRevenueReport();
+}
+function revenueReportRows(){
+  const monthKey = rrMonth || dashMonthKey(new Date());
+  const all = loadBookings().filter(b=>(b.date||'').slice(0,7)===monthKey);
+  all.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  return all;
+}
+function renderRevenueReport(){
+  if(!rrMonth) rrMonth = dashMonthKey(new Date());
+  const [ry,rm] = rrMonth.split('-').map(Number);
+  document.getElementById('rrMonthLabel').textContent = ry+' 年 '+rm+' 月';
+
+  const all = revenueReportRows();
+  const doneList = all.filter(b=>b.status==='done');
+  const upcomingList = all.filter(b=>b.status==='upcoming');
+  const pendingList = all.filter(b=>b.status==='pending');
+  const cancelledList = all.filter(b=>b.status==='cancelled');
+  const noshowList = all.filter(b=>b.status==='noshow');
+
+  const revenue = doneList.reduce((sum,b)=>sum+bookingActualTotal(b),0);
+  const adjustedCount = doneList.filter(b=> b.actualAmount!==undefined && b.actualAmount!==null && b.actualAmount!==bookingTotal(b)).length;
+  document.getElementById('rrRevenue').textContent = '$'+revenue.toLocaleString();
+  document.getElementById('rrRevenueSub').textContent = adjustedCount>0 ? `${adjustedCount} 筆已修正實收` : '實收優先口徑';
+
+  const validCount = doneList.length + upcomingList.length + pendingList.length;
+  document.getElementById('rrValidCount').textContent = validCount;
+  document.getElementById('rrValidSub').textContent = `完成 ${doneList.length}・已確認 ${upcomingList.length}・待確認 ${pendingList.length}`;
+
+  document.getElementById('rrVoidCount').textContent = cancelledList.length+'／'+noshowList.length;
+
+  const wrap = document.getElementById('rrList');
+  if(all.length===0){
+    wrap.innerHTML = `<div class="empty-state"><div class="ic">🧾</div><h3>這個月沒有預約</h3><p>換個月份看看，或直接切換到有排程的月份。</p></div>`;
+    return;
+  }
+  const wdShort = ['日','一','二','三','四','五','六'];
+  wrap.innerHTML = all.map(b=>{
+    const isVoid = b.status==='cancelled' || b.status==='noshow';
+    const svcs = bookingServices(b);
+    const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '（服務已刪除）';
+    const orig = bookingTotal(b);
+    const actual = bookingActualTotal(b);
+    const adjusted = b.actualAmount!==undefined && b.actualAmount!==null && actual!==orig;
+    const [y,m,d] = b.date.split('-').map(Number);
+    const wd = wdShort[new Date(y,m-1,d).getDay()];
+    return `
+      <div class="rr-card ${isVoid?'rr-void':''}" onclick="openBookingSheet('${b.id}')">
+        <div class="rr-top">
+          <span class="rr-when">${m}/${d}（${wd}） ${b.time}</span>
+          <span class="rr-who">${displayCustomer(b).name}</span>
+        </div>
+        <div class="rr-svc">${svcLabel}</div>
+        <div class="rr-bottom">
+          <span class="status-pill ${statusClass(b.status)}">${statusLabel(b.status)}</span>
+          <span class="rr-amt">${adjusted?`<span class="orig">$${orig}</span>`:''}<span class="actual">$${actual}</span></span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+function downloadRevenueReportCsv(){
+  const monthKey = rrMonth || dashMonthKey(new Date());
+  const all = revenueReportRows();
+  const rows = [['日期','時間','顧客','服務','服務人員','原價','實收','狀態','預約編號']];
+  all.forEach(b=>{
+    const svcs = bookingServices(b);
+    const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '（服務已刪除）';
+    rows.push([
+      b.date, b.time, displayCustomer(b).name, svcLabel,
+      (b.staff&&b.staff.name)||'', bookingTotal(b), bookingActualTotal(b), statusLabel(b.status), b.code||''
+    ]);
+  });
+  const csv = rows.map(r=>r.map(cell=>{
+    const s = String(cell??'');
+    return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+  }).join(',')).join('\r\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = '營收報表_'+monthKey+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('CSV 已下載');
 }
 
 /* ============================================================
@@ -3660,9 +3815,22 @@ async function updateBookingStatus(id, status){
     if(before && before.status==='pending' && status==='upcoming'){
       sendCustomerConfirmEmail({ ...before, status });
     }
+    // 顧客首頁「熱門服務」是依實際完成次數排序；只在狀態真的轉為「已完成」的那一刻，
+    // 幫這筆預約包含的服務項目各自累加一次完成次數
+    if(before && before.status!=='done' && status==='done'){
+      bumpServicePopularity(before);
+    }
     closeBookingSheet();
     showToast('狀態已更新');
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
+function bumpServicePopularity(booking){
+  bookingServices(booking).forEach(s=>{
+    if(!s.id) return;
+    // fire-and-forget：單一服務可能已被刪除（doc 不存在），個別更新失敗不影響其他服務或主流程
+    db.collection('services').doc(s.id).update({ bookingCount: firebase.firestore.FieldValue.increment(1) })
+      .catch(err=>console.error('累加服務熱門度失敗', s.id, err));
+  });
 }
 /* 顧客自助取消現在改成「送出取消申請」，要商家在這裡按下「同意取消」才會真的把狀態改成
    已取消（時段才會釋出）；駁回的話只是清掉申請旗標，預約本身狀態不變、時段繼續保留。 */
@@ -5520,24 +5688,53 @@ function renderCalGrid(){
   if(countEl) countEl.textContent = `共 ${totalCount} 筆預約`;
 }
 
-/* ---- 行程：依日期分組的時間軸（含休息時段區塊） ---- */
+/* ---- 行程：依日期分組的時間軸（含休息時段區塊），一次只顯示一個月，用月份選單切換 ---- */
 function addMinutes(timeStr, mins){
   const [hh,mm] = timeStr.split(':').map(Number);
   const total = hh*60 + mm + mins;
   return String(Math.floor(total/60)%24).padStart(2,'0')+':'+String(total%60).padStart(2,'0');
 }
+let tlMonth = null; // 'YYYY-MM'，預設當月
+function renderTlMonthPills(){
+  const wrap = document.getElementById('tlMonthPills');
+  if(!wrap) return;
+  const now = new Date();
+  if(!tlMonth) tlMonth = dashMonthKey(now);
+  const months = [];
+  for(let i=-6;i<=5;i++){
+    const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
+    months.push(dashMonthKey(d));
+  }
+  wrap.innerHTML = months.map(m=>{
+    const label = Number(m.split('-')[1]) + '月';
+    return `<div class="cal-month-pill ${m===tlMonth?'active':''}" onclick="setTlMonth('${m}')">${label}</div>`;
+  }).join('');
+  const activeEl = wrap.querySelector('.cal-month-pill.active');
+  if(activeEl) activeEl.scrollIntoView({block:'nearest', inline:'center'});
+}
+function setTlMonth(m){
+  tlMonth = m;
+  renderTlMonthPills();
+  renderCalendarTimeline();
+}
 function calGoToday(){
   calGridDate = new Date();
+  const key = dashMonthKey(new Date());
+  if(tlMonth !== key){ tlMonth = key; renderTlMonthPills(); renderCalendarTimeline(); }
   const el = document.getElementById('calTodayAnchor');
   if(el){ el.scrollIntoView({behavior:'smooth', block:'start'}); }
-  else { showToast('今天沒有預約或休息安排'); }
+  else { showToast('本月沒有預約或休息安排'); }
 }
-/* 跳到「今天以後、含今天」第一個真的有排程的日子，會自動跳過空的日子
-   （包含今天本身如果剛好沒預約），不用自己往下滑找 */
-let nearestUpcomingDateKey = null;
+/* 跳到「今天以後、含今天」第一個真的有排程的日子（不限於目前顯示的月份，
+   找到後會自動切換月份選單再捲過去），會自動跳過空的日子，不用自己往下滑找 */
 function calGoNearest(){
-  if(!nearestUpcomingDateKey){ showToast('目前沒有已排定的未來預約'); return; }
-  const el = document.querySelector(`.cal-day-sep[data-date="${nearestUpcomingDateKey}"]`);
+  const todayKey = fmtDateKey(new Date());
+  const upcoming = loadBookings().filter(b=>b.status!=='cancelled' && b.date>=todayKey);
+  if(upcoming.length===0){ showToast('目前沒有已排定的未來預約'); return; }
+  const nearestDate = upcoming.map(b=>b.date).sort()[0];
+  const monthKey = nearestDate.slice(0,7);
+  if(tlMonth !== monthKey){ tlMonth = monthKey; renderTlMonthPills(); renderCalendarTimeline(); }
+  const el = document.querySelector(`.cal-day-sep[data-date="${nearestDate}"]`);
   if(el){ el.scrollIntoView({behavior:'smooth', block:'start'}); }
   else { showToast('目前沒有已排定的未來預約'); }
 }
@@ -5562,13 +5759,16 @@ function collectBreakBlocksForRange(startKey, endKey){
 function renderCalendarTimeline(){
   const wrap = document.getElementById('calTimeline');
   if(!wrap) return;
+  if(!tlMonth) tlMonth = dashMonthKey(new Date());
+  renderTlMonthPills();
   const q = (document.getElementById('tlSearch').value||'').trim().toLowerCase();
-  let list = loadBookings().filter(b=>b.status!=='cancelled');
+  let list = loadBookings().filter(b=>b.status!=='cancelled' && (b.date||'').slice(0,7)===tlMonth);
   if(q){ list = list.filter(b=> (b.customer.name||'').toLowerCase().includes(q) || (b.customer.phone||'').replace(/[-\s]/g,'').includes(q.replace(/[-\s]/g,''))); }
   list = list.sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
 
   const now = new Date();
   const todayKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  const todayInThisMonth = todayKey.slice(0,7)===tlMonth;
 
   if(list.length===0 && (BUSINESS.breaks||[]).length===0){
     if(q){
@@ -5576,36 +5776,26 @@ function renderCalendarTimeline(){
       return;
     }
     // 完全沒有任何預約或休息安排時，還是要讓今天這一天顯示出來（本日無預約），
-    // 這樣「今天」按鈕才有錨點可以跳，不會永遠只能跳出 toast
+    // 這樣「今天」按鈕才有錨點可以跳，不會永遠只能跳出 toast（僅限今天剛好落在目前顯示的月份）
   }
 
-  // 合併「預約」與「整天休息」兩種區塊，依日期排序後一起渲染；今天這一天無論有沒有
-  // 排程都一定要出現在清單裡（沒有就顯示「本日無預約」），這樣「今天」按鈕才有錨點可以跳
-  const rangeStart = list.length ? list[0].date : todayKey;
-  const rangeEnd = list.length ? list[list.length-1].date : todayKey;
-  const breakBlocks = collectBreakBlocksForRange(rangeStart<todayKey?rangeStart:todayKey, rangeEnd>todayKey?rangeEnd:todayKey);
-  const allDates = new Set([...list.map(b=>b.date), ...Object.keys(breakBlocks), todayKey]);
+  // 合併「預約」與「整天休息」兩種區塊，依日期排序後一起渲染，範圍限定在目前顯示的這個月；
+  // 如果今天剛好落在這個月，無論有沒有排程都一定要出現在清單裡（沒有就顯示「本日無預約」），
+  // 這樣「今天」按鈕才有錨點可以跳
+  const [tly, tlm] = tlMonth.split('-').map(Number);
+  const monthStart = tlMonth+'-01';
+  const monthEnd = tlMonth+'-'+String(new Date(tly, tlm, 0).getDate()).padStart(2,'0');
+  const breakBlocks = collectBreakBlocksForRange(monthStart, monthEnd);
+  const allDates = new Set([...list.map(b=>b.date), ...Object.keys(breakBlocks)]);
+  if(todayInThisMonth) allDates.add(todayKey);
   const sortedDates = [...allDates].sort();
 
   let html = '';
-  let lastMonth = '';
-  nearestUpcomingDateKey = null;
   sortedDates.forEach(dateKey=>{
     const [y,m,d] = dateKey.split('-').map(Number);
-    const monthKey = y+'-'+m;
-    if(monthKey !== lastMonth){
-      html += `<div class="cal-month-sep">${y} 年 ${m} 月</div>`;
-      lastMonth = monthKey;
-    }
     const wd = WD_NAMES[new Date(y, m-1, d).getDay()];
     const anchor = (dateKey===todayKey) ? ' id="calTodayAnchor"' : '';
     html += `<div class="cal-day-sep" data-date="${dateKey}"${anchor}><span class="wd">${wd}</span><span class="dt">${m}/${d}</span></div>`;
-
-    // 「最近預約」要跳去的地方：今天以後（含今天）第一個出現的日子——即使今天是空的
-    // 也不跳過，一樣先跳到今天，維持跟「今天」按鈕一致的落點，不會讓人搞不清楚跳去哪了
-    if(dateKey >= todayKey && nearestUpcomingDateKey===null){
-      nearestUpcomingDateKey = dateKey;
-    }
 
     const dayBookings = list.filter(b=>b.date===dateKey);
     if(dayBookings.length===0 && !breakBlocks[dateKey]){

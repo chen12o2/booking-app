@@ -1361,7 +1361,10 @@ function renderHome(){
   }
 
   const wrap = document.getElementById('homeSvcPreview');
-  wrap.innerHTML = SERVICES.slice(0,3).map(s=>`
+  // 依實際完成次數（bookingCount，商家把預約標記「已完成」時才會累加）排序，
+  // 次數相同時（例如全新商家、大家都還是 0）沿用商家在服務項目設定的原始順序
+  const popular = [...SERVICES].sort((a,b)=>(b.bookingCount||0)-(a.bookingCount||0)).slice(0,3);
+  wrap.innerHTML = popular.map(s=>`
     <div class="svc-card" onclick="quickPickService('${s.id}')">
       <div class="svc-ic">${s.icon}</div>
       <div class="svc-body">
