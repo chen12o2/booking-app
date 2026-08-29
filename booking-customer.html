@@ -1245,23 +1245,33 @@ function renderLogo(){
 }
 
 /* ============================================================
-   同一時段僅能有一位顧客預約（不分服務人員），
+   同一時段預約規則：預設不分服務人員，同一時段僅能有一位顧客；
+   商家可在後台「時段與可約」開啟「依服務人員分開時段」，開啟後
+   不同服務人員可各自接一位顧客。無論哪種模式，只要有一方是「不指定」
+   （或找不到對應服務人員），一律視為占用，避免真的撞班。
    依 UPCOMING_BOOKINGS 快取判斷某時段是否已被占用
    ============================================================ */
-function isSlotTaken(dateKey, label){
-  return UPCOMING_BOOKINGS.some(b=>b.date===dateKey && b.time===label);
+function slotConflictsWithStaff(existingBooking, staffId){
+  if(BUSINESS.perStaffSlots !== true) return true;
+  const bStaffId = existingBooking.staff && existingBooking.staff.id;
+  if(!staffId || staffId==='any' || !bStaffId || bStaffId==='any') return true;
+  return bStaffId === staffId;
+}
+function isSlotTaken(dateKey, label, staffId){
+  return UPCOMING_BOOKINGS.some(b=>b.date===dateKey && b.time===label && slotConflictsWithStaff(b, staffId));
 }
 /* 排時段時使用：連同「預約間緩衝」一併檢查是否與其他預約的時間區間重疊
    （isSlotTaken 只做精確比對，用於送出前的最終防呆；這裡才是真正決定
    顧客在時段格子上能不能點的邏輯） */
 function toMinutes(t){ const [h,m] = t.split(':').map(Number); return h*60+m; }
-function isSlotBuffered(dateKey, label, durationMin){
+function isSlotBuffered(dateKey, label, durationMin, staffId){
   const buffer = Number(BUSINESS.bufferMin) || 0;
   const start = toMinutes(label);
   const end = start + (durationMin || SLOT_MIN());
   return UPCOMING_BOOKINGS.some(b=>{
     if(rescheduleBookingId && b.id===rescheduleBookingId) return false;
     if(b.date !== dateKey) return false;
+    if(!slotConflictsWithStaff(b, staffId)) return false;
     const bDur = bookingServices(b).reduce((sum,s)=>sum+(s.duration||0),0) || SLOT_MIN();
     const bStart = toMinutes(b.time) - buffer;
     const bEnd = toMinutes(b.time) + bDur + buffer;
@@ -1611,7 +1621,7 @@ function renderTimeGrid(){
     const label = String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0');
     const slotDate = new Date(y,m-1,d,h,mm);
     const isPast = slotDate < earliest;
-    const isBooked = isSlotBuffered(state.date, label, svcDuration);
+    const isBooked = isSlotBuffered(state.date, label, svcDuration, state.staff && state.staff.id);
     const isBreak = isTimeBlockedByBreak(state.date, label);
     const disabled = isPast || isBooked || isBreak;
     const sel = state.time===label ? 'selected' : '';
@@ -1801,7 +1811,7 @@ async function submitBooking(){
   }
 
   // 防止在填寫聯絡資訊期間，此時段已被其他顧客搶先預約（含待商家確認中的預約）
-  if(isSlotTaken(state.date, state.time)){
+  if(isSlotTaken(state.date, state.time, state.staff && state.staff.id)){
     showToast('這個時段剛被其他顧客預約了，請重新選擇時間');
     navStack = BUSINESS.enableStaffSelection === false ? ['home','service'] : ['home','service','staff'];
     goScreen('datetime');

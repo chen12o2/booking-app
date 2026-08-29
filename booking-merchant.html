@@ -1198,7 +1198,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         </div>
 
         <div class="field"><label for="mbService">服務項目</label><select id="mbService"></select></div>
-        <div class="field"><label for="mbStaff">服務人員</label><select id="mbStaff"></select></div>
+        <div class="field"><label for="mbStaff">服務人員</label><select id="mbStaff" onchange="renderManualTimeOptions()"></select></div>
         <div class="field-row">
           <div class="field"><label for="mbDate">日期</label><input type="date" id="mbDate" onchange="renderManualTimeOptions()"></div>
           <div class="field"><label for="mbTime">時間</label><select id="mbTime"></select></div>
@@ -2988,8 +2988,17 @@ function normEmailM(e){ return (e||'').trim().toLowerCase(); }
 /* ============================================================
    手動新增預約（同一時段僅能有一位顧客，規則與顧客頁一致）
    ============================================================ */
-function isSlotTaken(dateKey, label){
-  return loadBookings().some(b=>(b.status==='upcoming'||b.status==='pending') && b.date===dateKey && b.time===label);
+function isSlotTaken(dateKey, label, staffId){
+  return loadBookings().some(b=>{
+    if(!(b.status==='upcoming'||b.status==='pending')) return false;
+    if(b.date!==dateKey || b.time!==label) return false;
+    if(BUSINESS.perStaffSlots !== true) return true;
+    // 開啟「依服務人員分開時段」後，只有同一位服務人員才會互相卡時段；
+    // 只要任一邊是「不指定」（或找不到對應服務人員），為了避免真的撞班，一律視為占用
+    const bStaffId = b.staff && b.staff.id;
+    if(!staffId || staffId==='any' || !bStaffId || bStaffId==='any') return true;
+    return bStaffId === staffId;
+  });
 }
 let manualCustMode = 'existing';
 function setManualCustMode(mode){
@@ -3039,6 +3048,7 @@ function renderManualTimeOptions(){
   const dateKey = document.getElementById('mbDate').value;
   const timeSel = document.getElementById('mbTime');
   if(!dateKey){ timeSel.innerHTML = ''; return; }
+  const stfId = document.getElementById('mbStaff').value;
   const now = new Date();
   const isToday = dateKey === (now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0'));
   let opts = '';
@@ -3048,7 +3058,7 @@ function renderManualTimeOptions(){
       const [y,m,d] = dateKey.split('-').map(Number);
       const slotDate = new Date(y,m-1,d,h,mm);
       const isPast = isToday && slotDate < now;
-      const taken = isSlotTaken(dateKey, label);
+      const taken = isSlotTaken(dateKey, label, stfId);
       const disabled = isPast || taken;
       opts += `<option value="${label}" ${disabled?'disabled':''}>${label}${taken?'（已被預約）':isPast?'（已過時間）':''}</option>`;
     }
@@ -3085,7 +3095,7 @@ async function saveManualBooking(){
   if(!stfId){ showToast('請選擇服務人員'); return; }
   if(!date){ showToast('請選擇日期'); return; }
   if(!time){ showToast('請選擇時間'); return; }
-  if(isSlotTaken(date, time)){ showToast('這個時段已經有其他預約，請重新選擇時間'); renderManualTimeOptions(); return; }
+  if(isSlotTaken(date, time, stfId)){ showToast('這個時段已經有其他預約，請重新選擇時間'); renderManualTimeOptions(); return; }
 
   try{
     if(manualCustMode !== 'existing'){
@@ -3701,7 +3711,7 @@ function renderRescheduleTimeOptions(id){
       const slotDate = new Date(y,m-1,d,h,mm);
       const isPast = isToday && slotDate < now;
       const isSelf = (dateKey===b.date && label===b.time);
-      const taken = !isSelf && isSlotTaken(dateKey, label);
+      const taken = !isSelf && isSlotTaken(dateKey, label, b.staff && b.staff.id);
       const disabled = isPast || taken;
       opts += `<option value="${label}" ${disabled?'disabled':''} ${isSelf?'selected':''}>${label}${taken?'（已被預約）':isPast?'（已過時間）':''}</option>`;
     }
@@ -3714,7 +3724,7 @@ async function confirmReschedule(id){
   const b = loadBookings().find(x=>x.id===id);
   if(!b) return;
   if(!date || !time){ showToast('請選擇新的日期與時間'); return; }
-  if(!(date===b.date && time===b.time) && isSlotTaken(date, time)){ showToast('這個時段已經有其他預約'); return; }
+  if(!(date===b.date && time===b.time) && isSlotTaken(date, time, b.staff && b.staff.id)){ showToast('這個時段已經有其他預約'); return; }
   try{
     await db.collection('bookings').doc(id).update({ date, time });
     closeBookingSheet();
@@ -4883,18 +4893,33 @@ function renderStaffListView(){
         <p>顧客選擇「任一位皆可」時使用，無法刪除</p>
       </div>
     </div>
-  ` + editable.map(s=>`
+  ` + editable.map((s,i)=>`
     <div class="crud-card">
       <div class="crud-ic">${s.name.slice(0,1)}</div>
       <div class="crud-body">
-        <h4>${s.name}</h4>
+        <div class="nm-row">
+          <h4>${s.name}</h4>
+          ${i===0 ? `<span class="crud-tag">預設</span>` : ''}
+        </div>
         <p>${s.role||''}</p>
       </div>
       <div class="crud-actions">
+        ${i!==0 ? `<div class="ic-btn" style="width:auto; padding:0 10px; font-size:11.5px; font-weight:700;" onclick="setDefaultStaff('${s.id}')">設為預設</div>` : ''}
         <div class="ic-btn" onclick="openStaffForm('${s.id}')">✎</div>
       </div>
     </div>
   `).join('');
+}
+/* 「預設」＝清單裡排序最前面的服務人員，也就是顧客尚未選擇服務人員時系統帶入的那一位
+   （例如單人工作室關閉了「顧客可選服務人員」步驟時，就會直接用這位）。
+   設為預設＝把這位人員的 order 改成比目前最小值更小，讓他排到最前面 */
+async function setDefaultStaff(id){
+  const editable = STAFF_LIST.filter(s=>s.id!=='any');
+  const minOrder = editable.reduce((min,s)=>Math.min(min, s.order??9999), 0);
+  try{
+    await db.collection('staff').doc(id).update({ order: minOrder - 1 });
+    showToast('已設為預設服務人員');
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
 function openStaffForm(id){
   const isEdit = !!id;
@@ -5719,6 +5744,16 @@ function renderSettingsDetailScreen(){
       <div class="field-hint" style="margin-bottom:10px;">臨時休假、午休等不接客的時段。固定每週店休請用上方「營業時間」。僅顯示今天起的休息時段。</div>
       <div id="breaksList" style="margin-bottom:20px;"></div>
 
+      <div class="section-title" style="margin-bottom:2px;"><span class="lead">服務人員與時段</span><span class="live-save-badge">● 即時儲存</span></div>
+      <div class="field-hint" style="margin-bottom:10px;">開關一下即生效、自動儲存，不用按按鈕。</div>
+      <div class="toggle-row-inline" style="margin-bottom:20px;">
+        <div>
+          <div class="tt">同一時段可依服務人員分開預約</div>
+          <div class="ds">開啟後，不同服務人員可以在同一時段各自接一位顧客，不會互相卡住彼此的時段。顧客選「不指定」送出的預約，為了避免真的撞班，仍會視為佔用所有服務人員在那個時段的名額。只有一位服務人員的店家不需要開啟。</div>
+        </div>
+        <div class="switch" id="perStaffSlotsSwitch" onclick="togglePerStaffSlots()"><div class="knob"></div></div>
+      </div>
+
       <div class="section-title" style="margin-bottom:10px;"><span class="lead">時間規則</span></div>
       <div class="field">
         <label>可約時段產生方式</label>
@@ -5765,6 +5800,7 @@ function renderSettingsDetailScreen(){
     `;
     renderWeekHours();
     renderBreaksList();
+    document.getElementById('perStaffSlotsSwitch').classList.toggle('on', BUSINESS.perStaffSlots === true);
     document.getElementById('setSlotMin').value = String(BUSINESS.slotMin);
     document.getElementById('setLeadHours').value = BUSINESS.leadHours ?? 0;
     document.getElementById('setBufferMin').value = BUSINESS.bufferMin ?? 0;
@@ -6385,6 +6421,15 @@ async function toggleEnableStaffSelect(){
   try{
     await db.collection('meta').doc('business').set({ enableStaffSelection: next }, { merge:true });
     showToast(next ? '已開啟，顧客預約時可選服務人員' : '已關閉，顧客預約時會跳過選服務人員這步');
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
+async function togglePerStaffSlots(){
+  const current = BUSINESS.perStaffSlots === true;
+  const next = !current;
+  document.getElementById('perStaffSlotsSwitch').classList.toggle('on', next);
+  try{
+    await db.collection('meta').doc('business').set({ perStaffSlots: next }, { merge:true });
+    showToast(next ? '已開啟，不同服務人員可分開約同一時段' : '已關閉，同一時段僅能有一位顧客預約（不分服務人員）');
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
 async function setFieldMode(field, mode, silent){
