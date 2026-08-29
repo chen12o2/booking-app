@@ -2562,6 +2562,7 @@ function showToast(msg){
 /* init */
 document.title = BUSINESS.name + ' — 線上預約';
 renderCustLoginScreen();
+startPublicListeners();
 /* 登入狀態的實際判斷交給上面的 auth.onAuthStateChanged 處理，
    因為 Firebase 需要非同步向伺服器確認 token 是否仍然有效 */
 </script>
