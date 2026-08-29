@@ -5787,6 +5787,14 @@ function renderSettingsDetailScreen(){
         <div class="switch" id="allowMultiServiceSwitch" onclick="toggleAllowMultiService()"><div class="knob"></div></div>
       </div>
 
+      <div class="toggle-row-inline">
+        <div>
+          <div class="tt">顧客預約時可選擇服務人員</div>
+          <div class="ds">開啟後，顧客預約流程會多一步「選擇服務人員」。只有您自己一人服務時可以關閉，跳過這一步、預約流程更短；未來多請了員工，隨時可以再打開，不影響已經約好的舊預約。</div>
+        </div>
+        <div class="switch" id="enableStaffSelectSwitch" onclick="toggleEnableStaffSelect()"><div class="knob"></div></div>
+      </div>
+
       <div class="section-title" style="margin-bottom:8px; margin-top:20px;"><span class="lead">預約表單欄位</span></div>
       <div class="field-hint" style="margin-bottom:14px;">決定顧客在公開預約頁要不要填這些欄位。「不用填」＝不顯示也不蒐集。（Email 為聯絡與寄信管道，一律必填，不在此調整。）</div>
 
@@ -5840,6 +5848,7 @@ function renderSettingsDetailScreen(){
     `;
     document.getElementById('requireConfirmSwitch').classList.toggle('on', BUSINESS.requireConfirm !== false);
     document.getElementById('allowMultiServiceSwitch').classList.toggle('on', BUSINESS.allowMultiService === true);
+    document.getElementById('enableStaffSelectSwitch').classList.toggle('on', BUSINESS.enableStaffSelection !== false);
     setFieldMode('Phone', BUSINESS.fieldPhone || 'required', true);
     setFieldMode('LineId', BUSINESS.fieldLineId || 'optional', true);
     setFieldMode('Birthday', BUSINESS.fieldBirthday || 'optional', true);
@@ -6366,6 +6375,15 @@ async function toggleAllowMultiService(){
   try{
     await db.collection('meta').doc('business').set({ allowMultiService: next }, { merge:true });
     showToast(next ? '已允許一次預約多個服務' : '已關閉，顧客一次只能選一項服務');
+  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+}
+async function toggleEnableStaffSelect(){
+  const current = BUSINESS.enableStaffSelection !== false;
+  const next = !current;
+  document.getElementById('enableStaffSelectSwitch').classList.toggle('on', next);
+  try{
+    await db.collection('meta').doc('business').set({ enableStaffSelection: next }, { merge:true });
+    showToast(next ? '已開啟，顧客預約時可選服務人員' : '已關閉，顧客預約時會跳過選服務人員這步');
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
 }
 async function setFieldMode(field, mode, silent){

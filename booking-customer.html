@@ -584,7 +584,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
     <section class="screen" id="screen-service">
       <div class="section-title"><span class="num">1</span>選擇服務項目</div>
       <div id="serviceList"></div>
-      <button class="btn btn-primary" id="svcNextBtn" disabled onclick="goStep('staff')">下一步</button>
+      <button class="btn btn-primary" id="svcNextBtn" disabled onclick="goStepAfterService()">下一步</button>
     </section>
 
     <!-- ============ STEP 2: STAFF ============ -->
@@ -1307,6 +1307,16 @@ function goScreen(id, opts={}){
   if(id==='about') renderAbout();
 }
 function goStep(id){ goScreen(id); }
+/* 商家如果關閉了「顧客可選服務人員」，選完服務直接跳過選人員這步，
+   服務人員就用預設的第一位（單人工作室的常見情境） */
+function goStepAfterService(){
+  if(BUSINESS.enableStaffSelection === false){
+    if(!state.staff) state.staff = STAFF[0];
+    goStep('datetime');
+  } else {
+    goStep('staff');
+  }
+}
 function goBack(){
   navStack.pop();
   const prev = navStack.pop() || 'home';
@@ -1355,7 +1365,7 @@ function renderHome(){
 function quickPickService(id){
   state = { service:SERVICES.find(s=>s.id===id), staff:STAFF[0], date:null, time:null };
   navStack = ['home'];
-  goScreen('staff');
+  goScreen(BUSINESS.enableStaffSelection === false ? 'datetime' : 'staff');
 }
 
 /* ============================================================
@@ -1449,7 +1459,7 @@ function startBookingWithService(id){
   infoPrefilled = false;
   rescheduleBookingId = null;
   bookingPayMethod = 'cash';
-  goScreen('staff');
+  goScreen(BUSINESS.enableStaffSelection === false ? 'datetime' : 'staff');
 }
 
 /* ============================================================
@@ -1792,7 +1802,7 @@ async function submitBooking(){
   // 防止在填寫聯絡資訊期間，此時段已被其他顧客搶先預約（含待商家確認中的預約）
   if(isSlotTaken(state.date, state.time)){
     showToast('這個時段剛被其他顧客預約了，請重新選擇時間');
-    navStack = ['home','service','staff'];
+    navStack = BUSINESS.enableStaffSelection === false ? ['home','service'] : ['home','service','staff'];
     goScreen('datetime');
     return;
   }
