@@ -4290,15 +4290,17 @@ function moveServiceInList(id, delta){
   const idx = list.findIndex(s=>s.id===id);
   const targetIdx = idx + delta;
   if(idx<0 || targetIdx<0 || targetIdx>=list.length) return;
-  const a = list[idx], b = list[targetIdx];
-  const orderA = a.order ?? 0, orderB = b.order ?? 0;
-  a.order = orderB; b.order = orderA;
+  // 交換陣列位置後，把「目前顯示順序」整批重新寫回 order 欄位（依序 0,1,2...），
+  // 不能只單純交換兩筆原本的 order 值——如果這兩筆原本剛好都還沒設定過、
+  // 都是同一個預設值，單純交換等於沒變化，排序看起來就會像失效了
+  const moved = list.splice(idx,1)[0];
+  list.splice(targetIdx,0,moved);
+  list.forEach((s,i)=>{ s.order = i; });
   renderServicesList();
   (async()=>{
     try{
       const batch = db.batch();
-      batch.update(db.collection('services').doc(a.id), { order: orderB });
-      batch.update(db.collection('services').doc(b.id), { order: orderA });
+      list.forEach((s,i)=>{ batch.update(db.collection('services').doc(s.id), { order: i }); });
       await batch.commit();
     }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
   })();
@@ -5013,15 +5015,16 @@ function moveProductInList(id, delta){
   const idx = list.findIndex(p=>p.id===id);
   const targetIdx = idx + delta;
   if(idx<0 || targetIdx<0 || targetIdx>=list.length) return;
-  const a = list[idx], b = list[targetIdx];
-  const orderA = a.order ?? 0, orderB = b.order ?? 0;
-  a.order = orderB; b.order = orderA;
+  // 同樣改成整批重新編號，理由跟 moveServiceInList 一樣：單純交換兩筆原本的 order
+  // 在兩者都還沒設定過（同為預設值）時會沒有效果
+  const moved = list.splice(idx,1)[0];
+  list.splice(targetIdx,0,moved);
+  list.forEach((p,i)=>{ p.order = i; });
   renderProductsList();
   (async()=>{
     try{
       const batch = db.batch();
-      batch.update(db.collection('products').doc(a.id), { order: orderB });
-      batch.update(db.collection('products').doc(b.id), { order: orderA });
+      list.forEach((p,i)=>{ batch.update(db.collection('products').doc(p.id), { order: i }); });
       await batch.commit();
     }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
   })();
