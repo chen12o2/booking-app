@@ -1174,7 +1174,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         </div>
         <div id="mbNewWrap" style="display:none;">
           <div class="field"><label for="mbNewName">姓名</label><input type="text" id="mbNewName" placeholder="顧客姓名"></div>
-          <div class="field"><label for="mbNewPhone">手機號碼</label><input type="tel" id="mbNewPhone" placeholder="0912-345-678"></div>
+          <div class="field"><label for="mbNewPhone">手機號碼</label><input type="tel" id="mbNewPhone" placeholder="0912-345-678" oninput="formatPhoneInput(this)"></div>
           <div class="field"><label for="mbNewLineId">LINE ID（選填）</label><input type="text" id="mbNewLineId"></div>
           <div class="field"><label for="mbNewBirthday">生日（選填）</label><input type="date" id="mbNewBirthday"></div>
           <div class="field"><label for="mbNewGender">性別（選填）</label>
@@ -1346,7 +1346,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
         <div class="section-title" style="margin-bottom:14px;"><span class="lead" id="customerFormTitle">新增顧客</span></div>
         <input type="hidden" id="custFormId">
         <div class="field"><label for="custFormName">姓名</label><input type="text" id="custFormName" placeholder="顧客姓名"></div>
-        <div class="field"><label for="custFormPhone">手機號碼</label><input type="tel" id="custFormPhone" placeholder="0912-345-678"></div>
+        <div class="field"><label for="custFormPhone">手機號碼</label><input type="tel" id="custFormPhone" placeholder="0912-345-678" oninput="formatPhoneInput(this)"></div>
         <div class="field"><label for="custFormLineId">LINE ID（選填）</label><input type="text" id="custFormLineId"></div>
         <div class="field"><label for="custFormBirthday">生日（選填，西元年月日）</label><input type="date" id="custFormBirthday"></div>
         <div class="field"><label for="custFormGender">性別（選填）</label>
@@ -1544,7 +1544,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
     <div class="modal-card">
       <h3 id="orderFormTitle">新增訂單</h3>
       <div class="field"><label for="orderCustName">顧客姓名</label><input type="text" id="orderCustName" placeholder="請輸入顧客姓名" oninput="handleOrderNameInput()"></div>
-      <div class="field"><label for="orderCustPhone">手機號碼</label><input type="text" id="orderCustPhone" placeholder="0912-345-678" oninput="handleOrderPhoneInput()"></div>
+      <div class="field"><label for="orderCustPhone">手機號碼</label><input type="text" id="orderCustPhone" placeholder="0912-345-678" oninput="formatPhoneInput(this); handleOrderPhoneInput()"></div>
       <div class="field-hint" id="orderCustMatchHint"></div>
       <div class="field"><label for="orderCustNote">備註（選填）</label><input type="text" id="orderCustNote" placeholder="例如：儲值贈品、面交自取…"></div>
       <div class="cust-section-hd" style="margin-top:18px;"><h4>商品項目</h4></div>
@@ -6657,6 +6657,19 @@ function downloadPoster(){
    TOAST
    ============================================================ */
 let toastTimer;
+/* 手機號碼自動加上「-」：不管商家打字打得多快、有沒有自己加符號，
+   輸入框都會自動排成 09XX-XXX-XXX 的格式，只取數字、超過 10 碼不再加。
+   這只是「顯示格式」，實際比對顧客身份時系統還是會先去掉「-」再比，格式不影響配對。 */
+function formatPhoneInput(el){
+  const digits = el.value.replace(/\D/g,'').slice(0,10);
+  let formatted = digits;
+  if(digits.length > 7){
+    formatted = digits.slice(0,4) + '-' + digits.slice(4,7) + '-' + digits.slice(7,10);
+  } else if(digits.length > 4){
+    formatted = digits.slice(0,4) + '-' + digits.slice(4,7);
+  }
+  el.value = formatted;
+}
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;

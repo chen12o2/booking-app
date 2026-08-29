@@ -496,7 +496,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
           </div>
           <div class="field">
             <label for="loginPhone">手機號碼</label>
-            <input type="tel" id="loginPhone" placeholder="0912-345-678">
+            <input type="tel" id="loginPhone" placeholder="0912-345-678" oninput="formatPhoneInput(this)">
           </div>
         </div>
         <button class="btn btn-primary" id="loginBtn" onclick="submitCustLogin()">登入</button>
@@ -614,7 +614,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
       </div>
       <div class="field" id="custPhoneField">
         <label for="custPhone" id="custPhoneLabel">手機號碼</label>
-        <input type="tel" id="custPhone" placeholder="0912-345-678">
+        <input type="tel" id="custPhone" placeholder="0912-345-678" oninput="formatPhoneInput(this)">
       </div>
       <div class="field" id="custLineIdField">
         <label for="custLineId" id="custLineIdLabel">LINE ID（選填）</label>
@@ -768,7 +768,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
       </div>
       <div class="field">
         <label for="ckPhone">手機號碼</label>
-        <input type="tel" id="ckPhone" placeholder="0912-345-678">
+        <input type="tel" id="ckPhone" placeholder="0912-345-678" oninput="formatPhoneInput(this)">
       </div>
       <div class="field">
         <label for="ckNote">備註（選填）</label>
@@ -2504,6 +2504,19 @@ function backToHomeAfterConfirm(){
   goScreen('home');
 }
 let toastTimer;
+/* 手機號碼自動加上「-」：不管顧客打字打得多快、有沒有自己加符號，
+   輸入框都會自動排成 09XX-XXX-XXX 的格式，只取數字、超過 10 碼不再加。
+   這只是「顯示格式」，實際比對顧客身份時系統還是會先去掉「-」再比，格式不影響配對。 */
+function formatPhoneInput(el){
+  const digits = el.value.replace(/\D/g,'').slice(0,10);
+  let formatted = digits;
+  if(digits.length > 7){
+    formatted = digits.slice(0,4) + '-' + digits.slice(4,7) + '-' + digits.slice(7,10);
+  } else if(digits.length > 4){
+    formatted = digits.slice(0,4) + '-' + digits.slice(4,7);
+  }
+  el.value = formatted;
+}
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
