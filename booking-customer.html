@@ -796,6 +796,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
+auth.languageCode = 'zh-TW'; // 讓驗證信、忘記密碼信，以及點連結後看到的網頁都顯示繁體中文
 const db = firebase.firestore();
 
 /* EmailJS：顧客送出新預約時，寄一封通知信到商家信箱
