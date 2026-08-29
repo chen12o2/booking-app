@@ -427,7 +427,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
   cursor:pointer; font-size:14.5px; color:var(--ink);
 }
 .dropdown-select.open{ border-color:var(--ledger); border-radius:10px 10px 0 0; }
-.dropdown-select #editItemsSummary{ flex:1; }
+.dropdown-select span:first-child{ flex:1; }
 .dropdown-caret{ color:var(--ink-soft); font-size:12px; transition:transform .15s ease; flex-shrink:0; }
 .dropdown-caret.open{ transform:rotate(180deg); }
 .dropdown-panel{
@@ -1230,7 +1230,16 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
           <div class="field"><label for="mbNewEmail">Email（選填）</label><input type="email" id="mbNewEmail"></div>
         </div>
 
-        <div class="field"><label for="mbService">服務項目</label><select id="mbService"></select></div>
+        <div class="field">
+          <label>服務項目（可複選）</label>
+          <div class="dropdown-select" id="mbServiceDropdown" onclick="toggleMbServiceDropdown()">
+            <span id="mbServiceSummary">請選擇服務</span>
+            <span class="dropdown-caret" id="mbServiceCaret">▾</span>
+          </div>
+          <div id="mbServiceListWrap" class="dropdown-panel" style="display:none;">
+            <div id="mbServiceList"></div>
+          </div>
+        </div>
         <div class="field"><label for="mbStaff">服務人員</label><select id="mbStaff" onchange="renderManualTimeOptions()"></select></div>
         <div class="field-row">
           <div class="field"><label for="mbDate">日期</label><input type="date" id="mbDate" onchange="renderManualTimeOptions()"></div>
@@ -3331,6 +3340,43 @@ function setManualCustMode(mode){
   document.getElementById('mbExistingWrap').style.display = mode==='existing' ? 'block' : 'none';
   document.getElementById('mbNewWrap').style.display = mode==='new' ? 'block' : 'none';
 }
+let mbServiceSelected = [];
+let mbServiceOpen = false;
+function toggleMbServiceDropdown(){
+  mbServiceOpen = !mbServiceOpen;
+  document.getElementById('mbServiceListWrap').style.display = mbServiceOpen ? 'block' : 'none';
+  document.getElementById('mbServiceDropdown').classList.toggle('open', mbServiceOpen);
+  document.getElementById('mbServiceCaret').classList.toggle('open', mbServiceOpen);
+}
+function renderMbServiceSummary(){
+  const chosen = SERVICES.filter(s=>mbServiceSelected.includes(s.id));
+  document.getElementById('mbServiceSummary').textContent = chosen.length ? chosen.map(s=>s.name).join('、') : '請選擇服務';
+}
+function renderMbServiceList(){
+  const wrap = document.getElementById('mbServiceList');
+  if(SERVICES.length===0){
+    wrap.innerHTML = `<div class="field-hint">尚未設定任何服務項目，請先到「服務」頁新增。</div>`;
+    return;
+  }
+  wrap.innerHTML = SERVICES.map(s=>{
+    const checked = mbServiceSelected.includes(s.id);
+    return `
+    <div class="item-check-row ${checked?'checked':''}" onclick="toggleMbServiceItem('${s.id}')">
+      <input type="checkbox" ${checked?'checked':''} onclick="event.stopPropagation(); toggleMbServiceItem('${s.id}')">
+      <div class="icr-line"><span class="nm">${s.icon||''} ${s.name}</span><span class="mt"> ・ ${s.duration||0} 分</span></div>
+      <div class="icr-price">$${s.price||0}</div>
+    </div>`;
+  }).join('');
+}
+function toggleMbServiceItem(serviceId){
+  if(mbServiceSelected.includes(serviceId)){
+    mbServiceSelected = mbServiceSelected.filter(x=>x!==serviceId);
+  } else {
+    mbServiceSelected.push(serviceId);
+  }
+  renderMbServiceList();
+  renderMbServiceSummary();
+}
 function openManualBookingForm(prefillCustomerId, prefillDate){
   // 顧客下拉選單
   const customers = loadCustomers();
@@ -3356,8 +3402,14 @@ function openManualBookingForm(prefillCustomerId, prefillDate){
   document.getElementById('mbNewEmail').value = '';
   document.getElementById('mbNote').value = '';
 
-  // 服務／人員下拉選單
-  document.getElementById('mbService').innerHTML = SERVICES.map(s=>`<option value="${s.id}">${s.icon} ${s.name}（$${s.price}）</option>`).join('');
+  // 服務（可複選，改用跟「編輯項目」一樣的核取方塊清單）／人員下拉選單
+  mbServiceSelected = [];
+  mbServiceOpen = false;
+  renderMbServiceList();
+  renderMbServiceSummary();
+  document.getElementById('mbServiceListWrap').style.display = 'none';
+  document.getElementById('mbServiceDropdown').classList.remove('open');
+  document.getElementById('mbServiceCaret').classList.remove('open');
   document.getElementById('mbStaff').innerHTML = STAFF_LIST.map(st=>`<option value="${st.id}">${st.name}</option>`).join('');
 
   // 日期預設今天，除非是從某一天的「本日無預約」卡片點進來的，那就預填那一天；
@@ -3408,13 +3460,12 @@ async function saveManualBooking(){
     if(!phone){ showToast('請輸入手機號碼'); return; }
   }
 
-  const svcId = document.getElementById('mbService').value;
   const stfId = document.getElementById('mbStaff').value;
   const date = document.getElementById('mbDate').value;
   const time = document.getElementById('mbTime').value;
   const note = document.getElementById('mbNote').value.trim();
 
-  if(!svcId){ showToast('請選擇服務項目'); return; }
+  if(mbServiceSelected.length===0){ showToast('請選擇服務項目'); return; }
   if(!stfId){ showToast('請選擇服務人員'); return; }
   if(!date){ showToast('請選擇日期'); return; }
   if(!time){ showToast('請選擇時間'); return; }
@@ -3431,13 +3482,13 @@ async function saveManualBooking(){
       custId = newCustRef.id;
     }
 
-    const service = SERVICES.find(s=>s.id===svcId);
+    const services = SERVICES.filter(s=>mbServiceSelected.includes(s.id));
     const staff = STAFF_LIST.find(s=>s.id===stfId);
     const code = BUSINESS.bookingPrefix + '-' + date.replace(/-/g,'') + '-' + time.replace(':','') + '-' + Math.floor(Math.random()*90+10);
     await db.collection('bookings').add({
       code,
       customerId: custId,
-      service, staff, date, time,
+      service: services[0], services, staff, date, time,
       customer: { name, phone, lineId, birthday, gender, email, note, lineNotify:false },
       status: 'upcoming',
       createdAt: new Date().toISOString()
