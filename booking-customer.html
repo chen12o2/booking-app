@@ -755,10 +755,10 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
       <div class="field">
         <label>付款方式</label>
         <div class="toggle-pair" id="ckPayMethodRow">
-          <button class="toggle-opt active" id="ckPayCash" onclick="setCheckoutPayMethod('cash')">現金</button>
-          <button class="toggle-opt" id="ckPayTransfer" onclick="setCheckoutPayMethod('transfer')">轉帳</button>
-          <button class="toggle-opt" id="ckPayLinepay" onclick="setCheckoutPayMethod('linepay')">LinePay</button>
-          <button class="toggle-opt" id="ckPayWallet" onclick="setCheckoutPayMethod('wallet')">儲值金</button>
+          <button class="toggle-opt active" id="ckPayCash" onclick="handleCheckoutPayClick('cash')">現金</button>
+          <button class="toggle-opt" id="ckPayTransfer" onclick="handleCheckoutPayClick('transfer')">轉帳</button>
+          <button class="toggle-opt" id="ckPayLinepay" onclick="handleCheckoutPayClick('linepay')">LinePay</button>
+          <button class="toggle-opt" id="ckPayWallet" onclick="handleCheckoutPayClick('wallet')">儲值金</button>
         </div>
         <div class="field-hint" id="ckPayMethodHint"></div>
       </div>
@@ -1646,14 +1646,17 @@ function renderBookingPayMethodBox(){
     <div class="field">
       <label>付款方式</label>
       <div class="toggle-pair">
-        <button class="toggle-opt ${bookingPayMethod==='cash'?'active':''}" onclick="setBookingPayMethod('cash')">現金</button>
-        <button class="toggle-opt ${bookingPayMethod==='transfer'?'active':''}" onclick="setBookingPayMethod('transfer')">轉帳</button>
-        <button class="toggle-opt ${bookingPayMethod==='linepay'?'active':''}" onclick="setBookingPayMethod('linepay')">LinePay</button>
-        <button class="toggle-opt ${bookingPayMethod==='wallet'?'active':''}" onclick="setBookingPayMethod('wallet')">儲值金</button>
+        <button class="toggle-opt ${bookingPayMethod==='cash'?'active':''}" onclick="handleBookingPayClick('cash')">現金</button>
+        <button class="toggle-opt ${bookingPayMethod==='transfer'?'active':''}" onclick="handleBookingPayClick('transfer')">轉帳</button>
+        <button class="toggle-opt ${bookingPayMethod==='linepay'?'active':''}" onclick="handleBookingPayClick('linepay')">LinePay</button>
+        <button class="toggle-opt ${bookingPayMethod==='wallet'?'active':''}" onclick="handleBookingPayClick('wallet')">儲值金</button>
       </div>
       <div class="field-hint">${bookingPayMethodHint()}</div>
     </div>
   `;
+}
+function handleBookingPayClick(method){
+  setBookingPayMethod(bookingPayMethod===method ? '' : method);
 }
 function setBookingPayMethod(method){
   bookingPayMethod = method;
@@ -1804,6 +1807,7 @@ async function submitBooking(){
   // 沒有用套組折抵的話，就照顧客選的付款方式處理：儲值金當場檢查餘額、記錄付款；
   // 現金/轉帳/LinePay 只是先記下顧客說要怎麼付，實際收款還是要等商家在後台確認
   if(!usedPackage){
+    if(!bookingPayMethod){ showToast('請選擇付款方式'); return; }
     if(bookingPayMethod==='wallet'){
       const profile = currentCustomer();
       const total = selectedServicesTotal();
@@ -2025,6 +2029,9 @@ function dtNext(){
    ============================================================ */
 let cart = {}; // { productId: qty }
 let checkoutPayMethod = 'cash';
+function handleCheckoutPayClick(method){
+  setCheckoutPayMethod(checkoutPayMethod===method ? '' : method);
+}
 function setCheckoutPayMethod(method){
   checkoutPayMethod = method;
   ['cash','transfer','linepay','wallet'].forEach(m=>{
@@ -2113,10 +2120,10 @@ function renderPackagePlansShop(){
           <div class="field">
             <label>付款方式</label>
             <div class="toggle-pair">
-              <button class="toggle-opt ${packagePlanPayMethod==='cash'?'active':''}" onclick="setPackagePlanPayMethod('cash')">現金</button>
-              <button class="toggle-opt ${packagePlanPayMethod==='transfer'?'active':''}" onclick="setPackagePlanPayMethod('transfer')">轉帳</button>
-              <button class="toggle-opt ${packagePlanPayMethod==='linepay'?'active':''}" onclick="setPackagePlanPayMethod('linepay')">LinePay</button>
-              <button class="toggle-opt ${packagePlanPayMethod==='wallet'?'active':''}" onclick="setPackagePlanPayMethod('wallet')">儲值金</button>
+              <button class="toggle-opt ${packagePlanPayMethod==='cash'?'active':''}" onclick="handlePackagePlanPayClick('cash')">現金</button>
+              <button class="toggle-opt ${packagePlanPayMethod==='transfer'?'active':''}" onclick="handlePackagePlanPayClick('transfer')">轉帳</button>
+              <button class="toggle-opt ${packagePlanPayMethod==='linepay'?'active':''}" onclick="handlePackagePlanPayClick('linepay')">LinePay</button>
+              <button class="toggle-opt ${packagePlanPayMethod==='wallet'?'active':''}" onclick="handlePackagePlanPayClick('wallet')">儲值金</button>
             </div>
             <div class="field-hint">${packagePlanPayMethodHint(p)}</div>
           </div>
@@ -2133,6 +2140,9 @@ function togglePackagePurchase(planId){
   packagePurchasePlanId = (packagePurchasePlanId===planId) ? null : planId;
   packagePlanPayMethod = 'cash';
   renderPackagePlansShop();
+}
+function handlePackagePlanPayClick(method){
+  setPackagePlanPayMethod(packagePlanPayMethod===method ? '' : method);
 }
 function setPackagePlanPayMethod(method){
   packagePlanPayMethod = method;
@@ -2153,6 +2163,7 @@ async function confirmPurchasePackagePlan(planId){
   if(!plan) return;
   const uid = currentCustomerId();
   if(!uid){ showToast('請先登入會員帳號才能購買套組'); lockCustApp(); return; }
+  if(!packagePlanPayMethod){ showToast('請選擇付款方式'); return; }
   if(packagePlanPayMethod==='wallet'){
     const profile = currentCustomer();
     if((profile&&profile.balance||0) < plan.price){ showToast('儲值餘額不足，請改選其他付款方式或先儲值'); return; }
@@ -2318,6 +2329,7 @@ async function submitOrder(){
   const phone = document.getElementById('ckPhone').value.trim();
   if(!name){ showToast('請輸入姓名'); return; }
   if(!phone){ showToast('請輸入手機號碼'); return; }
+  if(!checkoutPayMethod){ showToast('請選擇付款方式'); return; }
   const uid = currentCustomerId();
   if(!uid){ showToast('請先登入會員帳號才能送出訂單'); closeCheckout(); lockCustApp(); return; }
   const needsDeposit = Object.keys(cart).some(pid=>{ const p=PRODUCTS.find(x=>x.id===pid); return p && p.depositRequired; });
