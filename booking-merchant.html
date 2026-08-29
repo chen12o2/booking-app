@@ -965,7 +965,8 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 
         <!-- 行程：依日期分組的時間軸 -->
         <div id="calTimelineView">
-          <div class="cal-toolbar" style="justify-content:flex-end;">
+          <div class="cal-toolbar" style="justify-content:flex-end; gap:8px;">
+            <button class="btn-today" onclick="calGoNearest()">最近預約</button>
             <button class="btn-today" onclick="calGoToday()">今天</button>
           </div>
           <div class="field" style="margin-bottom:14px;">
@@ -5496,6 +5497,15 @@ function calGoToday(){
   if(el){ el.scrollIntoView({behavior:'smooth', block:'start'}); }
   else { showToast('今天沒有預約或休息安排'); }
 }
+/* 跳到「今天以後、含今天」第一個真的有排程的日子，會自動跳過空的日子
+   （包含今天本身如果剛好沒預約），不用自己往下滑找 */
+let nearestUpcomingDateKey = null;
+function calGoNearest(){
+  if(!nearestUpcomingDateKey){ showToast('目前沒有已排定的未來預約'); return; }
+  const el = document.querySelector(`.cal-day-sep[data-date="${nearestUpcomingDateKey}"]`);
+  if(el){ el.scrollIntoView({behavior:'smooth', block:'start'}); }
+  else { showToast('目前沒有已排定的未來預約'); }
+}
 function collectBreakBlocksForRange(startKey, endKey){
   // 找出這段期間內每一天「整天休息」的區塊，回傳 { dateKey: {label, isWeekly} }
   const blocks = {};
@@ -5544,6 +5554,7 @@ function renderCalendarTimeline(){
 
   let html = '';
   let lastMonth = '';
+  nearestUpcomingDateKey = null;
   sortedDates.forEach(dateKey=>{
     const [y,m,d] = dateKey.split('-').map(Number);
     const monthKey = y+'-'+m;
@@ -5553,11 +5564,15 @@ function renderCalendarTimeline(){
     }
     const wd = WD_NAMES[new Date(y, m-1, d).getDay()];
     const anchor = (dateKey===todayKey) ? ' id="calTodayAnchor"' : '';
-    html += `<div class="cal-day-sep"${anchor}><span class="wd">${wd}</span><span class="dt">${m}/${d}</span></div>`;
+    html += `<div class="cal-day-sep" data-date="${dateKey}"${anchor}><span class="wd">${wd}</span><span class="dt">${m}/${d}</span></div>`;
 
     const dayBookings = list.filter(b=>b.date===dateKey);
     if(dayBookings.length===0 && !breakBlocks[dateKey]){
       html += `<div class="cal-day-empty"><span>本日無預約</span><button onclick="openManualBookingForm(null,'${dateKey}')">＋ 新增</button></div>`;
+    } else if(dateKey >= todayKey && nearestUpcomingDateKey===null){
+      // 「最近預約」按鈕要跳去的地方：今天以後（含今天）第一個真的有排程的日子，
+      // 空的今天（只有「本日無預約」卡片）不算數，會繼續往後找
+      nearestUpcomingDateKey = dateKey;
     }
 
     if(breakBlocks[dateKey]){
