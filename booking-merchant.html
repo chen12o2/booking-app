@@ -854,8 +854,9 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 /* toast */
 .toast{
   position:fixed; bottom:calc(var(--nav-h) + 16px); left:50%; transform:translateX(-50%) translateY(20px);
-  background:var(--ink); color:var(--white); padding:11px 20px; border-radius:99px; font-size:13px;
-  opacity:0; pointer-events:none; transition:all .25s ease; z-index:90; white-space:nowrap;
+  background:var(--ink); color:var(--white); padding:11px 20px; border-radius:18px; font-size:13px;
+  opacity:0; pointer-events:none; transition:all .25s ease; z-index:90;
+  max-width:calc(100% - 40px); text-align:center; line-height:1.5;
 }
 .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 
@@ -3202,17 +3203,18 @@ async function submitPackageForm(){
   const packages = [...(c.packages||[]), { id:'pkg_'+Date.now(), name, serviceId, total, used:0, note, paidAmount, createdAt: new Date().toISOString() }];
   try{
     await db.collection('customers').doc(c.id).update({ packages });
+    // 順便建立一筆訂單紀錄，讓顧客在「商品→訂單」頁也能看到這筆套組購買紀錄，
+    // 跟顧客線上自助購買套組方案時一致；如果同時有設定贈品，一併算進同一筆訂單
+    const items = [{ productId: null, name: name+'（套組方案）', price: paidAmount, qty: 1, subtotal: paidAmount, shippedQty: 0, isPackagePlan: true }];
     if(giftInfo){
-      await db.collection('orders').add({
-        code: genOrderCode(), customerId: c.id,
-        customer: { name: c.name||'', phone: c.phone||'', note: '套組贈品：'+name },
-        items: [{ productId: giftInfo.productId, name: giftInfo.productName, price: 0, qty: giftInfo.qty, subtotal: 0, shippedQty: 0 }],
-        totalAmount: 0, status: 'pending', createdAt: new Date().toISOString()
-      });
-      showToast('已新增套組，贈送商品已建立訂單，請至「商品訂單」安排出貨');
-    } else {
-      showToast('已新增套組');
+      items.push({ productId: giftInfo.productId, name: giftInfo.productName, price: 0, qty: giftInfo.qty, subtotal: 0, shippedQty: 0 });
     }
+    await db.collection('orders').add({
+      code: genOrderCode(), customerId: c.id,
+      customer: { name: c.name||'', phone: c.phone||'', note: '商家手動建立套組' },
+      items, totalAmount: paidAmount, status: giftInfo ? 'pending' : 'done', createdAt: new Date().toISOString()
+    });
+    showToast(giftInfo ? '已新增套組，贈送商品已建立訂單，請至「商品訂單」安排出貨' : '已新增套組');
     packageFormOpen = false;
     renderCustomerDetailScreen();
   }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
@@ -3366,7 +3368,7 @@ function renderMbServiceList(){
       <div class="icr-line"><span class="nm">${s.icon||''} ${s.name}</span><span class="mt"> ・ ${s.duration||0} 分</span></div>
       <div class="icr-price">$${s.price||0}</div>
     </div>`;
-  }).join('');
+  }).join('') + `<button class="btn btn-primary btn-sm" style="width:100%; margin-top:8px;" onclick="toggleMbServiceDropdown()">完成選擇</button>`;
 }
 function toggleMbServiceItem(serviceId){
   if(mbServiceSelected.includes(serviceId)){
@@ -3947,7 +3949,7 @@ function renderEditItemsList(){
       <div class="icr-line"><span class="nm">${s.icon||''} ${s.name}</span><span class="mt"> ・ ${s.duration||0} 分</span></div>
       <div class="icr-price">$${s.price||0}</div>
     </div>`;
-  }).join('');
+  }).join('') + `<button class="btn btn-primary btn-sm" style="width:100%; margin-top:8px;" onclick="toggleEditItemsDropdown()">完成選擇</button>`;
 }
 function toggleEditItem(serviceId){
   if(editItemsSelected.includes(serviceId)){

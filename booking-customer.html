@@ -426,8 +426,9 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 /* toast */
 .toast{
   position:fixed; bottom:calc(var(--nav-h) + 16px); left:50%; transform:translateX(-50%) translateY(20px);
-  background:var(--ink); color:var(--white); padding:11px 20px; border-radius:99px; font-size:13px;
-  opacity:0; pointer-events:none; transition:all .25s ease; z-index:50; white-space:nowrap;
+  background:var(--ink); color:var(--white); padding:11px 20px; border-radius:18px; font-size:13px;
+  opacity:0; pointer-events:none; transition:all .25s ease; z-index:50;
+  max-width:calc(100% - 40px); text-align:center; line-height:1.5;
 }
 .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 
