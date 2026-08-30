@@ -4150,7 +4150,7 @@ async function updateBookingStatus(id, status){
     handleWriteErrorDebug(err);
   }
 }
-
+function bumpServicePopularity(booking){
   bookingServices(booking).forEach(s=>{
     if(!s.id) return;
     // fire-and-forget：單一服務可能已被刪除（doc 不存在），個別更新失敗不影響其他服務或主流程
