@@ -2190,9 +2190,12 @@ function renderDashboard(){
     sum + (c.packages||[]).filter(p=>inSelectedMonth(p.createdAt)).reduce((s,p)=>s+(p.paidAmount||0),0)
   , 0);
   /* 商品營收：只要這筆訂單有記錄收款（不論付款方式），且不是取消單，付款當下就算進去，
-     不用等出貨完成；不論部分出貨或全部出貨都一樣，因為錢已經收了 */
+     不用等出貨完成；不論部分出貨或全部出貨都一樣，因為錢已經收了。套組方案訂單要排除掉，
+     不然同一筆錢會同時被算進「本月套組銷售」跟這裡，變成重複計算。用品項上的 isPackagePlan
+     標記判斷（而不是訂單的 packagePlanId），因為商家手動建立的套組訂單沒有 packagePlanId，
+     只有線上購買、選自「套組方案」清單的訂單才有 */
   const productRevenue = ALL_ORDERS
-    .filter(o=>o.status!=='cancelled' && o.payment && o.payment.method && inSelectedMonth(o.payment.recordedAt))
+    .filter(o=>o.status!=='cancelled' && !(o.items||[]).some(it=>it.isPackagePlan) && o.payment && o.payment.method && inSelectedMonth(o.payment.recordedAt))
     .reduce((sum,o)=>sum+(o.totalAmount||0),0);
 
   const isCurrentMonth = dashboardMonth === dashMonthKey(new Date());
