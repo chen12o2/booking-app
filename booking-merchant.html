@@ -1744,6 +1744,20 @@ const auth = firebase.auth();
 auth.languageCode = 'zh-TW'; // 讓忘記密碼信、以及點連結後看到的網頁都顯示繁體中文
 const db = firebase.firestore();
 
+/* iOS Safari 背景多年一個已知的怪異行為：分頁切到背景（切去別的 App、或螢幕鎖定）一段時間後，
+   Firestore 底層連線會被系統暫停，回到分頁時連線不會自動恢復，導致接下來任何讀寫都失敗、
+   跳出「更新失敗，請檢查網路連線後再試」，即使網路實際上是通的。
+   解法：分頁重新變成可見時，強制斷線再重連一次 Firestore，把底層連線刷新。 */
+function reviveFirestoreConnection(){
+  db.disableNetwork().then(()=>db.enableNetwork()).catch(()=>{});
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') reviveFirestoreConnection();
+});
+window.addEventListener('pageshow', (e)=>{
+  if(e.persisted) reviveFirestoreConnection();
+});
+
 /* ============================================================
    資料層：所有資料存在 Firestore，與 booking-customer.html 共用
    同一個 Firebase 專案，商家在這裡的異動會即時同步到顧客頁。
