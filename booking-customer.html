@@ -2258,23 +2258,36 @@ async function confirmPurchasePackagePlan(planId){
   }
   const orderRef = db.collection('orders').doc();
   try{
-    if(packagePlanPayMethod==='wallet'){
+    if(plan.giftProductId || packagePlanPayMethod==='wallet'){
       await db.runTransaction(async (tx)=>{
-        const custRef = db.collection('customers').doc(uid);
-        const custSnap = await tx.get(custRef);
-        const bal = custSnap.exists ? (custSnap.data().balance||0) : 0;
-        if(bal < plan.price){ throw new Error('WALLET_SHORT'); }
+        let giftRef = null, giftSnap = null;
+        if(plan.giftProductId){
+          giftRef = db.collection('products').doc(plan.giftProductId);
+          giftSnap = await tx.get(giftRef);
+        }
+        let custRef = null, custSnap = null;
+        if(packagePlanPayMethod==='wallet'){
+          custRef = db.collection('customers').doc(uid);
+          custSnap = await tx.get(custRef);
+          const bal = custSnap.exists ? (custSnap.data().balance||0) : 0;
+          if(bal < plan.price){ throw new Error('WALLET_SHORT'); }
+        }
+        if(giftRef){
+          const data = giftSnap.data();
+          const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
+          if(hasStock && data.stock < (plan.giftQty||1)){ throw new Error('STOCK_SHORT'); }
+          if(hasStock){ tx.update(giftRef, { stock: data.stock - (plan.giftQty||1) }); }
+        }
         tx.set(orderRef, order);
-        const custData = custSnap.data() || {};
-        const newBalance = (custData.balance||0) - plan.price;
-        const log = [...(custData.balanceLog||[]), { date:new Date().toISOString(), amount:-plan.price, note:'消費扣款（'+order.code+'）', type:'order_deduct' }];
-        const newPackages = [...(custData.packages||[]), { id:'pkg_'+Date.now(), name: plan.name, serviceId: plan.serviceId||null, total: plan.totalSessions+(plan.giftSessions||0), used:0, note: plan.giftSessions?`顧客線上購買（含贈送 ${plan.giftSessions} 堂）`:'顧客線上購買', paidAmount: plan.price, createdAt: new Date().toISOString() }];
-        tx.update(custRef, { balance:newBalance, balanceLog: log, packages: newPackages });
+        if(custRef){
+          const custData = custSnap.data() || {};
+          const newBalance = (custData.balance||0) - plan.price;
+          const log = [...(custData.balanceLog||[]), { date:new Date().toISOString(), amount:-plan.price, note:'消費扣款（'+order.code+'）', type:'order_deduct' }];
+          const newPackages = [...(custData.packages||[]), { id:'pkg_'+Date.now(), name: plan.name, serviceId: plan.serviceId||null, total: plan.totalSessions+(plan.giftSessions||0), used:0, note: plan.giftSessions?`顧客線上購買（含贈送 ${plan.giftSessions} 堂）`:'顧客線上購買', paidAmount: plan.price, createdAt: new Date().toISOString() }];
+          tx.update(custRef, { balance:newBalance, balanceLog: log, packages: newPackages });
+        }
       });
     } else {
-      // 贈品庫存不在這裡扣：顧客端沒有寫入 products 的權限（安全規則只允許商家寫入），
-      // 硬要在這裡扣庫存只會讓整筆交易被拒絕、訂單也建立不成功。贈品項目仍會照樣進到
-      // 這筆訂單的 items 裡，商家在「商品訂單」出貨時，用自己的權限手動調整庫存即可
       await orderRef.set(order);
     }
     packagePurchasePlanId = null;
@@ -2283,6 +2296,7 @@ async function confirmPurchasePackagePlan(planId){
   }catch(err){
     const msg = String(err&&err.message||'');
     if(msg==='WALLET_SHORT'){ showToast('儲值餘額不足，請改選其他付款方式或先儲值'); }
+    else if(msg==='STOCK_SHORT'){ showToast('贈品目前庫存不足，請聯絡商家確認'); }
     else{ showToast('送出失敗，請檢查網路連線後再試'); }
   }
 }
@@ -2423,14 +2437,28 @@ async function submitOrder(){
   const custRef = db.collection('customers').doc(uid);
   try{
     await db.runTransaction(async (tx)=>{
-      // 交易內：儲值金付款的話，在同一筆交易內檢查餘額並扣款，確保訂單建立跟扣款同時成功或同時失敗。
-      // 庫存不在這裡扣：顧客端沒有寫入 products 的權限（安全規則只允許商家寫入），硬要在這裡扣
-      // 只會讓整筆交易被拒絕、訂單也建立不成功。庫存請商家在出貨時用自己的權限手動調整
+      // 交易內：先讀取每個商品目前的庫存，確認夠了才真正扣，避免跟其他顧客同時搶購時超賣；
+      // 選儲值金付款的話，也在同一筆交易內檢查餘額並扣款，確保庫存跟扣款是同時成功或同時失敗。
+      // 安全規則只允許顧客把 stock 改小（不能改其他欄位、不能調大），所以這裡的扣法要合規
+      const productRefs = items.map(it=>db.collection('products').doc(it.productId));
+      const snaps = await Promise.all(productRefs.map(ref=>tx.get(ref)));
       let custSnap = null;
       if(checkoutPayMethod==='wallet'){
         custSnap = await tx.get(custRef);
         const bal = custSnap.exists ? (custSnap.data().balance||0) : 0;
         if(bal < totalAmount){ throw new Error('WALLET_SHORT'); }
+      }
+      for(let i=0;i<items.length;i++){
+        const data = snaps[i].data();
+        const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
+        if(hasStock && data.stock < items[i].qty){
+          throw new Error('STOCK_SHORT:'+items[i].name);
+        }
+      }
+      for(let i=0;i<items.length;i++){
+        const data = snaps[i].data();
+        const hasStock = data && data.stock!==null && data.stock!==undefined && data.stock!=='';
+        if(hasStock){ tx.update(productRefs[i], { stock: data.stock - items[i].qty }); }
       }
       tx.set(orderRef, order);
       if(checkoutPayMethod==='wallet'){
@@ -2450,7 +2478,9 @@ async function submitOrder(){
     showToast(usedWallet ? '訂單已送出，已直接扣除儲值金' : '訂單已送出');
   }catch(err){
     const msg = String(err && err.message || '');
-    if(msg==='WALLET_SHORT'){
+    if(msg.startsWith('STOCK_SHORT:')){
+      showToast(`「${msg.slice(12)}」庫存不足，請調整數量再試一次`);
+    } else if(msg==='WALLET_SHORT'){
       showToast('儲值餘額不足，請改選其他付款方式或先儲值');
     } else {
       showToast('送出失敗，請檢查網路連線後再試');

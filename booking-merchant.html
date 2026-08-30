@@ -2415,7 +2415,7 @@ function setStatusFilter(s){
 }
 function bookingCardHtml(b){
   const svcs = bookingServices(b);
-  const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '（服務已刪除）';
+  const svcLabel = svcs.length ? (svcs[0].name + (svcs.length>1 ? ` +${svcs.length-1}` : '')) : '（服務已刪除）';
   const cust = displayCustomer(b);
   const isBday = isBirthdayMonth(cust.birthday, b.date);
   return `
@@ -2620,7 +2620,7 @@ function renderCustomerDetailScreen(){
     <div class="cust-section-hd"><h4>預約歷史（${history.length} 筆）</h4></div>
     ${history.length===0 ? `<div class="field-hint">目前尚無預約紀錄。</div>` : history.map(b=>{
       const svcs = bookingServices(b);
-      const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '（服務已刪除）';
+      const svcLabel = svcs.length ? (svcs[0].name + (svcs.length>1 ? ` +${svcs.length-1}` : '')) : '（服務已刪除）';
       const dur = svcs.reduce((sum,s)=>sum+(s.duration||0),0);
       const [yy,mm,dd] = b.date.split('-').map(Number);
       const wd = ['日','一','二','三','四','五','六'][new Date(yy,mm-1,dd).getDay()];
@@ -6053,7 +6053,7 @@ function renderCalendarTimeline(){
           </div>
           <div class="cal-body">
             <div class="nm">${displayCustomer(b).name}</div>
-            <div class="sv">${svcs.length ? svcs.map(s=>s.name).join('、') : '（服務已刪除）'}</div>
+            <div class="sv">${svcs.length ? (svcs[0].name + (svcs.length>1 ? ` +${svcs.length-1}` : '')) : '（服務已刪除）'}</div>
             <div class="rowline">
               <span class="status-pill ${statusClass(b.status)}">${statusLabel(b.status)}</span>
               <span class="rng">${b.time}–${endTime}</span>
