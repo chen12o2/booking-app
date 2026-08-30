@@ -339,7 +339,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
   background:var(--stamp); color:var(--white); padding:18px 84px 20px 20px; position:relative;
 }
 .ticket-head .tk-eyebrow{ font-family:'Space Mono',monospace; font-size:10.5px; letter-spacing:2px; opacity:.85; }
-.ticket-head h2{ font-family:'Noto Serif TC', serif; font-size:20px; font-weight:900; margin:6px 0 2px; }
+.ticket-head h2{ font-family:'Noto Serif TC', serif; font-size:20px; font-weight:900; margin:6px 0 2px; line-height:1.35; }
 .ticket-head .tk-sub{ font-size:12.5px; opacity:.9; }
 .stamp-seal{
   position:absolute; right:16px; top:14px; width:56px; height:56px; border-radius:50%;
@@ -1945,7 +1945,7 @@ function ticketHtml(b, big, extraHtml){
   let perfCircles = '';
   for(let i=0;i<10;i++){ perfCircles += '<div class="circle"></div>'; }
   const svcs = bookingServices(b);
-  const svcLabel = svcs.length ? svcs.map(s=>s.name).join('、') : '（服務已刪除）';
+  const svcLabel = svcs.length ? svcs.map(s=>s.name).join('<br>') : '（服務已刪除）';
   const isPending = b.status === 'pending';
   return `
     <div class="ticket-head">
