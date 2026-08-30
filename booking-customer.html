@@ -616,23 +616,23 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 
       <div class="field">
         <label for="custName">姓名</label>
-        <input type="text" id="custName" placeholder="請輸入您的姓名">
+        <input type="text" id="custName" placeholder="請輸入您的姓名" oninput="markInfoFieldDirty('custName')">
       </div>
       <div class="field" id="custPhoneField">
         <label for="custPhone" id="custPhoneLabel">手機號碼</label>
-        <input type="tel" id="custPhone" placeholder="0912-345-678" oninput="formatPhoneInput(this)">
+        <input type="tel" id="custPhone" placeholder="0912-345-678" oninput="formatPhoneInput(this); markInfoFieldDirty('custPhone')">
       </div>
       <div class="field" id="custLineIdField">
         <label for="custLineId" id="custLineIdLabel">LINE ID（選填）</label>
-        <input type="text" id="custLineId" placeholder="您的 LINE ID">
+        <input type="text" id="custLineId" placeholder="您的 LINE ID" oninput="markInfoFieldDirty('custLineId')">
       </div>
       <div class="field" id="custBirthdayField">
         <label for="custBirthday" id="custBirthdayLabel">生日（選填，西元年月日）</label>
-        <input type="date" id="custBirthday">
+        <input type="date" id="custBirthday" oninput="markInfoFieldDirty('custBirthday')">
       </div>
       <div class="field" id="custGenderField">
         <label for="custGender" id="custGenderLabel">性別（選填）</label>
-        <select id="custGender">
+        <select id="custGender" onchange="markInfoFieldDirty('custGender')">
           <option value="">不透露</option>
           <option value="女">女</option>
           <option value="男">男</option>
@@ -641,7 +641,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
       </div>
       <div class="field">
         <label for="custEmail">Email（選填）</label>
-        <input type="email" id="custEmail" placeholder="you@example.com">
+        <input type="email" id="custEmail" placeholder="you@example.com" oninput="markInfoFieldDirty('custEmail')">
       </div>
       <div class="field">
         <label for="custNote">備註（選填）</label>
@@ -706,7 +706,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
     <!-- ============ ABOUT ============ -->
     <section class="screen" id="screen-about">
       <div class="section-title"><span class="num">📖</span>商家資訊</div>
-      <div style="text-align:center; font-size:11px; color:#999; margin:-4px 0 8px;">版本標記：2026-08-31-r1</div>
+      <div style="text-align:center; font-size:11px; color:#999; margin:-4px 0 8px;">版本標記：2026-08-31-r2</div>
 
       <div class="about-card">
         <div class="logo-preview" id="logoPreview" style="margin:0 auto 4px;">🏷️</div>
@@ -946,7 +946,7 @@ const OPEN_HOUR = () => BUSINESS.openHour, CLOSE_HOUR = () => BUSINESS.closeHour
 let state = { service:null, staff:STAFF[0], date:null, time:null };
 let lastBooking = null;
 let navStack = ['home'];
-let infoPrefilled = false;
+let infoDirtyFields = new Set(); // 使用者親手改過的欄位 id，一旦改過就不再被自動代入蓋掉
 
 /* ============================================================
    Firestore 即時監聽（登入成功、信箱驗證通過後才會啟動）
@@ -1237,7 +1237,7 @@ function enterCustApp(){
   startPublicListeners();
   startCustomerListeners(auth.currentUser.uid);
   state.staff = STAFF[0];
-  infoPrefilled = false;
+  infoDirtyFields = new Set();
   navStack = ['home'];
   goScreen('home', {noPush:true});
 }
@@ -1356,7 +1356,7 @@ function goBack(){
 }
 function startBooking(){
   state = { service:null, staff:STAFF[0], date:null, time:null };
-  infoPrefilled = false;
+  infoDirtyFields = new Set();
   rescheduleBookingId = null;
   bookingPayMethod = 'cash';
   goScreen('service');
@@ -1491,7 +1491,7 @@ function startBookingWithService(id){
   const s = SERVICES.find(x=>x.id===id);
   if(!s) return;
   state = { service:s, services:[s], staff:STAFF[0], date:null, time:null };
-  infoPrefilled = false;
+  infoDirtyFields = new Set();
   rescheduleBookingId = null;
   bookingPayMethod = 'cash';
   goScreen(BUSINESS.enableStaffSelection === false ? 'datetime' : 'staff');
@@ -1780,18 +1780,19 @@ function renderInfoSummary(){
   renderDepositNotice(svcs);
   applyFieldPolicy();
 
-  // 從帳號資料預填聯絡資訊，仍可依此次預約需求修改
+  // 從帳號資料預填聯絡資訊，仍可依此次預約需求修改；
+  // 只要欄位使用者還沒親自改過，就持續跟著最新的會員資料同步（避免資料晚一步載入時，畫面被鎖死在空白預設值）
   const me = currentCustomer();
-  if(me && !infoPrefilled){
-    document.getElementById('custName').value = me.name || '';
-    document.getElementById('custPhone').value = me.phone || '';
-    document.getElementById('custLineId').value = me.lineId || '';
-    document.getElementById('custBirthday').value = me.birthday || fmtDateKey(new Date());
-    document.getElementById('custGender').value = me.gender || '';
-    document.getElementById('custEmail').value = me.email || '';
-    infoPrefilled = true;
+  if(me){
+    if(!infoDirtyFields.has('custName')) document.getElementById('custName').value = me.name || '';
+    if(!infoDirtyFields.has('custPhone')) document.getElementById('custPhone').value = me.phone || '';
+    if(!infoDirtyFields.has('custLineId')) document.getElementById('custLineId').value = me.lineId || '';
+    if(!infoDirtyFields.has('custBirthday')) document.getElementById('custBirthday').value = me.birthday || fmtDateKey(new Date());
+    if(!infoDirtyFields.has('custGender')) document.getElementById('custGender').value = me.gender || '';
+    if(!infoDirtyFields.has('custEmail')) document.getElementById('custEmail').value = me.email || '';
   }
 }
+function markInfoFieldDirty(id){ infoDirtyFields.add(id); }
 /* 依商家「接單政策 → 預約表單欄位」設定，顯示/隱藏必填/選填欄位 */
 function applyFieldPolicy(){
   const rules = [
@@ -2104,7 +2105,7 @@ function startReschedule(id){
   }
   rescheduleBookingId = id;
   state = { service: b.service||null, services: b.services||(b.service?[b.service]:[]), staff: b.staff||STAFF[0], date:null, time:null };
-  infoPrefilled = false;
+  infoDirtyFields = new Set();
   goScreen('datetime');
 }
 async function submitReschedule(){
