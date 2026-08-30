@@ -2867,7 +2867,7 @@ async function saveGiftPresetsAndRefresh(presets){
     renderWalletGiftManager();
     if(walletFormKind) renderWalletForm();
     if(packageFormOpen) renderPackageForm();
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 /* ---- 儲值／扣款的備註也做成跟套組名稱一樣的自建清單，常用的備註（例如「儲5000送500」）
    選過一次以後就能重複挑選，一樣可以在「管理」裡改名稱或刪除 ---- */
@@ -2925,7 +2925,7 @@ async function renameWalletNotePreset(i){
     showToast('已修改');
     renderWalletNoteManager();
     if(walletFormKind) renderWalletForm();
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 async function deleteWalletNotePreset(i){
   if(!confirm('確定要刪除這個備註嗎？已經用過這個備註的紀錄不會受影響。')) return;
@@ -2937,7 +2937,7 @@ async function deleteWalletNotePreset(i){
     showToast('已刪除');
     renderWalletNoteManager();
     if(walletFormKind) renderWalletForm();
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 function handleGiftSelectChange(){
   const sel = document.getElementById('walletGiftSelect');
@@ -3042,7 +3042,7 @@ async function submitWalletForm(kind){
     }
     walletFormKind = null;
     renderCustomerDetailScreen();
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 /* ---- 儲值紀錄填錯了可以修改或刪除：餘額一律用「所有紀錄加總」重新算一次，
    不是直接改餘額欄位，這樣才不會因為改錯一筆就跟原本的加總對不起來 ---- */
@@ -3076,7 +3076,7 @@ async function saveBalanceLogEdit(idx){
     await db.collection('customers').doc(c.id).update({ balance: newBalance, balanceLog: log });
     showToast('已修改');
     renderCustomerDetailScreen();
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 async function deleteBalanceLogEntry(idx){
   if(!confirm('確定要刪除這筆異動紀錄嗎？餘額會依剩餘紀錄重新計算。')) return;
@@ -3090,7 +3090,7 @@ async function deleteBalanceLogEntry(idx){
     await db.collection('customers').doc(c.id).update({ balance: newBalance, balanceLog: log });
     showToast('已刪除');
     renderCustomerDetailScreen();
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 /* ---- 套組：堂數制，跟金額無關，用掉一堂扣一堂 ---- */
 let packageFormOpen = false;
@@ -3198,7 +3198,7 @@ async function renamePkgNamePreset(i){
     showToast('已修改');
     renderPkgNameManager();
     if(packageFormOpen) renderPackageForm();
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 async function deletePkgNamePreset(i){
   if(!confirm('確定要刪除這個套組名稱嗎？已經用這個名稱建立的套組不會受影響。')) return;
@@ -3210,7 +3210,7 @@ async function deletePkgNamePreset(i){
     showToast('已刪除');
     renderPkgNameManager();
     if(packageFormOpen) renderPackageForm();
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 function handlePkgNameSelectChange(){
   const sel = document.getElementById('pkgNameSelect');
@@ -3255,7 +3255,7 @@ async function submitPackageForm(){
       packageFormOpen = false;
       packageFormEditId = null;
       renderCustomerDetailScreen();
-    }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+    }catch(err){ handleWriteErrorDebug(err); }
     return;
   }
 
@@ -3292,7 +3292,7 @@ async function submitPackageForm(){
     showToast(giftInfo ? '已新增套組，贈送商品已建立訂單，請至「商品訂單」安排出貨' : '已新增套組');
     packageFormOpen = false;
     renderCustomerDetailScreen();
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 async function usePackageSession(pkgId){
   const c = loadCustomers().find(x=>x.id===currentCustomerDetailId);
@@ -3302,7 +3302,7 @@ async function usePackageSession(pkgId){
     await db.collection('customers').doc(c.id).update({ packages });
     showToast('已扣一堂');
     renderCustomerDetailScreen();
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 async function deletePackage(pkgId){
   if(!confirm('確定要刪除這個套組嗎？此動作無法復原。')) return;
@@ -3313,7 +3313,7 @@ async function deletePackage(pkgId){
     await db.collection('customers').doc(c.id).update({ packages });
     showToast('已刪除套組');
     renderCustomerDetailScreen();
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 function closeCustomerDetailAndOpenBooking(bookingId){
   goScreen('bookings', {noPush:true});
@@ -3729,7 +3729,7 @@ async function confirmStaffReassign(id, staffId){
     await db.collection('bookings').doc(id).update({ staff });
     showToast('已更新服務人員');
     openBookingSheet(id);
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 let adjustAmountBookingId = null;
 function adjustActualAmount(id){
@@ -3758,7 +3758,7 @@ async function confirmAdjustAmount(){
     const id = adjustAmountBookingId;
     closeAdjustAmount();
     openBookingSheet(id);
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 
 /* ---- 收款：記錄這筆款項實際的收款方式 ---- */
@@ -4146,9 +4146,11 @@ async function updateBookingStatus(id, status){
     }
     closeBookingSheet();
     showToast('狀態已更新');
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){
+    handleWriteErrorDebug(err);
+  }
 }
-function bumpServicePopularity(booking){
+
   bookingServices(booking).forEach(s=>{
     if(!s.id) return;
     // fire-and-forget：單一服務可能已被刪除（doc 不存在），個別更新失敗不影響其他服務或主流程
@@ -4163,14 +4165,14 @@ async function approveCancelRequest(id){
     await db.collection('bookings').doc(id).update({ status:'cancelled', cancelRequested:false, updatedAt: new Date().toISOString() });
     closeBookingSheet();
     showToast('已同意取消，時段將自動釋出');
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 async function declineCancelRequest(id){
   try{
     await db.collection('bookings').doc(id).update({ cancelRequested:false });
     closeBookingSheet();
     showToast('已駁回取消申請，預約維持原狀');
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 function toggleRescheduleBox(id){
   const b = loadBookings().find(x=>x.id===id);
@@ -4531,7 +4533,7 @@ async function toggleServiceActive(id){
     showToast(nextActive ? '已重新上架' : '已下架');
     s.active = nextActive;
     renderServicesList();
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 /* 上下移動排序：只跟目前畫面上顯示的清單（可能已被分類篩選過）裡相鄰的項目交換順序，
    所見即所得，不會影響到其他分類裡的項目 */
@@ -4552,7 +4554,7 @@ function moveServiceInList(id, delta){
       const batch = db.batch();
       list.forEach((s,i)=>{ batch.update(db.collection('services').doc(s.id), { order: i }); });
       await batch.commit();
-    }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
+    }catch(err){ handleWriteErrorDebug(err); }
   })();
 }
 /* 直接把項目移到（同分類群組內的）最上面或最下面，一次到位不用一步一步點 */
@@ -4926,7 +4928,7 @@ async function togglePackagePlanActive(id){
   try{
     await db.collection('packagePlans').doc(id).update({ active: nextActive });
     showToast(nextActive ? '已重新上架' : '已下架');
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 function renderOrdersList(){
   const wrap = document.getElementById('ordersList');
@@ -5136,7 +5138,7 @@ async function updateOrderStatus(id, status){
     if(msg.startsWith('STOCK_SHORT:')){
       showToast(`「${msg.slice(12)}」目前庫存不足，無法恢復成待處理`);
     } else {
-      showToast('更新失敗，請檢查網路連線後再試');
+      handleWriteErrorDebug(err);
     }
   }
 }
@@ -5321,7 +5323,7 @@ async function toggleProductActive(id){
     showToast(nextActive ? '已重新上架' : '已下架');
     p.active = nextActive;
     renderProductsList();
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 function moveProductInList(id, delta){
   const list = getDisplayedProductList();
@@ -5339,7 +5341,7 @@ function moveProductInList(id, delta){
       const batch = db.batch();
       list.forEach((p,i)=>{ batch.update(db.collection('products').doc(p.id), { order: i }); });
       await batch.commit();
-    }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
+    }catch(err){ handleWriteErrorDebug(err); }
   })();
 }
 /* ============================================================
@@ -5404,7 +5406,7 @@ async function moveCategory(index, delta){
   [cats[index], cats[target]] = [cats[target], cats[index]];
   try{
     await db.collection('meta').doc('business').update({ [field]: cats });
-  }catch(err){ showToast('排序更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 /* 重新命名分類：連同所有已使用這個分類的服務／商品一起更新，避免改名後項目變成孤兒分類 */
 async function renameCategory(oldName){
@@ -5423,7 +5425,7 @@ async function renameCategory(oldName){
     items.forEach(it=>{ batch.update(db.collection(coll).doc(it.id), { category:name }); });
     await batch.commit();
     showToast('分類已重新命名');
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 async function deleteCategory(name){
   if(!confirm(`確定要刪除分類「${name}」嗎？已使用這個分類的項目不會被刪除，只會變成未分類。`)) return;
@@ -5477,7 +5479,7 @@ async function setDefaultStaff(id){
   try{
     await db.collection('staff').doc(id).update({ order: minOrder - 1 });
     showToast('已設為預設服務人員');
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 function openStaffForm(id){
   const isEdit = !!id;
@@ -6606,7 +6608,7 @@ async function toggleHideAddr(){
   try{
     await db.collection('meta').doc('business').set({ hideAddress: next }, { merge:true });
     showToast(next ? '已開啟：預約成立後才顯示詳細地址' : '已關閉：完整地址將公開顯示');
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 
 /* ---- 每週營業時間 ---- */
@@ -7036,7 +7038,7 @@ async function toggleRequireConfirm(){
   try{
     await db.collection('meta').doc('business').set({ requireConfirm: next }, { merge:true });
     showToast(next ? '已開啟確認制' : '已關閉確認制，新預約將直接成立');
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 async function toggleAllowMultiService(){
   const current = BUSINESS.allowMultiService === true;
@@ -7045,7 +7047,7 @@ async function toggleAllowMultiService(){
   try{
     await db.collection('meta').doc('business').set({ allowMultiService: next }, { merge:true });
     showToast(next ? '已允許一次預約多個服務' : '已關閉，顧客一次只能選一項服務');
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 async function toggleEnableStaffSelect(){
   const current = BUSINESS.enableStaffSelection !== false;
@@ -7054,7 +7056,7 @@ async function toggleEnableStaffSelect(){
   try{
     await db.collection('meta').doc('business').set({ enableStaffSelection: next }, { merge:true });
     showToast(next ? '已開啟，顧客預約時可選服務人員' : '已關閉，顧客預約時會跳過選服務人員這步');
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 async function togglePerStaffSlots(){
   const current = BUSINESS.perStaffSlots === true;
@@ -7063,7 +7065,7 @@ async function togglePerStaffSlots(){
   try{
     await db.collection('meta').doc('business').set({ perStaffSlots: next }, { merge:true });
     showToast(next ? '已開啟，不同服務人員可分開約同一時段' : '已關閉，同一時段僅能有一位顧客預約（不分服務人員）');
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 async function setFieldMode(field, mode, silent){
   ['required','optional','off'].forEach(m=>{
@@ -7075,7 +7077,7 @@ async function setFieldMode(field, mode, silent){
   try{
     await db.collection('meta').doc('business').set({ [key]: mode }, { merge:true });
     showToast('已更新');
-  }catch(err){ showToast('更新失敗，請檢查網路連線後再試'); }
+  }catch(err){ handleWriteErrorDebug(err); }
 }
 async function saveCancelPolicy(){
   const hours = Number(document.getElementById('setCancelDeadline').value) || 0;
@@ -7393,6 +7395,11 @@ function showToast(msg){
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+/* 暫時性除錯：先把實際錯誤內容顯示出來，抓到「切回畫面後任何操作都失敗」的真正原因後就會拿掉，
+   換回原本簡單的 showToast('更新失敗，請檢查網路連線後再試') */
+function handleWriteErrorDebug(err){
+  alert('【除錯】code: '+(err&&err.code)+'\nmessage: '+(err&&err.message)+'\n登入狀態: '+(auth.currentUser?('已登入 '+auth.currentUser.email):'未登入/已登出'));
 }
 
 /* ============================================================
