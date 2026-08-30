@@ -1824,8 +1824,11 @@ async function submitBooking(){
     try{
       const staffSnap = await db.collection('staff').get();
       const freshStaff = staffSnap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(a.order??9999)-(b.order??9999));
+      // 暫時性除錯用彈窗：直接把查到的原始資料顯示出來，不需要開發者工具就能看到
+      alert('【除錯】staff 集合共 '+staffSnap.size+' 筆\n'+freshStaff.map(s=>s.name+'（id:'+s.id+', order:'+s.order+'）').join('\n'));
       state.staff = freshStaff.length ? freshStaff[0] : STAFF[0];
     }catch(err){
+      alert('【除錯】查詢失敗：'+(err&&err.message||err));
       state.staff = STAFF[0]; // 查詢失敗時，退回目前快取的值當備援，至少不會整個中斷送出流程
     }
   }
