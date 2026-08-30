@@ -765,6 +765,8 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .break-row .info{ font-size:13px; }
 .break-row .info .lbl{ color:var(--ink-soft); font-size:11.5px; margin-top:2px; }
 .break-row .del{ color:var(--stamp-dark); font-size:12px; cursor:pointer; text-decoration:underline; flex-shrink:0; }
+.break-row-actions{ display:flex; gap:14px; flex-shrink:0; }
+.break-row .edit{ color:var(--ledger-dark); font-size:12px; cursor:pointer; text-decoration:underline; flex-shrink:0; }
 .break-tab-pair{ display:flex; background:var(--paper-2); border-radius:99px; padding:4px; gap:2px; margin-bottom:18px; }
 .svc-tab-pair{ display:flex; background:var(--paper-2); border-radius:99px; padding:4px; gap:2px; margin-bottom:16px; }
 .svc-tab{ flex:1; border:none; background:transparent; padding:11px 6px; border-radius:99px; font-size:12.5px; font-weight:700; color:var(--ink-soft); cursor:pointer; font-family:inherit; }
@@ -1430,7 +1432,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 
       <!-- ============ BREAK ENTRY (full page) ============ -->
       <section class="screen" id="screen-break-entry">
-        <div class="section-title" style="margin-bottom:14px;"><span class="lead">新增休息時段</span></div>
+        <div class="section-title" style="margin-bottom:14px;"><span class="lead" id="breakEntryTitle">新增休息時段</span></div>
         <div class="break-tab-pair">
           <button class="break-tab active" id="breakTabSingle" onclick="setBreakTab('single')">單次</button>
           <button class="break-tab" id="breakTabWeekly" onclick="setBreakTab('weekly')">每週重複</button>
@@ -1507,7 +1509,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 
         <div class="sheet-actions" style="margin:16px 0 20px;">
           <button class="btn btn-outline" onclick="closeBreakEntry()">取消</button>
-          <button class="btn btn-primary" onclick="createBreakEntry()">建立</button>
+          <button class="btn btn-primary" id="breakSubmitBtn" onclick="createBreakEntry()">建立</button>
         </div>
       </section>
 
@@ -6578,7 +6580,10 @@ function renderBreaksList(){
     return `
     <div class="break-row">
       <div class="info">${tag} ${summarizeBreak(b)}<div class="lbl">${b.label || '休息'}</div></div>
-      <span class="del" onclick="deleteBreakEntry(${realIdx})">刪除</span>
+      <div class="break-row-actions">
+        <span class="edit" onclick="editBreakEntry(${realIdx})">編輯</span>
+        <span class="del" onclick="deleteBreakEntry(${realIdx})">刪除</span>
+      </div>
     </div>`;
   }).join('');
 }
@@ -6596,7 +6601,9 @@ let breakTab = 'single';
 let breakSelectedWeekdays = [];
 let breakSelectedDates = [];
 let breakMonthCursor = new Date();
+let editingBreakIdx = null; // null＝新增；數字＝正在編輯 BUSINESS.breaks 裡的第幾筆
 function addBreakEntry(){
+  editingBreakIdx = null;
   breakTab = 'single';
   breakSelectedWeekdays = [];
   breakSelectedDates = [];
@@ -6608,12 +6615,52 @@ function addBreakEntry(){
   const defEnd = new Date(); defEnd.setMonth(defEnd.getMonth()+3);
   document.getElementById('breakEndDateInput').value = defEnd.toISOString().slice(0,10);
   document.querySelectorAll('.wd-pick').forEach(el=>el.classList.remove('active'));
+  document.getElementById('breakRangesWrap').style.display = 'block';
   setBreakTab('single');
   document.getElementById('breakRangesList').innerHTML = '';
   addBreakRange();
+  document.getElementById('breakEntryTitle').textContent = '新增休息時段';
+  document.getElementById('breakSubmitBtn').textContent = '建立';
+  goScreen('break-entry');
+}
+/* 編輯既有的休息時段：把表單填回這筆原本的資料，其餘沿用「新增」那套 UI／驗證邏輯，
+   送出時 createBreakEntry() 會判斷 editingBreakIdx 是不是有值，決定要新增還是取代原本那筆 */
+function editBreakEntry(idx){
+  const entry = (BUSINESS.breaks||[])[idx];
+  if(!entry) return;
+  editingBreakIdx = idx;
+  breakSelectedWeekdays = entry.type==='weekly' ? [...(entry.weekdays||[])] : [];
+  breakSelectedDates = entry.type==='monthly' ? [...(entry.dates||[])] : [];
+  breakMonthCursor = new Date();
+
+  document.getElementById('breakAllDayCheck').checked = !!entry.allDay;
+  document.getElementById('breakLabelInput').value = entry.label || '';
+  document.getElementById('breakWeekdayError').style.display = 'none';
+  document.querySelectorAll('.wd-pick').forEach(el=>{
+    el.classList.toggle('active', breakSelectedWeekdays.includes(Number(el.dataset.wd)));
+  });
+
+  document.getElementById('breakDateInput').value = entry.type==='single' ? (entry.date||'') : new Date().toISOString().slice(0,10);
+  const defEnd = new Date(); defEnd.setMonth(defEnd.getMonth()+3);
+  document.getElementById('breakEndDateInput').value = entry.type==='weekly' ? (entry.endDate||'') : defEnd.toISOString().slice(0,10);
+
+  document.getElementById('breakRangesList').innerHTML = '';
+  if(!entry.allDay && (entry.ranges||[]).length){
+    entry.ranges.forEach(r=>addBreakRange(r.start, r.end));
+  } else {
+    addBreakRange();
+  }
+  document.getElementById('breakRangesWrap').style.display = entry.allDay ? 'none' : 'block';
+
+  setBreakTab(entry.type || 'single');
+  if(entry.type==='monthly') renderBreakMonthGrid();
+
+  document.getElementById('breakEntryTitle').textContent = '編輯休息時段';
+  document.getElementById('breakSubmitBtn').textContent = '儲存';
   goScreen('break-entry');
 }
 function closeBreakEntry(){
+  editingBreakIdx = null;
   currentSettingsKind = 'hours';
   goScreen('settings-detail', {noPush:true});
 }
@@ -6678,14 +6725,14 @@ function onBreakAllDayToggle(){
   document.getElementById('breakRangesWrap').style.display = document.getElementById('breakAllDayCheck').checked ? 'none' : 'block';
   refreshBreakPreview();
 }
-function addBreakRange(){
+function addBreakRange(start, end){
   const list = document.getElementById('breakRangesList');
   const row = document.createElement('div');
   row.className = 'break-range-row';
   row.innerHTML = `
-    <input type="time" class="brk-start" value="13:00" onchange="refreshBreakPreview()">
+    <input type="time" class="brk-start" value="${start || '13:00'}" onchange="refreshBreakPreview()">
     <span class="sep">–</span>
-    <input type="time" class="brk-end" value="14:00" onchange="refreshBreakPreview()">
+    <input type="time" class="brk-end" value="${end || '14:00'}" onchange="refreshBreakPreview()">
     <span class="rm" onclick="this.parentElement.remove(); refreshBreakPreview();">✕</span>
   `;
   list.appendChild(row);
@@ -6747,10 +6794,16 @@ async function createBreakEntry(){
     if(breakSelectedDates.length===0){ showToast('請至少選一天'); return; }
     entry = { type:'monthly', dates:[...breakSelectedDates], allDay, ranges, label };
   }
-  const breaks = [...(BUSINESS.breaks || []), entry];
+  const breaks = [...(BUSINESS.breaks || [])];
+  if(editingBreakIdx!==null && editingBreakIdx>=0 && editingBreakIdx<breaks.length){
+    breaks[editingBreakIdx] = entry;
+  } else {
+    breaks.push(entry);
+  }
   try{
     await db.collection('meta').doc('business').set({ breaks }, { merge:true });
-    showToast('已新增休息時段');
+    showToast(editingBreakIdx!==null ? '已更新休息時段' : '已新增休息時段');
+    editingBreakIdx = null;
     closeBreakEntry();
     renderBreaksList();
   }catch(err){ showToast('儲存失敗，請檢查網路連線後再試'); }
