@@ -706,7 +706,6 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
     <!-- ============ ABOUT ============ -->
     <section class="screen" id="screen-about">
       <div class="section-title"><span class="num">📖</span>商家資訊</div>
-      <div style="text-align:center; font-size:11px; color:#999; margin:-4px 0 8px;">版本標記：2026-08-31-r4</div>
 
       <div class="about-card">
         <div class="logo-preview" id="logoPreview" style="margin:0 auto 4px;">🏷️</div>
@@ -1934,7 +1933,15 @@ async function submitBooking(){
     if(birthdayMode!=='off' && birthday) profileBackfill.birthday = birthday;
     if(genderMode!=='off' && gender) profileBackfill.gender = gender;
     if(Object.keys(profileBackfill).length){
-      db.collection('customers').doc(uid).update(profileBackfill).catch(err=>console.error('回寫會員生日／性別失敗', err));
+      db.collection('customers').doc(uid).update(profileBackfill).then(()=>{
+        // 暫時性除錯：連成功也顯示一次，才能分辨「回寫失敗」跟「回寫成功但畫面沒同步」這兩種不同狀況
+        alert('【除錯】生日/性別回寫成功：'+JSON.stringify(profileBackfill));
+      }).catch(err=>{
+        console.error('回寫會員生日／性別失敗', err);
+        // 暫時性除錯：這個回寫是「送出後在背景默默執行」，失敗了使用者原本完全看不到，
+        // 先用 alert 讓錯誤現形，抓到原因後會拿掉
+        alert('【除錯】生日/性別回寫失敗\ncode: '+(err&&err.code)+'\nmessage: '+(err&&err.message));
+      });
     }
     if(usedPackage){
       const profile = currentCustomer();
