@@ -5001,15 +5001,29 @@ async function grantPackagePlanToCustomer(order){
   const custId = order.customerId;
   if(!custId){ return { ok:false, msg:'這筆訂單沒有對應的會員資料，請手動幫顧客加堂數' }; }
   try{
-    const custRef = db.collection('customers').doc(custId);
-    const custSnap = await custRef.get();
+    let custRef = db.collection('customers').doc(custId);
+    let custSnap = await custRef.get();
+    if(!custSnap.exists){
+      // 顧客帳號 ID 對不到任何現存資料（例如合併會員後這筆訂單沒有一起移過去），
+      // 改用電話號碼當備援去找人，找到的話就直接發放到「現在真正存在」的那筆顧客資料
+      const phone = ((order.customer && order.customer.phone) || '').replace(/[-\s]/g,'');
+      const fallback = phone ? loadCustomers().find(c=>(c.phone||'').replace(/[-\s]/g,'')===phone) : null;
+      if(fallback){
+        custRef = db.collection('customers').doc(fallback.id);
+        custSnap = await custRef.get();
+      }
+    }
     if(!custSnap.exists){ return { ok:false, msg:'找不到顧客資料，請手動加堂數' }; }
     const cust = custSnap.data();
     const total = plan.totalSessions + (plan.giftSessions||0);
     const newPkgId = 'pkg_'+Date.now();
     const packages = [...(cust.packages||[]), { id:newPkgId, name: plan.name, serviceId: plan.serviceId||null, total, used:0, note: plan.giftSessions ? `顧客線上購買（含贈送 ${plan.giftSessions} 堂）` : '顧客線上購買', paidAmount: order.totalAmount||plan.price, createdAt: new Date().toISOString() }];
     await custRef.update({ packages });
-    await db.collection('orders').doc(order.id).update({ packageGranted: true, grantedPackageId: newPkgId });
+    // 訂單上的顧客 ID 如果一開始對不到人、是靠電話備援才找到的，順便把訂單的 customerId
+    // 更新成真正存在的那筆，避免同一張訂單下次又卡在一樣的地方
+    const orderUpdates = { packageGranted: true, grantedPackageId: newPkgId };
+    if(custRef.id !== custId){ orderUpdates.customerId = custRef.id; }
+    await db.collection('orders').doc(order.id).update(orderUpdates);
     return { ok:true, msg: plan.giftProductId ? '堂數已加進顧客帳戶，贈品出貨請照這筆訂單原本的流程處理（可延後或預購）' : '堂數已加進顧客帳戶' };
   }catch(err){ return { ok:false, msg:'堂數發放失敗，請手動幫顧客加套組' }; }
 }
