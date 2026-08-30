@@ -1817,10 +1817,18 @@ async function submitBooking(){
     if(!agree || !agree.checked){ showToast('請先閱讀並勾選同意取消／退款政策'); return; }
   }
 
-  // 顧客可選服務人員這步若被關閉，一律以「當下最新」的預設人員（STAFF[0]）送出，
-  // 不要沿用流程一開始暫存的 state.staff，避免商家中途調整「設為預設」或
-  // Firestore 資料還沒同步完成時，卡到舊的／不指定的服務人員
-  if(BUSINESS.enableStaffSelection === false){ state.staff = STAFF[0]; }
+  // 顧客可選服務人員這步若被關閉，一律在送出的當下直接重新查一次 Firestore，
+  // 找出「現在真正的預設服務人員」——不依賴瀏覽器裡暫存的 STAFF 快取，
+  // 徹底排除監聽器同步時機、登入時重新訂閱等各種可能造成快取不同步的情況
+  if(BUSINESS.enableStaffSelection === false){
+    try{
+      const staffSnap = await db.collection('staff').get();
+      const freshStaff = staffSnap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(a.order??9999)-(b.order??9999));
+      state.staff = freshStaff.length ? freshStaff[0] : STAFF[0];
+    }catch(err){
+      state.staff = STAFF[0]; // 查詢失敗時，退回目前快取的值當備援，至少不會整個中斷送出流程
+    }
+  }
 
   // 防止在填寫聯絡資訊期間，此時段已被其他顧客搶先預約（含待商家確認中的預約）
   if(isSlotTaken(state.date, state.time, state.staff && state.staff.id)){
