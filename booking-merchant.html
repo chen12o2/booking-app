@@ -686,6 +686,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .slot-poster .sub{ font-size:10.5px; letter-spacing:1.5px; color:var(--ink-soft); margin-bottom:12px; }
 .slot-poster .biz{ font-size:14px; font-weight:700; color:var(--ink); }
 .slot-poster .handle{ font-size:11px; font-weight:700; color:var(--stamp); margin-bottom:10px; }
+.slot-poster .hours{ font-size:10px; color:var(--ink-soft); margin-bottom:10px; }
 .slot-poster .divider{ border-top:1px solid rgba(122,92,46,0.2); margin:6px 0 12px; }
 .slot-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; background:transparent; padding:0; }
 .slot-grid .wd{ font-size:10px; color:var(--ink-soft); text-align:center; padding-bottom:6px; font-weight:700; }
@@ -711,6 +712,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .avail-poster .hd{ background:var(--gold); color:var(--white); text-align:center; padding:16px; }
 .avail-poster .hd h4{ margin:0 0 4px; font-family:'Noto Serif TC',serif; font-size:16px; }
 .avail-poster .hd p{ margin:0; font-size:11px; opacity:.85; }
+.avail-poster .hd .hours{ margin:4px 0 0; font-size:10px; opacity:.75; }
 .avail-poster .mo{ text-align:center; font-family:'Noto Serif TC',serif; font-weight:700; font-size:14px; padding:12px 0 6px; background:var(--white); }
 .avail-poster .wd{ display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:10.5px; color:var(--ink-soft); background:var(--white); padding-bottom:4px; }
 .avail-poster .grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; background:var(--white); padding:4px 10px 16px; }
@@ -5640,7 +5642,7 @@ function renderAvailPoster(){
   }
   wrap.innerHTML = `
     <div class="avail-poster">
-      <div class="hd"><h4>${BUSINESS.name||'預約服務'}</h4><p>掃碼或透過連結立即預約</p></div>
+      <div class="hd"><h4>${BUSINESS.name||'預約服務'}</h4><p>掃碼或透過連結立即預約</p>${BUSINESS.hoursFull ? `<p class="hours">${BUSINESS.hoursFull}</p>` : ''}</div>
       <div class="mo">${y} 年 ${m+1} 月</div>
       <div class="wd"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
       <div class="grid">${cells}</div>
@@ -5655,7 +5657,7 @@ function downloadAvailPoster(){
   const firstDow = new Date(y,m,1).getDay();
   const daysInMonth = new Date(y,m+1,0).getDate();
   const rows = Math.ceil((firstDow+daysInMonth)/7);
-  const W = 600, headH = 110, moH = 40, wdH = 26, cellH = 66;
+  const W = 600, headH = BUSINESS.hoursFull ? 128 : 110, moH = 40, wdH = 26, cellH = 66;
   const gridTop = headH + moH + wdH;
   const gridH = rows*cellH;
   const legendH = 76;
@@ -5670,6 +5672,11 @@ function downloadAvailPoster(){
   ctx.fillText(BUSINESS.name||'預約服務', W/2, 55);
   ctx.font = '400 13px "Noto Sans TC", sans-serif';
   ctx.fillText('掃碼或透過連結立即預約', W/2, 82);
+  if(BUSINESS.hoursFull){
+    ctx.font = '400 11px "Noto Sans TC", sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillText(BUSINESS.hoursFull, W/2, 100);
+  }
   ctx.fillStyle = '#26221B';
   ctx.font = '700 20px "Noto Serif TC", serif';
   ctx.fillText(y+' 年 '+(m+1)+' 月', W/2, headH+30);
@@ -5814,6 +5821,7 @@ function renderSlotPosterPreview(){
       <div class="sub">${y} ・ ${m+1}月可約時段</div>
       <div class="biz">${BUSINESS.name||''}</div>
       <div class="handle">${handle}</div>
+      ${BUSINESS.hoursFull ? `<div class="hours">${BUSINESS.hoursFull}</div>` : ''}
       <div class="divider"></div>
       <div class="slot-grid">
         ${wdNames.map((wd,i)=>`<div class="wd${(i===0||i===6)?' weekend':''}">${wd}</div>`).join('')}
@@ -5858,7 +5866,7 @@ async function downloadSlotPoster(){
   const cellH = 58*S;
   const wdRowH = 20*S;
   const gridH = wdRowH + rows*cellH;
-  const headH = 26*S + 64*S + 10*S + 44*S + 4*S + 21*S + 12*S + 20*S + 4*S + 17*S + 10*S + 1*S + 12*S;
+  const headH = 26*S + 64*S + 10*S + 44*S + 4*S + 21*S + 12*S + 20*S + 4*S + 17*S + 10*S + (BUSINESS.hoursFull ? 10*S : 0) + 1*S + 12*S;
   const footH = 16*S + 44*S + 12*S + 16*S + 12*S + 56*S + 20*S;
   const H = headH + gridH + footH;
 
@@ -5907,6 +5915,11 @@ async function downloadSlotPoster(){
   ctx.fillStyle = '#8A6E47'; ctx.font = '700 '+(11*S)+'px "Space Mono", monospace';
   ctx.fillText(handle, W/2, cy);
   cy += 10*S;
+  if(BUSINESS.hoursFull){
+    ctx.fillStyle = '#9C8563'; ctx.font = '400 '+(9.5*S)+'px "Noto Sans TC", sans-serif';
+    ctx.fillText(BUSINESS.hoursFull, W/2, cy);
+    cy += 10*S;
+  }
   // 分隔線
   ctx.strokeStyle = 'rgba(122,92,46,0.2)'; ctx.lineWidth = 1*S;
   ctx.beginPath(); ctx.moveTo(padX, cy); ctx.lineTo(W-padX, cy); ctx.stroke();
