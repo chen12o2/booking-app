@@ -706,7 +706,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
     <!-- ============ ABOUT ============ -->
     <section class="screen" id="screen-about">
       <div class="section-title"><span class="num">📖</span>商家資訊</div>
-      <div style="text-align:center; font-size:11px; color:#999; margin:-4px 0 8px;">版本標記：2026-08-31-r2</div>
+      <div style="text-align:center; font-size:11px; color:#999; margin:-4px 0 8px;">版本標記：2026-08-31-r3</div>
 
       <div class="about-card">
         <div class="logo-preview" id="logoPreview" style="margin:0 auto 4px;">🏷️</div>
@@ -1398,7 +1398,19 @@ function renderHome(){
   `).join('');
 }
 function quickPickService(id){
-  state = { service:SERVICES.find(s=>s.id===id), staff:STAFF[0], date:null, time:null };
+  const s = SERVICES.find(x=>x.id===id);
+  if(BUSINESS.allowMultiService){
+    // 多選模式開啟時，快速卡片不再直接跳過選擇畫面，改成帶著這項服務先進入正式的服務選擇步驟，
+    // 讓顧客還能繼續加選其他服務，跟從「預約」流程進來的體驗一致
+    state = { service:s, services:[s], staff:STAFF[0], date:null, time:null };
+    navStack = ['home'];
+    infoDirtyFields = new Set();
+    rescheduleBookingId = null;
+    bookingPayMethod = 'cash';
+    goScreen('service');
+    return;
+  }
+  state = { service:s, staff:STAFF[0], date:null, time:null };
   navStack = ['home'];
   goScreen(BUSINESS.enableStaffSelection === false ? 'datetime' : 'staff');
 }
@@ -1494,6 +1506,12 @@ function startBookingWithService(id){
   infoDirtyFields = new Set();
   rescheduleBookingId = null;
   bookingPayMethod = 'cash';
+  if(BUSINESS.allowMultiService){
+    // 多選模式開啟時，同樣改成先進入服務選擇畫面，讓顧客能繼續加選，而不是直接跳過
+    navStack = ['home'];
+    goScreen('service');
+    return;
+  }
   goScreen(BUSINESS.enableStaffSelection === false ? 'datetime' : 'staff');
 }
 
