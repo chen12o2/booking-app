@@ -158,6 +158,15 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .rr-bottom{ display:flex; justify-content:space-between; align-items:center; }
 .rr-amt .orig{ text-decoration:line-through; color:var(--ink-soft); font-size:11.5px; margin-right:6px; font-family:'Space Mono',monospace; }
 .rr-amt .actual{ font-family:'Space Mono', monospace; font-weight:700; font-size:14px; }
+.rr-staff-row{
+  display:flex; align-items:center; gap:10px; padding:11px 14px; border:1.5px solid var(--line);
+  border-radius:10px; background:var(--white); margin-bottom:8px; cursor:pointer; font-size:13px;
+}
+.rr-staff-row.active{ border-color:var(--gold); background:#FBF3E1; }
+.rr-staff-row:active{ transform:scale(0.99); }
+.rr-staff-row .nm{ font-weight:700; flex:1; }
+.rr-staff-row .ct{ color:var(--ink-soft); font-size:12px; flex-shrink:0; }
+.rr-staff-row .amt{ font-family:'Space Mono', monospace; font-weight:700; color:var(--stamp-dark); flex-shrink:0; min-width:64px; text-align:right; }
 
 .hero-ticket{
   background:var(--gold); color:var(--white);
@@ -1570,6 +1579,10 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
           </div>
         </div>
 
+        <div class="section-title" style="margin-bottom:10px;"><span class="lead">服務人員業績</span></div>
+        <div id="rrStaffBreakdown" style="margin-bottom:6px;"></div>
+        <div class="field-hint" style="margin-bottom:20px;">點一位服務人員可篩選只看她的明細（含下方 CSV／PDF），再點一次取消篩選。金額只計入「已完成」的預約。</div>
+
         <div id="rrList"></div>
 
         <div class="field-hint" style="margin-top:6px;">取消／未到列灰顯供對帳，不計入營收（未到定金保留除外）；已修正實收顯示劃線原價。CSV 另含服務人員與預約編號欄。</div>
@@ -2225,25 +2238,62 @@ function renderDashboard(){
    ============================================================ */
 function openRevenueReport(){
   rrMonth = dashboardMonth || dashMonthKey(new Date());
+  rrStaffFilter = null;
   goScreen('revenue-report');
 }
 let rrMonth = null; // 'YYYY-MM'
+let rrStaffFilter = null; // 服務人員 id，null＝全部
 function shiftRevenueReportMonth(dir){
   if(!rrMonth) rrMonth = dashMonthKey(new Date());
   const [y,m] = rrMonth.split('-').map(Number);
   rrMonth = dashMonthKey(new Date(y, m-1+dir, 1));
   renderRevenueReport();
 }
-function revenueReportRows(){
+function revenueReportMonthRows(){
   const monthKey = rrMonth || dashMonthKey(new Date());
   const all = loadBookings().filter(b=>(b.date||'').slice(0,7)===monthKey);
   all.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   return all;
 }
+function revenueReportRows(){
+  const all = revenueReportMonthRows();
+  if(!rrStaffFilter) return all;
+  return all.filter(b=> ((b.staff && b.staff.id) || 'unknown') === rrStaffFilter);
+}
+function setRrStaffFilter(staffId){
+  rrStaffFilter = (rrStaffFilter===staffId) ? null : staffId;
+  renderRevenueReport();
+}
+function renderStaffBreakdown(){
+  const wrap = document.getElementById('rrStaffBreakdown');
+  if(!wrap) return;
+  const doneList = revenueReportMonthRows().filter(b=>b.status==='done');
+  if(doneList.length===0){
+    wrap.innerHTML = `<div class="field-hint">這個月還沒有已完成的預約可以統計業績。</div>`;
+    return;
+  }
+  const map = {};
+  doneList.forEach(b=>{
+    const key = (b.staff && b.staff.id) || 'unknown';
+    const label = (b.staff && b.staff.name) || '不指定';
+    if(!map[key]) map[key] = { name: label, count:0, revenue:0 };
+    map[key].count++;
+    map[key].revenue += bookingActualTotal(b);
+  });
+  const rows = Object.entries(map).sort((a,b)=>b[1].revenue-a[1].revenue);
+  wrap.innerHTML = rows.map(([key,d])=>`
+    <div class="rr-staff-row ${rrStaffFilter===key?'active':''}" onclick="setRrStaffFilter('${key}')">
+      <span class="nm">${d.name}</span>
+      <span class="ct">${d.count} 單</span>
+      <span class="amt">$${d.revenue.toLocaleString()}</span>
+    </div>
+  `).join('');
+}
 function renderRevenueReport(){
   if(!rrMonth) rrMonth = dashMonthKey(new Date());
   const [ry,rm] = rrMonth.split('-').map(Number);
   document.getElementById('rrMonthLabel').textContent = ry+' 年 '+rm+' 月';
+  renderStaffBreakdown();
 
   const all = revenueReportRows();
   const doneList = all.filter(b=>b.status==='done');
@@ -2265,7 +2315,9 @@ function renderRevenueReport(){
 
   const wrap = document.getElementById('rrList');
   if(all.length===0){
-    wrap.innerHTML = `<div class="empty-state"><div class="ic">🧾</div><h3>這個月沒有預約</h3><p>換個月份看看，或直接切換到有排程的月份。</p></div>`;
+    wrap.innerHTML = rrStaffFilter
+      ? `<div class="empty-state"><div class="ic">🧾</div><h3>這位服務人員這個月沒有預約</h3><p>點一下上面的名字可以取消篩選，看全部人的明細。</p></div>`
+      : `<div class="empty-state"><div class="ic">🧾</div><h3>這個月沒有預約</h3><p>換個月份看看，或直接切換到有排程的月份。</p></div>`;
     return;
   }
   const wdShort = ['日','一','二','三','四','五','六'];
@@ -2310,7 +2362,8 @@ function downloadRevenueReportCsv(){
     return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
   }).join(',')).join('\r\n');
   const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
-  shareOrDownloadBlob(blob, '營收報表_'+monthKey+'.csv', 'CSV 已下載');
+  const filterLabel = rrStaffFilter && all[0] && all[0].staff ? '_'+all[0].staff.name : '';
+  shareOrDownloadBlob(blob, '營收報表_'+monthKey+filterLabel+'.csv', 'CSV 已下載');
 }
 /* 存為 PDF：借用瀏覽器內建的「列印」功能，列印預覽畫面裡可以直接選「儲存為 PDF」。
    中文字型完全沒問題（用系統字型），也不用額外載入 PDF 產生套件，缺點是比 CSV/圖片
@@ -2348,6 +2401,7 @@ function printRevenueReportPdf(){
   // 開一個全新分頁來裝報表內容，再自動觸發列印：這樣即使目前是從「加入主畫面」的
   // 獨立 App 模式開啟（iOS 在這種模式下沒有瀏覽器介面，window.print() 會完全沒反應），
   // 也會強制用真正的 Safari 分頁打開，列印功能才會確實可以用
+  const staffLabel = rrStaffFilter && all[0] && all[0].staff ? '　・　'+all[0].staff.name : '';
   const printHtml = `<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8">
 <title>${BUSINESS.name||''} 營收報表</title>
 <style>
@@ -2364,7 +2418,7 @@ function printRevenueReportPdf(){
 </style>
 </head><body>
   <h1>${BUSINESS.name||''}　營收報表</h1>
-  <div class="sub">${ry} 年 ${rm} 月</div>
+  <div class="sub">${ry} 年 ${rm} 月${staffLabel}</div>
   <div class="stats">
     <div>本月實收營收<b>$${revenue.toLocaleString()}</b></div>
     <div>有效單數<b>${doneList.length+upcomingList.length+pendingList.length}</b>（完成 ${doneList.length}・已確認 ${upcomingList.length}・待確認 ${pendingList.length}）</div>
