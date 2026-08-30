@@ -6228,6 +6228,7 @@ function renderCalendarTimeline(){
             <div class="rowline">
               <span class="status-pill ${statusClass(b.status)}">${statusLabel(b.status)}</span>
               <span class="rng">${b.time}–${endTime}</span>
+              <span class="staff-tag" style="margin-left:auto; font-size:11.5px; color:var(--ink-3,#8a7a63);">👤 ${b.staff ? b.staff.name : '不指定'}</span>
             </div>
           </div>
         </div>`;
