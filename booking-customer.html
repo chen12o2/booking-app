@@ -2245,6 +2245,7 @@ async function confirmPurchasePackagePlan(planId){
   if(plan.giftProductId){
     items.push({ productId: plan.giftProductId, name: plan.giftProductName+'（套組贈品）', price: 0, qty: plan.giftQty||1, subtotal: 0, shippedQty: 0 });
   }
+  const newPkgId = 'pkg_'+Date.now();
   const order = {
     code: genOrderCode(), customerId: uid,
     customer: { name: (cust&&cust.name)||'', phone: (cust&&cust.phone)||'', email:(cust&&cust.email)||'', note: '線上購買套組方案' },
@@ -2253,6 +2254,7 @@ async function confirmPurchasePackagePlan(planId){
   if(packagePlanPayMethod==='wallet'){
     order.payment = { method:'wallet', walletAmount: plan.price, recordedAt: new Date().toISOString(), note:'顧客結帳時使用儲值金付款' };
     order.packageGranted = true;
+    order.grantedPackageId = newPkgId;
   } else {
     order.customerDeclaredMethod = packagePlanPayMethod;
   }
@@ -2283,7 +2285,7 @@ async function confirmPurchasePackagePlan(planId){
           const custData = custSnap.data() || {};
           const newBalance = (custData.balance||0) - plan.price;
           const log = [...(custData.balanceLog||[]), { date:new Date().toISOString(), amount:-plan.price, note:'消費扣款（'+order.code+'）', type:'order_deduct' }];
-          const newPackages = [...(custData.packages||[]), { id:'pkg_'+Date.now(), name: plan.name, serviceId: plan.serviceId||null, total: plan.totalSessions+(plan.giftSessions||0), used:0, note: plan.giftSessions?`顧客線上購買（含贈送 ${plan.giftSessions} 堂）`:'顧客線上購買', paidAmount: plan.price, createdAt: new Date().toISOString() }];
+          const newPackages = [...(custData.packages||[]), { id:newPkgId, name: plan.name, serviceId: plan.serviceId||null, total: plan.totalSessions+(plan.giftSessions||0), used:0, note: plan.giftSessions?`顧客線上購買（含贈送 ${plan.giftSessions} 堂）`:'顧客線上購買', paidAmount: plan.price, createdAt: new Date().toISOString() }];
           tx.update(custRef, { balance:newBalance, balanceLog: log, packages: newPackages });
         }
       });
