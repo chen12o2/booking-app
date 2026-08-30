@@ -902,7 +902,6 @@ const DEFAULT_SERVICES = [
   { id:'s3', icon:'💎', name:'尊榮預約', desc:'完整服務流程，含專屬諮詢與售後追蹤。', duration:90, price:1980 },
 ];
 const DEFAULT_STAFF = [
-  { id:'any', name:'不指定', role:'任一位皆可' },
   { id:'st1', name:'A 專員', role:'資深' },
   { id:'st2', name:'B 專員', role:'一般' },
 ];
@@ -960,7 +959,8 @@ function startPublicListeners(){
   );
   unsubscribers.push(
     db.collection('staff').onSnapshot(snap=>{
-      STAFF = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(a.order??9999)-(b.order??9999));
+      // id:'any'（不指定）不該是真實的服務人員資料，過濾掉以免污染「預設服務人員」的判斷
+      STAFF = snap.docs.map(d=>({ id:d.id, ...d.data() })).filter(s=>s.id!=='any').sort((a,b)=>(a.order??9999)-(b.order??9999));
       if(STAFF.length===0) STAFF = [...DEFAULT_STAFF];
       if(!state.staff || !STAFF.find(s=>s.id===state.staff.id)) state.staff = STAFF[0];
       rerenderActiveScreen();
@@ -1823,12 +1823,9 @@ async function submitBooking(){
   if(BUSINESS.enableStaffSelection === false){
     try{
       const staffSnap = await db.collection('staff').get();
-      const freshStaff = staffSnap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(a.order??9999)-(b.order??9999));
-      // 暫時性除錯用彈窗：直接把查到的原始資料顯示出來，不需要開發者工具就能看到
-      alert('【除錯】staff 集合共 '+staffSnap.size+' 筆\n'+freshStaff.map(s=>s.name+'（id:'+s.id+', order:'+s.order+'）').join('\n'));
+      const freshStaff = staffSnap.docs.map(d=>({ id:d.id, ...d.data() })).filter(s=>s.id!=='any').sort((a,b)=>(a.order??9999)-(b.order??9999));
       state.staff = freshStaff.length ? freshStaff[0] : STAFF[0];
     }catch(err){
-      alert('【除錯】查詢失敗：'+(err&&err.message||err));
       state.staff = STAFF[0]; // 查詢失敗時，退回目前快取的值當備援，至少不會整個中斷送出流程
     }
   }

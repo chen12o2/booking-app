@@ -1766,7 +1766,6 @@ const DEFAULT_SERVICES = [
   { id:'s3', icon:'💎', name:'尊榮預約', desc:'完整服務流程，含專屬諮詢與售後追蹤。', duration:90, price:1980, order:3 },
 ];
 const DEFAULT_STAFF = [
-  { id:'any', name:'不指定', role:'任一位皆可', order:0 },
   { id:'st1', name:'A 專員', role:'資深', order:1 },
   { id:'st2', name:'B 專員', role:'一般', order:2 },
 ];
@@ -1834,7 +1833,8 @@ function startListeners(){
   );
   unsubscribers.push(
     db.collection('staff').onSnapshot(snap=>{
-      STAFF_LIST = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(a.order||0)-(b.order||0));
+      // id:'any'（不指定）不該是真實的服務人員資料，過濾掉以免污染「預設服務人員」的判斷
+      STAFF_LIST = snap.docs.map(d=>({ id:d.id, ...d.data() })).filter(s=>s.id!=='any').sort((a,b)=>(a.order||0)-(b.order||0));
       rerenderActiveScreen();
     }, err=>console.error('staff listener', err))
   );
