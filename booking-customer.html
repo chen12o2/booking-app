@@ -802,6 +802,10 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
+/* 商家頁跟顧客頁是同一個網域下的兩個獨立頁面，Firebase Auth 預設用 localStorage 存登入狀態，
+   會在同網域的所有分頁間共用——導致在商家頁登入/切換帳號後，顧客分頁的登入狀態也被悄悄換掉。
+   改成 SESSION persistence（存在 sessionStorage）：每個分頁各自獨立，不會互相干擾。 */
+auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
 auth.languageCode = 'zh-TW'; // 讓驗證信、忘記密碼信，以及點連結後看到的網頁都顯示繁體中文
 const db = firebase.firestore();
 
