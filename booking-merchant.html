@@ -1034,7 +1034,6 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
             </div>
             <div class="cal-legend-row">
               <span class="cal-legend-chip cal-legend-break">休息</span>
-              <span class="cal-legend-chip cal-legend-break">特別休息</span>
             </div>
             <div class="field-hint" id="calGridCount" style="text-align:center; margin:10px 0;">共 0 筆預約</div>
             <div class="cal-grid-wd">
@@ -1668,6 +1667,53 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
   </div>
 
   <!-- ============ PAYMENT RECONCILE MODAL ============ -->
+  <!-- ============ BREAK DAY DETAIL SHEET（行程頁點休息卡片跳出） ============ -->
+  <div class="modal-backdrop" id="breakDayDetailBackdrop" onclick="if(event.target===this)closeBreakDayDetail()">
+    <div class="modal-card">
+      <h3 id="breakDayDetailTitle">休假</h3>
+      <p class="field-hint" id="breakDayDetailSub" style="margin-bottom:6px;"></p>
+      <p class="field-hint" id="breakDayDetailRepeatNote" style="margin-bottom:16px;"></p>
+      <div style="text-align:center;">
+        <span style="color:var(--stamp-dark); font-size:13px; cursor:pointer; text-decoration:underline;" onclick="startDeleteBreakDay()">刪除這筆紀錄</span>
+      </div>
+      <div class="sheet-actions" style="margin-top:20px;">
+        <button class="btn btn-outline" style="width:100%;" onclick="closeBreakDayDetail()">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ BREAK DELETE：選擇「僅刪除這一天」或「刪除所有重複」 ============ -->
+  <div class="modal-backdrop" id="breakDeleteChoiceBackdrop" onclick="if(event.target===this)closeBreakDeleteChoice()">
+    <div class="modal-card">
+      <h3>刪除這個休息時段</h3>
+      <p class="field-hint" style="margin-bottom:18px;" id="breakDeleteChoiceSub">「休假」是一組重複休息的一部分。</p>
+      <div class="break-delete-option" onclick="openBreakDeleteSingleConfirm()" style="border:1.5px solid var(--line,#E4D9C4); border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-weight:700;">僅刪除這一天</span>
+        <span class="field-hint" id="breakDeleteChoiceDate" style="margin:0;"></span>
+      </div>
+      <div class="break-delete-option" onclick="openBreakDeleteAllConfirm()" style="border:1.5px solid rgba(193,74,58,0.3); background:rgba(193,74,58,0.06); border-radius:12px; padding:14px; margin-bottom:16px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-weight:700; color:#C14A3A;">刪除所有重複</span>
+        <span style="color:#C14A3A; font-size:13px;" id="breakDeleteChoiceCount"></span>
+      </div>
+      <div style="text-align:center;">
+        <span class="field-hint" style="cursor:pointer;" onclick="closeBreakDeleteChoice()">取消</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ BREAK DELETE：最終刪除確認（單一天／整組重複共用，內容依情境動態帶入） ============ -->
+  <div class="modal-backdrop" id="breakDeleteAllConfirmBackdrop" onclick="if(event.target===this)closeBreakDeleteAllConfirm()">
+    <div class="modal-card">
+      <h3 id="breakDeleteAllConfirmTitle">確定刪除整組重複休息？</h3>
+      <p class="field-hint" style="margin-bottom:14px;" id="breakDeleteAllConfirmSub"></p>
+      <p style="background:rgba(193,74,58,0.08); color:#C14A3A; font-size:13px; padding:10px 12px; border-radius:10px; margin:0 0 20px;" id="breakDeleteAllConfirmWarn">此操作無法復原。</p>
+      <div class="sheet-actions">
+        <button class="btn btn-outline" onclick="closeBreakDeleteAllConfirm()">返回</button>
+        <button class="btn btn-primary" style="background:#C14A3A; border-color:#C14A3A;" onclick="runBreakDeleteConfirmed()" id="breakDeleteAllConfirmBtn">刪除</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="payReconcileBackdrop" onclick="if(event.target===this)closePayReconcile()">
     <div class="modal-card">
       <h3>收款</h3>
@@ -5551,6 +5597,7 @@ function breakAppliesToDate(b, dateKey, weekday){
   if(b.type==='weekly'){
     if(!(b.weekdays||[]).includes(weekday)) return false;
     if(b.endDate && dateKey>b.endDate) return false;
+    if((b.excludeDates||[]).includes(dateKey)) return false; // 「僅刪除這一天」留下的排除清單
     return true;
   }
   if(b.type==='monthly') return (b.dates||[]).includes(dateKey);
@@ -6217,7 +6264,7 @@ function renderCalendarTimeline(){
     if(breakBlocks[dateKey]){
       const bb = breakBlocks[dateKey];
       html += `
-        <div class="cal-off-card">
+        <div class="cal-off-card" onclick="openBreakDayDetail('${dateKey}')" style="cursor:pointer;">
           <div class="badge">${bb.label}${bb.isWeekly ? '<span class="rep">重複</span>' : ''}</div>
           <div class="ttl">${bb.label}・全天</div>
           <div class="sub">今日不接受預約</div>
@@ -6723,6 +6770,140 @@ async function deleteBreakEntry(idx){
     showToast('已刪除');
     renderBreaksList();
   }catch(err){ showToast('刪除失敗，請檢查網路連線後再試'); }
+}
+
+/* ---- 行程頁點休息卡片：休假詳情 → 刪除（支援「僅刪除這一天」／「刪除所有重複」，仿照 Pencil app 的互動） ---- */
+let breakDayDetailDate = null;
+let breakDeleteMode = null; // 'single' | 'all'
+function findBreakEntryForDate(dateKey){
+  const [y,m,d] = dateKey.split('-').map(Number);
+  const wd = new Date(y,m-1,d).getDay();
+  const breaks = BUSINESS.breaks || [];
+  for(let i=0;i<breaks.length;i++){
+    const b = breaks[i];
+    if(breakAppliesToDate(b, dateKey, wd) && (b.allDay===true || !b.ranges || b.ranges.length===0)){
+      return { entry:b, index:i };
+    }
+  }
+  return null;
+}
+function isBreakEntryGroup(entry){
+  return entry.type==='weekly' || (entry.type==='monthly' && (entry.dates||[]).length>1);
+}
+/* 只計算「今天起」到結束日（或無結束日時抓一年內）還剩幾天符合，給刪除確認畫面顯示用的概略天數，
+   不去回溯計算過去，因為過去的已經約束不到什麼、對商家沒有實際意義 */
+function countBreakGroupDays(entry){
+  if(entry.type==='monthly') return (entry.dates||[]).length;
+  if(entry.type==='weekly'){
+    const today = new Date(); today.setHours(0,0,0,0);
+    const cap = entry.endDate ? new Date(entry.endDate+'T00:00:00') : new Date(today.getFullYear()+1, today.getMonth(), today.getDate());
+    let count = 0;
+    for(let d=new Date(today); d<=cap; d.setDate(d.getDate()+1)){
+      if((entry.weekdays||[]).includes(d.getDay())){
+        const dk = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+        if(!(entry.excludeDates||[]).includes(dk)) count++;
+      }
+    }
+    return count;
+  }
+  return 1;
+}
+function openBreakDayDetail(dateKey){
+  const found = findBreakEntryForDate(dateKey);
+  if(!found) return;
+  breakDayDetailDate = dateKey;
+  const { entry } = found;
+  const [y,m,d] = dateKey.split('-').map(Number);
+  const wd = WD_LABELS[new Date(y,m-1,d).getDay()];
+  document.getElementById('breakDayDetailTitle').textContent = entry.label || '休假';
+  document.getElementById('breakDayDetailSub').textContent = `${m}/${d}（週${wd}） 00:00–23:59`;
+  document.getElementById('breakDayDetailRepeatNote').textContent = isBreakEntryGroup(entry) ? `「${entry.label||'休假'}」是一組重複休息的一部分。` : '';
+  document.getElementById('breakDayDetailBackdrop').classList.add('show');
+}
+function closeBreakDayDetail(){
+  document.getElementById('breakDayDetailBackdrop').classList.remove('show');
+}
+function startDeleteBreakDay(){
+  const dateKey = breakDayDetailDate;
+  const found = findBreakEntryForDate(dateKey);
+  closeBreakDayDetail();
+  if(!found) return;
+  const { entry } = found;
+  if(!isBreakEntryGroup(entry)){
+    // 不是重複的一部分（單次休假，或整月挑日子已經只剩最後一天）：不需要問要刪一天還是刪全部，直接走單一天的刪除確認
+    openBreakDeleteSingleConfirm();
+    return;
+  }
+  const [y,m,d] = dateKey.split('-').map(Number);
+  const wd = WD_LABELS[new Date(y,m-1,d).getDay()];
+  document.getElementById('breakDeleteChoiceSub').textContent = `「${entry.label||'休假'}」是一組重複休息的一部分。`;
+  document.getElementById('breakDeleteChoiceDate').textContent = `${m}/${d}（週${wd}）`;
+  document.getElementById('breakDeleteChoiceCount').textContent = `共 ${countBreakGroupDays(entry)} 天`;
+  document.getElementById('breakDeleteChoiceBackdrop').classList.add('show');
+}
+function closeBreakDeleteChoice(){
+  document.getElementById('breakDeleteChoiceBackdrop').classList.remove('show');
+}
+function openBreakDeleteSingleConfirm(){
+  closeBreakDeleteChoice();
+  breakDeleteMode = 'single';
+  const dateKey = breakDayDetailDate;
+  const found = findBreakEntryForDate(dateKey);
+  if(!found) return;
+  const { entry } = found;
+  const [y,m,d] = dateKey.split('-').map(Number);
+  const wd = WD_LABELS[new Date(y,m-1,d).getDay()];
+  document.getElementById('breakDeleteAllConfirmTitle').textContent = '永久刪除這筆紀錄？';
+  document.getElementById('breakDeleteAllConfirmSub').textContent = `${entry.label||'休假'}・${m}/${d}（週${wd}） 00:00`;
+  document.getElementById('breakDeleteAllConfirmWarn').textContent = isBreakEntryGroup(entry) ? '只會刪除這一天，其餘重複休息不受影響。此操作無法復原。' : '此操作無法復原。';
+  document.getElementById('breakDeleteAllConfirmBtn').textContent = '刪除';
+  document.getElementById('breakDeleteAllConfirmBackdrop').classList.add('show');
+}
+function openBreakDeleteAllConfirm(){
+  closeBreakDeleteChoice();
+  breakDeleteMode = 'all';
+  const dateKey = breakDayDetailDate;
+  const found = findBreakEntryForDate(dateKey);
+  if(!found) return;
+  const { entry } = found;
+  const count = countBreakGroupDays(entry);
+  document.getElementById('breakDeleteAllConfirmTitle').textContent = '確定刪除整組重複休息？';
+  document.getElementById('breakDeleteAllConfirmSub').innerHTML = `將永久刪除「${entry.label||'休假'}」這組 <b>${count} 天</b> 的休息時段。`;
+  document.getElementById('breakDeleteAllConfirmWarn').textContent = '此操作無法復原。';
+  document.getElementById('breakDeleteAllConfirmBtn').textContent = `刪除 ${count} 天`;
+  document.getElementById('breakDeleteAllConfirmBackdrop').classList.add('show');
+}
+function closeBreakDeleteAllConfirm(){
+  document.getElementById('breakDeleteAllConfirmBackdrop').classList.remove('show');
+  breakDeleteMode = null;
+}
+async function runBreakDeleteConfirmed(){
+  const dateKey = breakDayDetailDate;
+  const found = findBreakEntryForDate(dateKey);
+  if(!found){ closeBreakDeleteAllConfirm(); return; }
+  const { entry, index } = found;
+  let breaks = [...(BUSINESS.breaks || [])];
+  if(breakDeleteMode==='all' || !isBreakEntryGroup(entry)){
+    // 整組刪除；或本來就不是群組（單次休假／整月挑日子最後一天），刪掉這一筆等同刪掉整條紀錄
+    breaks = breaks.filter((_,i)=>i!==index);
+  } else {
+    // 僅刪除這一天：weekly 用排除清單記住這天不再休息；monthly 直接把這天從日期清單移除
+    const updated = { ...entry };
+    if(entry.type==='weekly'){
+      updated.excludeDates = [...(entry.excludeDates||[]), dateKey];
+    } else if(entry.type==='monthly'){
+      updated.dates = (entry.dates||[]).filter(d=>d!==dateKey);
+    }
+    breaks[index] = updated;
+  }
+  try{
+    await db.collection('meta').doc('business').set({ breaks }, { merge:true });
+    showToast('已刪除');
+  }catch(err){ showToast('刪除失敗，請檢查網路連線後再試'); }
+  closeBreakDeleteAllConfirm();
+  breakDayDetailDate = null;
+  renderCalendarTimeline();
+  renderBreaksList();
 }
 
 /* ---- 新增休息時段（單次／每週重複／整月挑日子） ---- */
