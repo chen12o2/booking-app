@@ -5867,14 +5867,13 @@ function renderSlotPosterPreview(){
       <div class="en-month">${EN_MONTHS[m]}</div>
       <div class="sub">${y} ・ ${m+1}月可約時段</div>
       <div class="biz">${BUSINESS.name||''}</div>
-      <div class="handle">${handle}</div>
       ${BUSINESS.hoursFull ? `<div class="hours">${BUSINESS.hoursFull}</div>` : ''}
       <div class="divider"></div>
       <div class="slot-grid">
         ${wdNames.map((wd,i)=>`<div class="wd${(i===0||i===6)?' weekend':''}">${wd}</div>`).join('')}
         ${cells}
       </div>
-      <div class="cta">→ 立即線上預約 ・ ${handle}</div>
+      <div class="cta">→ 立即線上預約</div>
       <div class="microtext">時段皆可微調，歡迎私訊　劃掉＝已約滿</div>
       <div class="bottom-row">
         <div class="qr-cap">掃碼預約</div>
@@ -5959,8 +5958,6 @@ async function downloadSlotPoster(){
   ctx.fillStyle = '#26221B'; ctx.font = '700 '+(14*S)+'px "Noto Sans TC", sans-serif';
   ctx.fillText(BUSINESS.name||'', W/2, cy);
   cy += 4*S + 11*S;
-  ctx.fillStyle = '#8A6E47'; ctx.font = '700 '+(11*S)+'px "Space Mono", monospace';
-  ctx.fillText(handle, W/2, cy);
   cy += 10*S;
   if(BUSINESS.hoursFull){
     ctx.fillStyle = '#9C8563'; ctx.font = '400 '+(9.5*S)+'px "Noto Sans TC", sans-serif';
@@ -6005,7 +6002,7 @@ async function downloadSlotPoster(){
 
   cy = gridTop + gridH + 16*S;
   // CTA 按鈕：網址長短不一，動態縮小字級避免按鈕超出海報寬度被裁切
-  const ctaText = '→ 立即線上預約 ・ '+handle;
+  const ctaText = '→ 立即線上預約';
   const ctaMaxW = innerW;
   let ctaFontSize = 12.5*S;
   const ctaMinFontSize = 8*S;
