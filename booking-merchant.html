@@ -991,6 +991,24 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
             <button class="btn-share-outline" onclick="previewCustomerLink()">預覽</button>
             <button class="btn-share-fill" onclick="openPosterGen()">產生可約月曆圖</button>
           </div>
+          <div class="qr-choice-row" style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(122,92,46,0.14);">
+            <div class="field-hint" style="margin-bottom:8px;">上面的 QR Code、以及「可約月曆圖」海報要顯示哪一個？隨時可以切換。</div>
+            <div style="display:flex; gap:8px; margin-bottom:10px;">
+              <button type="button" class="btn btn-outline btn-sm" id="qrChoiceBookingBtn" style="flex:1;" onclick="setQrDisplay('booking')">預約頁連結</button>
+              <button type="button" class="btn btn-outline btn-sm" id="qrChoiceLineBtn" style="flex:1;" onclick="setQrDisplay('line')">LINE 官方帳號</button>
+            </div>
+            <div id="lineQrUploadBox" style="display:none;">
+              <div class="about-card logo-upload-card" style="padding:10px;">
+                <div class="logo-preview" id="lineQrPreview" style="border-radius:8px;">—</div>
+                <div class="logo-upload-actions">
+                  <button class="btn btn-outline btn-sm" onclick="document.getElementById('lineQrFileInput').click()">上傳 LINE QR Code 圖片</button>
+                  <button class="btn btn-ghost btn-sm" id="removeLineQrBtn" style="display:none;" onclick="removeLineQr()">移除</button>
+                  <div class="field-hint">從 LINE 官方帳號後台下載加入好友 QR Code 圖片後上傳</div>
+                </div>
+                <input type="file" id="lineQrFileInput" accept="image/*" style="display:none;" onchange="handleLineQrUpload(event)">
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="about-card" style="margin-top:16px;">
@@ -1824,6 +1842,8 @@ const DEFAULT_BUSINESS = {
   phone: "請於後台設定聯絡電話",
   bookingPrefix: "GD",
   customerUrl: "",
+  qrDisplay: "booking", // 'booking'（自動用預約網址產生 QR）| 'line'（改用商家上傳的 LINE QR 圖片）
+  lineQrImage: "",
   serviceCategories: [],
   productCategories: []
 };
@@ -5661,11 +5681,95 @@ function renderSharePage(){
   const url = (BUSINESS.customerUrl||'').trim();
   const qrWrap = document.getElementById('qrCodeWrap');
   if(qrWrap){
-    qrWrap.innerHTML = url
-      ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}" alt="預約頁 QR Code">`
-      : `<div class="field-hint">請先至「設定→商店門面」貼上顧客頁網址，才能產生 QR Code</div>`;
+    if(BUSINESS.qrDisplay==='line' && BUSINESS.lineQrImage){
+      qrWrap.innerHTML = `<img src="${BUSINESS.lineQrImage}" alt="LINE 官方帳號 QR Code" style="max-width:200px;">`;
+    } else {
+      qrWrap.innerHTML = url
+        ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}" alt="預約頁 QR Code">`
+        : `<div class="field-hint">請先至「設定→商店門面」貼上顧客頁網址，才能產生 QR Code</div>`;
+    }
   }
+  renderQrDisplayToggleUI();
   renderAvailPoster();
+}
+function renderQrDisplayToggleUI(){
+  const bookingBtn = document.getElementById('qrChoiceBookingBtn');
+  const lineBtn = document.getElementById('qrChoiceLineBtn');
+  if(!bookingBtn || !lineBtn) return;
+  const mode = BUSINESS.qrDisplay || 'booking';
+  bookingBtn.classList.toggle('btn-primary', mode==='booking');
+  bookingBtn.classList.toggle('btn-outline', mode!=='booking');
+  lineBtn.classList.toggle('btn-primary', mode==='line');
+  lineBtn.classList.toggle('btn-outline', mode!=='line');
+  document.getElementById('lineQrUploadBox').style.display = (mode==='line') ? '' : 'none';
+  const preview = document.getElementById('lineQrPreview');
+  const removeBtn = document.getElementById('removeLineQrBtn');
+  if(BUSINESS.lineQrImage){
+    preview.innerHTML = `<img src="${BUSINESS.lineQrImage}" style="width:100%; height:100%; object-fit:contain;">`;
+    removeBtn.style.display = '';
+  } else {
+    preview.textContent = '—';
+    removeBtn.style.display = 'none';
+  }
+}
+async function setQrDisplay(mode){
+  if(mode==='line' && !BUSINESS.lineQrImage){
+    // 還沒上傳過 LINE QR 圖片，先切換 UI 讓商家看到上傳欄位，等真的上傳完成後再一併存進 Firestore
+    BUSINESS.qrDisplay = 'line';
+    renderQrDisplayToggleUI();
+    showToast('請先上傳 LINE QR Code 圖片');
+    return;
+  }
+  try{
+    await db.collection('meta').doc('business').set({ qrDisplay: mode }, { merge:true });
+    renderSharePage();
+    renderSlotPosterPreview();
+  }catch(err){ showToast('切換失敗，請檢查網路連線後再試'); }
+}
+function handleLineQrUpload(e){
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ showToast('請選擇圖片檔案'); return; }
+  if(file.size > 8 * 1024 * 1024){ showToast('圖片檔案過大，請選擇 8MB 以下的圖片'); return; }
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const img = new Image();
+    img.onload = async function(){
+      // QR Code 需要保留較多細節才能正常掃描，尺寸抓大一點（跟 Logo 縮圖不同）
+      const maxSide = 500;
+      let w = img.width, h = img.height;
+      if(w > h && w > maxSide){ h = Math.round(h * maxSide / w); w = maxSide; }
+      else if(h >= w && h > maxSide){ w = Math.round(w * maxSide / h); h = maxSide; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0,0,w,h);
+      ctx.drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/png');
+      try{
+        await db.collection('meta').doc('business').set({ lineQrImage: dataUrl, qrDisplay: 'line' }, { merge:true });
+        renderSharePage();
+        renderSlotPosterPreview();
+        showToast('LINE QR Code 已更新');
+      }catch(err){
+        showToast('儲存失敗，圖片可能過大（Firestore 單一文件上限 1MB）');
+      }
+    };
+    img.onerror = function(){ showToast('圖片讀取失敗，請換一張試試'); };
+    img.src = ev.target.result;
+  };
+  reader.onerror = function(){ showToast('讀取檔案失敗'); };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+async function removeLineQr(){
+  try{
+    await db.collection('meta').doc('business').set({ lineQrImage: firebase.firestore.FieldValue.delete(), qrDisplay: 'booking' }, { merge:true });
+    renderSharePage();
+    renderSlotPosterPreview();
+    showToast('已移除 LINE QR Code');
+  }catch(err){ showToast('移除失敗，請檢查網路連線後再試'); }
 }
 function renderAvailPoster(){
   const wrap = document.getElementById('availPoster');
@@ -5684,7 +5788,7 @@ function renderAvailPoster(){
     } else if(info.full){
       cells += `<div class="cell full"><div class="dnum">${d}</div><div class="tm">${info.label||'已約滿'}</div></div>`;
     } else {
-      cells += `<div class="cell"><div class="dnum">${d}</div><div class="tm">${info.slots.slice(0,3).join('<br>')}</div></div>`;
+      cells += `<div class="cell"><div class="dnum">${d}</div><div class="tm">${slotTimesToHtml(info.slots.slice(0,3))}</div></div>`;
     }
   }
   wrap.innerHTML = `
@@ -5693,7 +5797,7 @@ function renderAvailPoster(){
       <div class="mo">${y} 年 ${m+1} 月</div>
       <div class="wd"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
       <div class="grid">${cells}</div>
-      <div class="avail-legend"><span>時段皆可微調，歡迎私訊</span><span>劃掉＝已約滿</span></div>
+      <div class="avail-legend"><span>時段皆可微調，歡迎私訊</span><span>劃掉＝已約滿或已過時間</span></div>
       <div class="url">${BUSINESS.customerUrl||''}</div>
     </div>
   `;
@@ -5749,12 +5853,12 @@ function downloadAvailPoster(){
       ctx.fillText(info.label||'已約滿', cx, cy+16);
     } else {
       ctx.font = '400 9.5px "Space Mono", monospace'; ctx.fillStyle = '#9C8563';
-      info.slots.slice(0,3).forEach((t,i)=>{ ctx.fillText(t, cx, cy+16+i*12); });
+      info.slots.slice(0,3).forEach((s,i)=>{ drawSlotTimeCanvas(ctx, s, cx, cy+16+i*12, 4); });
     }
   }
   const legendY = gridTop + gridH + 28;
   ctx.font = '400 11px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#9C8563';
-  ctx.fillText('時段皆可微調，歡迎私訊　劃掉＝已約滿', W/2, legendY);
+  ctx.fillText('時段皆可微調，歡迎私訊　劃掉＝已約滿或已過時間', W/2, legendY);
   ctx.font = '400 12px "Space Mono", monospace';
   ctx.fillText(BUSINESS.customerUrl||'', W/2, legendY+26);
 
@@ -5802,6 +5906,33 @@ function closedDayLabel(dateKey){
   if(hit) return '休息';
   return '公休';
 }
+/* 把 {time,status} 陣列轉成 HTML：已過期／已約滿的時段加刪除線，而不是直接不顯示 */
+function slotTimesToHtml(slots){
+  return slots.map(s => (s.status==='ok')
+    ? s.time
+    : `<span style="text-decoration:line-through; opacity:.5;">${s.time}</span>`
+  ).join('<br>');
+}
+/* Canvas 版本：畫時間文字，已過期／已約滿的話疊加半透明＋手動畫一條刪除線（canvas 沒有內建 text-decoration） */
+function drawSlotTimeCanvas(ctx, s, x, y, strikeOffset){
+  ctx.save();
+  if(s.status!=='ok') ctx.globalAlpha = 0.5;
+  ctx.fillText(s.time, x, y);
+  if(s.status!=='ok'){
+    const w = ctx.measureText(s.time).width;
+    const off = strikeOffset || 4;
+    const align = ctx.textAlign;
+    let x0, x1;
+    if(align==='right'){ x0 = x-w; x1 = x; }
+    else if(align==='left'){ x0 = x; x1 = x+w; }
+    else { x0 = x-w/2; x1 = x+w/2; }
+    const ly = y - off;
+    ctx.beginPath(); ctx.moveTo(x0,ly); ctx.lineTo(x1,ly);
+    ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = Math.max(1, off/4);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
 function availableSlotsForDate(dateKey){
   const hours = merchantDayHours(dateKey);
   if(!hours) return { closed:true, slots:[], label: closedDayLabel(dateKey) };
@@ -5809,31 +5940,38 @@ function availableSlotsForDate(dateKey){
   const [th,tm] = hours.to.split(':').map(Number);
   const slotMin = BUSINESS.slotMin || 30;
   const now = new Date();
+  const today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const [y,m,d] = dateKey.split('-').map(Number);
   const isToday = (y===now.getFullYear() && m===now.getMonth()+1 && d===now.getDate());
+  const isPastDate = new Date(y,m-1,d) < today0;
   const taken = loadBookings().filter(b=>b.date===dateKey && (b.status==='upcoming'||b.status==='pending')).map(b=>b.time);
   const all = [];
   for(let cur=fh*60+fm; cur<th*60+tm; cur+=slotMin){
     const label = String(Math.floor(cur/60)).padStart(2,'0')+':'+String(cur%60).padStart(2,'0');
-    if(taken.includes(label)) continue;
-    if(isTimeBlockedByBreak(dateKey, label)) continue;
-    if(isToday){
+    if(isTimeBlockedByBreak(dateKey, label)) continue; // 整段休息時間直接隱藏，不算「已過期」也不算「已約滿」
+    let status = 'ok';
+    if(isPastDate){
+      status = 'past';
+    } else if(isToday){
       const slotDate = new Date(y,m-1,d,Math.floor(cur/60),cur%60);
-      if(slotDate < now) continue;
+      if(slotDate < now) status = 'past';
     }
-    all.push(label);
+    if(status==='ok' && taken.includes(label)) status = 'taken';
+    all.push({ time:label, status });
   }
-  // 場次太多時，均勻取樣最多 4 筆代表性時段，避免海報格子塞爆
+  // 場次太多時，均勻取樣最多 4 筆代表性時段，避免海報格子塞爆；
+  // 已過期／已約滿的時段不再直接濾掉，而是保留、標記狀態讓畫面畫上刪除線，讓顧客看得出「這個時間點不能約」而不是單純消失不見
   let sample = all;
   if(all.length > 4){
     sample = [];
     const step = (all.length-1) / 3;
     for(let i=0;i<4;i++){ sample.push(all[Math.round(i*step)]); }
-    sample = [...new Set(sample)];
+    const seen = new Set();
+    sample = sample.filter(s=>{ if(seen.has(s.time)) return false; seen.add(s.time); return true; });
   }
-  // 整天營業但因部分時段休息導致當天完全沒有可約時段時，也附上休息標籤方便辨識
+  const anyAvailable = all.some(s=>s.status==='ok');
   const label = (all.length===0) ? closedDayLabel(dateKey) : null;
-  return { closed:false, full: all.length===0, slots: sample, label };
+  return { closed:false, full: all.length===0, slots: sample, label, anyAvailable };
 }
 function renderSlotPosterPreview(){
   const wrap = document.getElementById('posterPreviewWrap');
@@ -5857,7 +5995,7 @@ function renderSlotPosterPreview(){
     } else if(info.full){
       cells += `<div class="day full${weekendCls}"><div class="dnum">${d}</div><div class="tm">${info.label||'已約滿'}</div></div>`;
     } else {
-      cells += `<div class="day${weekendCls}"><div class="dnum">${d}</div><div class="tm">${info.slots.join('<br>')}</div></div>`;
+      cells += `<div class="day${weekendCls}"><div class="dnum">${d}</div><div class="tm">${slotTimesToHtml(info.slots)}</div></div>`;
     }
   }
   const handle = (BUSINESS.customerUrl||'').replace(/^https?:\/\//,'');
@@ -5874,10 +6012,10 @@ function renderSlotPosterPreview(){
         ${cells}
       </div>
       <div class="cta">→ 立即線上預約</div>
-      <div class="microtext">時段皆可微調，歡迎私訊　劃掉＝已約滿</div>
+      <div class="microtext">時段皆可微調，歡迎私訊　劃掉＝已約滿或已過時間</div>
       <div class="bottom-row">
-        <div class="qr-cap">掃碼預約</div>
-        <div class="qr-row"><img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(BUSINESS.customerUrl||'')}"></div>
+        <div class="qr-cap">掃碼${BUSINESS.qrDisplay==='line'&&BUSINESS.lineQrImage?'加LINE':'預約'}</div>
+        <div class="qr-row"><img src="${BUSINESS.qrDisplay==='line'&&BUSINESS.lineQrImage ? BUSINESS.lineQrImage : 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data='+encodeURIComponent(BUSINESS.customerUrl||'')}"></div>
       </div>
     </div>
   `;
@@ -5918,7 +6056,9 @@ async function downloadSlotPoster(){
 
   const [logoImg, qrImg] = await Promise.all([
     loadImageAsync(BUSINESS.logo || ''),
-    loadImageAsync('https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(BUSINESS.customerUrl||''))
+    (BUSINESS.qrDisplay==='line' && BUSINESS.lineQrImage)
+      ? loadImageAsync(BUSINESS.lineQrImage)
+      : loadImageAsync('https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(BUSINESS.customerUrl||''))
   ]);
 
   const canvas = document.createElement('canvas');
@@ -5996,7 +6136,7 @@ async function downloadSlotPoster(){
       ctx.fillText(info.label||'已約滿', cx, cyTop+14*S);
     } else {
       ctx.font = '700 '+(8.5*S)+'px "Space Mono", monospace'; ctx.fillStyle = isWeekend ? '#8A6E47' : '#6B5636';
-      info.slots.slice(0,3).forEach((t,i)=>{ ctx.fillText(t, cx, cyTop+14*S+i*11*S); });
+      info.slots.slice(0,3).forEach((s,i)=>{ drawSlotTimeCanvas(ctx, s, cx, cyTop+14*S+i*11*S, 5*S); });
     }
   }
 
@@ -6019,13 +6159,13 @@ async function downloadSlotPoster(){
   cy += ctaH + 12*S;
 
   ctx.font = '400 '+(9.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#9C8563';
-  ctx.fillText('時段皆可微調，歡迎私訊　劃掉＝已約滿', W/2, cy);
+  ctx.fillText('時段皆可微調，歡迎私訊　劃掉＝已約滿或已過時間', W/2, cy);
   cy += 16*S + 12*S;
 
   // 底部：QR code（靠右）＋ 說明文字，跟預覽的 bottom-row 一致
   const qrSize = 56*S;
   ctx.textAlign = 'left'; ctx.font = '400 '+(9*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = '#9C8563';
-  ctx.fillText('掃碼預約', padX, cy+qrSize-6*S);
+  ctx.fillText((BUSINESS.qrDisplay==='line'&&BUSINESS.lineQrImage) ? '掃碼加LINE' : '掃碼預約', padX, cy+qrSize-6*S);
   if(qrImg){
     roundRect(ctx, W-padX-qrSize, cy, qrSize, qrSize, 6*S);
     ctx.fillStyle = '#FFFFFF'; ctx.fill();
