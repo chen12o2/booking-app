@@ -694,7 +694,7 @@ main{ padding:calc(74px + env(safe-area-inset-top)) 18px calc(var(--nav-h) + 28p
 .slot-grid .day{ font-size:10px; text-align:center; padding:2px 0; min-height:56px; display:flex; flex-direction:column; }
 .slot-grid .day.blank{ visibility:hidden; }
 .slot-grid .day .dnum{ font-weight:700; font-size:11px; margin-bottom:2px; color:var(--ink); }
-.slot-grid .day .tm{ font-family:'Space Mono',monospace; font-weight:700; font-size:7.5px; color:var(--ledger); line-height:1.5; display:grid; grid-template-columns:repeat(2,1fr); gap:0 2px; margin-top:auto; margin-bottom:auto; }
+.slot-grid .day .tm{ font-family:'Space Mono',monospace; font-weight:700; font-size:8.5px; color:var(--ledger); line-height:1.55; margin-top:auto; margin-bottom:auto; }
 .slot-grid .day.weekend .tm{ color:var(--stamp); }
 .slot-grid .day.full .tm{ text-decoration:line-through; opacity:.5; font-weight:400; color:var(--ink-soft); }
 .slot-grid .day.closed .tm{ color:var(--stamp-dark); font-weight:700; }
@@ -5906,12 +5906,12 @@ function closedDayLabel(dateKey){
   if(hit) return '休息';
   return '公休';
 }
-/* 把 {time,status} 陣列轉成 HTML：兩欄排列（比單欄省高度很多），已過期／已約滿的時段加刪除線 */
+/* 把 {time,status} 陣列轉成 HTML：單欄、一行一個時段，已過期／已約滿的時段加刪除線 */
 function slotTimesToHtml(slots){
   return slots.map(s => (s.status==='ok')
-    ? `<span>${s.time}</span>`
+    ? s.time
     : `<span style="text-decoration:line-through; opacity:.5;">${s.time}</span>`
-  ).join('');
+  ).join('<br>');
 }
 /* Canvas 版本：畫時間文字，已過期／已約滿的話疊加半透明＋手動畫一條刪除線（canvas 沒有內建 text-decoration） */
 function drawSlotTimeCanvas(ctx, s, x, y, strikeOffset){
@@ -6059,7 +6059,7 @@ async function downloadSlotPoster(){
     const dateKey = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     dayInfos[d] = availableSlotsForDate(dateKey);
   }
-  const rowLineH = 9.5*S, rowTopPad = 14*S, rowBottomPad = 10*S;
+  const rowLineH = 11*S, rowTopPad = 14*S, rowBottomPad = 10*S;
   const rowHeights = [];
   const rowMaxLines = [];
   for(let r=0; r<rows; r++){
@@ -6068,7 +6068,7 @@ async function downloadSlotPoster(){
       const d = r*7 + col - firstDow + 1;
       if(d<1 || d>daysInMonth) continue;
       const info = dayInfos[d];
-      if(!info.closed && !info.full) maxLines = Math.max(maxLines, Math.ceil((info.slots.length||1)/2));
+      if(!info.closed && !info.full) maxLines = Math.max(maxLines, info.slots.length || 1);
     }
     rowMaxLines.push(maxLines);
     rowHeights.push(rowTopPad + maxLines*rowLineH + rowBottomPad);
@@ -6160,16 +6160,14 @@ async function downloadSlotPoster(){
       ctx.font = '400 '+(8.5*S)+'px "Noto Sans TC", sans-serif'; ctx.fillStyle = 'rgba(107,99,86,0.55)';
       ctx.fillText(info.label||'已約滿', cx, cyTop+14*S);
     } else {
-      ctx.font = '700 '+(6*S)+'px "Space Mono", monospace'; ctx.fillStyle = isWeekend ? '#8A6E47' : '#6B5636';
-      const colX = [cx - cellW*0.26, cx + cellW*0.26];
+      ctx.font = '700 '+(8.5*S)+'px "Space Mono", monospace'; ctx.fillStyle = isWeekend ? '#8A6E47' : '#6B5636';
       // 同一排（同一週）裡，時段行數比別天少的話，這裡讓它的整塊時段在留白空間中垂直置中，
       // 而不是永遠貼齊最上面、下面留一大塊不整齊的空白
-      const dayLines = Math.ceil((info.slots.length||1)/2);
+      const dayLines = info.slots.length || 1;
       const rowMax = rowMaxLines[row];
       const centerOffset = ((rowMax - dayLines) * rowLineH) / 2;
       info.slots.forEach((s,i)=>{
-        const rowI = Math.floor(i/2), colI = i%2;
-        drawSlotTimeCanvas(ctx, s, colX[colI], cyTop+14*S+centerOffset+rowI*rowLineH, 3.5*S);
+        drawSlotTimeCanvas(ctx, s, cx, cyTop+14*S+centerOffset+i*rowLineH, 5*S);
       });
     }
   }
