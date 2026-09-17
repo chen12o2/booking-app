@@ -5940,22 +5940,17 @@ function availableSlotsForDate(dateKey){
   const [th,tm] = hours.to.split(':').map(Number);
   const slotMin = BUSINESS.slotMin || 30;
   const now = new Date();
-  const today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // 「已過期」的判斷跟顧客端送出預約時用的是同一條線——不是單純早於現在，而是早於「現在+最少提前幾小時」，
+  // 否則海報可能會顯示一個理論上還沒到、但實際上顧客已經來不及約的時段
+  const earliest = new Date(now.getTime() + (Number(BUSINESS.leadHours)||0)*3600000);
   const [y,m,d] = dateKey.split('-').map(Number);
-  const isToday = (y===now.getFullYear() && m===now.getMonth()+1 && d===now.getDate());
-  const isPastDate = new Date(y,m-1,d) < today0;
   const taken = loadBookings().filter(b=>b.date===dateKey && (b.status==='upcoming'||b.status==='pending')).map(b=>b.time);
   const all = [];
   for(let cur=fh*60+fm; cur<th*60+tm; cur+=slotMin){
     const label = String(Math.floor(cur/60)).padStart(2,'0')+':'+String(cur%60).padStart(2,'0');
     if(isTimeBlockedByBreak(dateKey, label)) continue; // 整段休息時間直接隱藏，不算「已過期」也不算「已約滿」
-    let status = 'ok';
-    if(isPastDate){
-      status = 'past';
-    } else if(isToday){
-      const slotDate = new Date(y,m-1,d,Math.floor(cur/60),cur%60);
-      if(slotDate < now) status = 'past';
-    }
+    const slotDate = new Date(y,m-1,d,Math.floor(cur/60),cur%60);
+    let status = (slotDate < earliest) ? 'past' : 'ok';
     if(status==='ok' && taken.includes(label)) status = 'taken';
     all.push({ time:label, status });
   }
