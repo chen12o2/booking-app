@@ -132,6 +132,7 @@ tfoot td,.tt td{font-weight:700;border-top:2px solid var(--bd);border-bottom:0}
 <form id="f2"><div class="g2">
 <label class="c2">日期<input type="date" id="g_d" required></label>
 <label class="c2">條碼<input id="g_b" placeholder="掃描或輸入條碼，會自動選商品" autocomplete="off"></label>
+<label class="c2">分類<select id="g_c"></select></label>
 <label class="c2">商品<select id="g_p" required></select><span class="ft" id="g_st"></span></label>
 <label>銷貨數量<input type="number" id="g_q" min="0" step="any" required></label>
 <label>單價（預設先進先出）<input type="number" id="g_m" min="0" step="any" required></label>
@@ -247,10 +248,10 @@ function fifo(sl){sl=sl||sales;const L={},out={},sh={};
   [...sl].sort(cmp).forEach(t=>{const a=L[t.p||"（未填）"]||[];let need=Number(t.q),c=0;for(const l of a){if(need<=0)break;const u=Math.min(l.left,need);l.left-=u;need-=u;c+=u*l.m}if(need>0){c+=need*(a.length?a[a.length-1].m:0);sh[t.id]=need}out[t.id]=c});
   return{L,out,sh}}
 function inv(){const m={},g=k=>m[k]=m[k]||{p:k,iq:0,ia:0,oq:0},F=fifo();rows.forEach(r=>{const o=g(r.p||"（未填）");o.iq+=Number(r.q);o.ia+=tot(r)});sales.forEach(r=>{g(r.p||"（未填）").oq+=Number(r.q)});Object.values(m).forEach(o=>{o.avg=o.iq?o.ia/o.iq:0;o.st=o.iq-o.oq;o.val=(F.L[o.p]||[]).reduce((x,l)=>x+l.left*l.m,0)});return m}
-let FO={};
-const saleHtml=r=>{const c=FO[r.id]||0,g=tot(r)-c;return`<div class="it" data-sid="${esc(r.id)}"><div class="a"><span>${esc(r.p)}</span><span>${money(tot(r))}</span></div><div class="b">${esc(String(r.d).replace(/-/g,"/"))}・${num(r.q)} × ${money(r.m)}・先進先出成本 ${money(c)}${Math.abs(g)>.005?"・毛利 "+money(g):""}${r.n?"・"+esc(r.n):""}</div></div>`};
+let FO={},PC={};
+const saleHtml=r=>{const c=FO[r.id]||0,g=tot(r)-c;return`<div class="it" data-sid="${esc(r.id)}"><div class="a"><span>${esc(r.p)}</span><span>${money(tot(r))}</span></div><div class="b">${esc(String(r.d).replace(/-/g,"/"))}${PC[r.p]?"・"+esc(PC[r.p]):""}・${num(r.q)} × ${money(r.m)}・先進先出成本 ${money(c)}${Math.abs(g)>.005?"・毛利 "+money(g):""}${r.n?"・"+esc(r.n):""}</div></div>`};
 function r4(){const l=sorted(inP(rows));$("b1").textContent=l.length;$("b2").textContent=num(l.reduce((a,r)=>a+Number(r.q),0));$("b3").textContent=money(l.reduce((a,r)=>a+tot(r),0));$("bt").textContent="📥 進貨紀錄（"+plab()+"）";$("tb1").innerHTML=l.length?l.map(rowHtml).join(""):empD}
-function r5(){FO=fifo().out;const l=sorted(inP(sales));$("x1").textContent=l.length;$("x2").textContent=num(l.reduce((a,r)=>a+Number(r.q),0));$("x3").textContent=money(l.reduce((a,r)=>a+tot(r),0));$("xt").textContent="📤 銷貨紀錄（"+plab()+"）";$("tb2").innerHTML=l.length?l.map(saleHtml).join(""):empD}
+function r5(){FO=fifo().out;PC=pcat();const l=sorted(inP(sales));$("x1").textContent=l.length;$("x2").textContent=num(l.reduce((a,r)=>a+Number(r.q),0));$("x3").textContent=money(l.reduce((a,r)=>a+tot(r),0));$("xt").textContent="📤 銷貨紀錄（"+plab()+"）";$("tb2").innerHTML=l.length?l.map(saleHtml).join(""):empD}
 function pcat(){const m={};[...rows].sort((a,b)=>String(a.d).localeCompare(String(b.d))||String(a.id).localeCompare(String(b.id))).forEach(r=>{if(r.p&&r.c)m[r.p]=r.c});return Object.assign(m,OP().pc)}
 const catOrder=ks=>{const cs=OP().c;return ks.sort((a,b)=>{const x=cs.indexOf(a),y=cs.indexOf(b);return(x<0?999:x)-(y<0?999:y)||a.localeCompare(b,"zh-TW")})};
 function pgroups(list){const m=pcat(),g={};list.forEach(p=>{const c=m[p]||"未分類";(g[c]=g[c]||[]).push(p)});return catOrder(Object.keys(g)).map(c=>[c,g[c]])}
@@ -308,11 +309,12 @@ function gauto(){gstock();const p=$("g_p").value,q=Number($("g_q").value),h=$("g
   const id="__t",F=fifo(sales.filter(x=>x.id!==edit2).concat({id,d:$("g_d").value||today(),p,q})),c=F.out[id],u=Math.round(c/q*1e6)/1e6;
   h.textContent="先進先出成本 "+money(c)+"（單價 "+money(u)+"）"+(F.sh[id]?"；庫存不足，缺 "+num(F.sh[id])+" 以最近進價估算":"");
   if($("g_m").dataset.man!=="1")$("g_m").value=u;gcalc()}
-function fillG(){const sel=$("g_p"),cur=sel.value;sel.innerHTML='<option value="">請選擇商品</option>'+optsHtml("p");setG(cur);gstock()}
-function openG(r){edit2=r?r.id:null;$("md2").hidden=false;$("mt2").textContent=r?"✏️ 編輯銷貨":"➕ 新增銷貨";$("f2").reset();fillG();$("g_d").value=r?r.d:today();if(r){setG(r.p);$("g_b").value=OP().bc[r.p]||"";$("g_q").value=r.q;$("g_m").value=r.m;$("g_n").value=r.n||""}$("g_m").dataset.man=r?"1":"0";gauto();$("dl2").hidden=!r}
+function fillG(){const sc=$("g_c"),cc=sc.value,cs=OP().c;sc.innerHTML='<option value="">全部分類</option>'+cs.map(optHtml).join("");sc.value=cs.includes(cc)?cc:"";const sel=$("g_p"),cur=sel.value;sel.innerHTML='<option value="">請選擇商品</option>'+optsHtml("p",sc.value);setG(cur);gstock()}
+function openG(r){edit2=r?r.id:null;$("md2").hidden=false;$("mt2").textContent=r?"✏️ 編輯銷貨":"➕ 新增銷貨";$("f2").reset();fillG();$("g_d").value=r?r.d:today();if(r){setG(r.p);$("g_b").value=OP().bc[r.p]||"";{const pc=pcat()[r.p];$("g_c").value=OP().c.includes(pc)?pc:""}$("g_q").value=r.q;$("g_m").value=r.m;$("g_n").value=r.n||""}$("g_m").dataset.man=r?"1":"0";gauto();$("dl2").hidden=!r}
 const closeG=()=>{$("md2").hidden=true;edit2=null};
-$("g_p").onchange=()=>{const v=$("g_p").value;$("g_b").value=v?OP().bc[v]||"":"";gauto()};
-$("g_b").oninput=()=>{const b=$("g_b").value.trim(),bc=OP().bc,hit=b&&Object.keys(bc).find(k=>bc[k]===b);if(hit){setG(hit);gauto()}};
+$("g_p").onchange=()=>{const v=$("g_p").value;$("g_b").value=v?OP().bc[v]||"":"";const c=pcat()[v];if(c&&OP().c.includes(c))$("g_c").value=c;gauto()};
+$("g_c").onchange=()=>{const c=$("g_c").value,cur=$("g_p").value;if(cur&&c){const pc=pcat()[cur];if(pc&&pc!==c){$("g_p").value="";$("g_b").value=""}}fillG();gauto()};
+$("g_b").oninput=()=>{const b=$("g_b").value.trim(),bc=OP().bc,hit=b&&Object.keys(bc).find(k=>bc[k]===b);if(hit){setG(hit);const c=pcat()[hit];if(c&&OP().c.includes(c))$("g_c").value=c;gauto()}};
 $("g_b").onkeydown=e=>{if(e.key==="Enter")e.preventDefault()};$("g_q").oninput=gauto;$("g_d").onchange=gauto;$("g_m").oninput=()=>{$("g_m").dataset.man="1";gcalc()};$("cx2").onclick=closeG;$("md2").onclick=e=>{if(e.target===$("md2"))closeG()};
 $("f2").onsubmit=e=>{e.preventDefault();run(async()=>{await putSale({id:edit2||String(Date.now()),v:1,d:$("g_d").value,p:$("g_p").value,q:Number($("g_q").value),m:Number($("g_m").value),n:$("g_n").value.trim()});closeG();toast("已儲存")})};
 $("dl2").onclick=e=>arm(e.target,()=>run(async()=>{await delSale(edit2);closeG();toast("已刪除")}),"確認刪除");
