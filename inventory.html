@@ -255,7 +255,7 @@ function pcat(){const m={};[...rows].sort((a,b)=>String(a.d).localeCompare(Strin
 const catOrder=ks=>{const cs=OP().c;return ks.sort((a,b)=>{const x=cs.indexOf(a),y=cs.indexOf(b);return(x<0?999:x)-(y<0?999:y)||a.localeCompare(b,"zh-TW")})};
 function pgroups(list){const m=pcat(),g={};list.forEach(p=>{const c=m[p]||"未分類";(g[c]=g[c]||[]).push(p)});return catOrder(Object.keys(g)).map(c=>[c,g[c]])}
 const optHtml=v=>`<option value="${esc(v)}">${esc(v)}</option>`;
-const optsHtml=k=>{const op=OP()[k];return k==="p"?pgroups(op).map(([c,l])=>`<optgroup label="${esc(c)}">${l.map(optHtml).join("")}</optgroup>`).join(""):op.map(optHtml).join("")};
+const optsHtml=(k,cat)=>{const op=OP()[k];if(k==="p"&&cat){const m=pcat(),a=op.filter(p=>m[p]===cat),b=op.filter(p=>!m[p]);return a.map(optHtml).join("")+(b.length?`<optgroup label="未分類">${b.map(optHtml).join("")}</optgroup>`:"")}return k==="p"?pgroups(op).map(([c,l])=>`<optgroup label="${esc(c)}">${l.map(optHtml).join("")}</optgroup>`).join(""):op.map(optHtml).join("")};
 function r6(){const bcm=OP().bc,v=Object.values(inv()).sort((a,b)=>a.st-b.st||a.p.localeCompare(b.p,"zh-TW"));$("i1").textContent=v.length;$("i2").textContent=money(v.reduce((a,o)=>a+Math.max(o.val,0),0));$("i3").textContent=v.filter(o=>o.st<=0).length;
   const pc=pcat(),gg={};v.forEach(o=>{const c=pc[o.p]||"未分類";(gg[c]=gg[c]||[]).push(o)});
   const item=o=>`<div class="it" data-pk="${esc(o.p)}"><div class="a"><span>${esc(o.p)}</span><span class="${o.st<=0?"dg":""}">庫存 ${num(o.st)}</span></div><div class="b">進貨 ${num(o.iq)}・銷貨 ${num(o.oq)}・平均進價 ${money(o.avg)}・庫存金額 ${money(o.val)}${bcm[o.p]?"・條碼 "+esc(bcm[o.p]):""}</div></div>`;
@@ -272,7 +272,7 @@ const getVal=k=>$("f_"+k).value==="__new"?$("f_"+k+"_n").value.trim():$("f_"+k).
 function tg(k){const on=$("f_"+k).value==="__new",n=$("f_"+k+"_n");n.hidden=!on;n.required=on;if(!on)n.value=""}
 function setVal(k,v){v=String(v??"");const sel=$("f_"+k);if(v&&![...sel.options].some(o=>o.value===v)){const o=document.createElement("option");o.value=o.textContent=v;sel.insertBefore(o,sel.lastElementChild)}sel.value=v;tg(k)}
 function fillSel(k){const f=F[k],sel=$("f_"+k),isNew=sel.value==="__new",cur=getVal(k);
-  sel.innerHTML=`<option value="">${f.ph}</option>`+optsHtml(k)+`<option value="__new">${f.nw}</option>`;
+  sel.innerHTML=`<option value="">${f.ph}</option>`+optsHtml(k,k==="p"?getVal("c"):"")+`<option value="__new">${f.nw}</option>`;
   if(isNew)sel.value="__new";else setVal(k,cur)}
 const calc=()=>{$("f_t").value=money(Number(getVal("q"))*Number($("f_m").value))};
 function openM(r){edit=r?r.id:null;$("md").hidden=false;$("mt").textContent=r?"✏️ 編輯耗材":"➕ 新增耗材";$("f").reset();K.forEach(tg);K.forEach(fillSel);
@@ -283,6 +283,7 @@ K.forEach(k=>{$("f_"+k).onchange=()=>{tg(k);if($("f_"+k).value==="__new")$("f_"+
 $("f_p").addEventListener("change",()=>{const v=$("f_p").value;if(v&&v!=="__new"){$("f_b").value=OP().bc[v]||"";const c=pcat()[v];if(c&&OP().c.includes(c))setVal("c",c)}});
 $("f_b").oninput=()=>{const b=$("f_b").value.trim(),bc=OP().bc,hit=b&&Object.keys(bc).find(k=>bc[k]===b);if(hit){setVal("p",hit);const c=pcat()[hit];if(c&&OP().c.includes(c))setVal("c",c)}};
 $("f_b").onkeydown=e=>{if(e.key==="Enter")e.preventDefault()};
+$("f_c").addEventListener("change",()=>{const c=getVal("c"),cur=$("f_p").value;if(cur&&cur!=="__new"){const pc=pcat()[cur];if(c&&pc&&pc!==c){$("f_p").value="";$("f_b").value=""}}fillSel("p")});
 $("f_m").oninput=calc;$("f_q_n").oninput=calc;
 $("cx").onclick=closeM;$("md").onclick=e=>{if(e.target===$("md"))closeM()};
 document.onkeydown=e=>{if(e.key==="Escape"){closeM();closeG();closeH()}};
