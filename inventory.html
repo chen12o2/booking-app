@@ -47,6 +47,7 @@ tfoot td,.tt td{font-weight:700;border-top:2px solid var(--bd);border-bottom:0}
 #ts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(140px + env(safe-area-inset-bottom,0px));background:#4a3b2e;color:#fffaf2;padding:8px 14px;border-radius:20px;font-size:13px;z-index:20}
 .mg{position:relative;display:flex;gap:10px;overflow-x:auto;padding:14px;margin-bottom:12px;background:var(--card);border:1px solid var(--bd);border-radius:18px;scrollbar-width:none}.mg::-webkit-scrollbar{display:none}.mg button{flex:none;min-width:66px;padding:12px 18px;border-radius:999px;background:transparent;color:var(--tx);border:2px solid var(--bd);font-weight:700}.mg button.on{background:var(--ac);color:var(--card);border-color:var(--ac)}
 .hd{display:flex;align-items:center;gap:12px}header small.nm{font-size:14px;letter-spacing:1px;color:var(--tx);font-weight:700}#hl img{display:block;width:54px;height:54px;border-radius:50%;object-fit:contain;background:var(--card);border:2px solid var(--bd)}
+.dh{touch-action:none;cursor:grab;color:var(--mu);padding:4px 10px 4px 2px;font-size:18px;user-select:none}#ml li.dragging{background:var(--ac2)}#ml li .nm{flex:1}
 .s3{grid-template-columns:repeat(3,1fr)!important}
 @media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}}
 </style>
@@ -104,7 +105,7 @@ tfoot td,.tt td{font-weight:700;border-top:2px solid var(--bd);border-bottom:0}
 <div class="card"><h2>🏷️ 管理選項</h2>
 <div class="seg" id="sg"><button data-f="c" class="on">分類</button><button data-f="p">商品</button><button data-f="q">數量</button><button data-f="s">購入來源</button></div>
 <div class="mrow" style="margin:10px 0 0"><input id="mn"><button id="ma">新增</button></div>
-<ul id="ml"></ul><div class="ft">改名會同步更新已記錄的資料（數量除外）。刪除選項不會改動已記錄的資料。</div></div>
+<ul id="ml"></ul><div class="ft">改名會同步更新已記錄的資料（數量除外）。刪除選項不會改動已記錄的資料。按住 ☰ 上下拖曳可以調整順序，下拉選單會照這個順序顯示。</div></div>
 <div class="card"><h2>📤 資料</h2><button class="g" id="ex">匯出進貨 CSV</button> <button class="g" id="ex2">匯出銷貨 CSV</button> <div style="margin-top:8px"><button class="g" id="im1">匯入進貨 CSV</button> <button class="g" id="im2">匯入銷貨 CSV</button><input type="file" id="imf" accept=".csv,text/csv" hidden></div><div class="ft">匯入格式與匯出的 CSV 相同，可用來把舊資料搬進來；重複匯入會產生重複資料。</div></div>
 <div class="card"><h2>👤 帳號與同步</h2><div id="ac"></div></div>
 </section>
@@ -163,7 +164,7 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const safeUrl=u=>/^https?:\/\//i.test(u||"")?u:"";
 const today=()=>{const t=new Date();return new Date(t-t.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
 const srt=(k,a)=>[...a].sort(F[k].num?(x,y)=>x-y:(x,y)=>x.localeCompare(y,"zh-TW"));
-const OP=()=>{const o={};K.forEach(k=>{const d=OPdoc&&Array.isArray(OPdoc[k])?OPdoc[k]:[...new Set([...F[k].def.map(String),...rows.map(r=>String(r[k]??"")).filter(Boolean)])];o[k]=srt(k,d.map(String))});o.bc=OPdoc&&OPdoc.bc&&typeof OPdoc.bc==="object"?{...OPdoc.bc}:{};return o};
+const OP=()=>{const o={};K.forEach(k=>{const d=OPdoc&&Array.isArray(OPdoc[k])?OPdoc[k]:[...new Set([...F[k].def.map(String),...rows.map(r=>String(r[k]??"")).filter(Boolean)])];o[k]=OPdoc&&Array.isArray(OPdoc[k])?d.map(String):srt(k,d.map(String))});o.bc=OPdoc&&OPdoc.bc&&typeof OPdoc.bc==="object"?{...OPdoc.bc}:{};return o};
 const sorted=l=>[...l].sort((a,b)=>String(b.d).localeCompare(String(a.d)));
 const emp=n=>`<tr><td colspan="${n}" class="em">沒有資料</td></tr>`;
 const empD='<div class="em">沒有資料</div>';
@@ -226,7 +227,7 @@ function r3(){
     if(bedit===v&&mf==="p")return`<li><span>${esc(v)}</span><input id="bi" value="${esc(OPx.bc[v]||"")}" placeholder="條碼（留空＝清除）"><span><button data-sb="${esc(v)}">儲存</button><button class="g" data-cn="1">取消</button></span></li>`;
     if(medit===v)return`<li><input id="me" ${f.num?'type="number" step="any" min="0"':""} value="${esc(v)}"><span><button data-sv="${esc(v)}">儲存</button><button class="g" data-cn="1">取消</button></span></li>`;
     const n=rows.filter(r=>String(r[mf])===v).length+(mf==="p"?sales.filter(r=>r.p===v).length:0);
-    return`<li><span>${esc(v)}<span class="u">${n?"已用 "+n+" 筆":""}</span>${mf==="p"&&OPx.bc[v]?`<span class="u">條碼 ${esc(OPx.bc[v])}</span>`:""}</span>${canW?`<span>${mf==="p"?`<button class="g" data-bc="${esc(v)}">條碼</button>`:""}<button class="g" data-rn="${esc(v)}">改名</button><button class="g dg" data-dl="${esc(v)}">刪除</button></span>`:""}</li>`}).join(""):'<li class="em">尚無選項</li>';
+    return`<li data-v="${esc(v)}">${canW?'<span class="dh">☰</span>':""}<span class="nm">${esc(v)}<span class="u">${n?"已用 "+n+" 筆":""}</span>${mf==="p"&&OPx.bc[v]?`<span class="u">條碼 ${esc(OPx.bc[v])}</span>`:""}</span>${canW?`<span>${mf==="p"?`<button class="g" data-bc="${esc(v)}">條碼</button>`:""}<button class="g" data-rn="${esc(v)}">改名</button><button class="g dg" data-dl="${esc(v)}">刪除</button></span>`:""}</li>`}).join(""):'<li class="em">尚無選項</li>';
   if(medit!==null&&$("me"))$("me").focus();
   $("ac").innerHTML=mode==="cloud"||mode==="denied"?`登入帳號：${esc(who)}<div class="mrow" style="margin:10px 0 0"><button class="g" id="lo">登出</button><button class="g" id="pr">寄送重設密碼信</button></div><div class="ft">資料存在 Firebase 雲端，名單內的登入人員會看到同一份資料。${mode==="denied"?"<br>目前這個帳號沒有讀寫權限，請確認 Firestore 規則。":""}</div>`:"連線中…";
   
@@ -324,12 +325,18 @@ $("sg").onclick=e=>{if(e.target.dataset.f){mf=e.target.dataset.f;medit=null;$("m
 $("ma").onclick=()=>run(async()=>{let v=$("mn").value.trim();if(!v)return;if(F[mf].num){if(isNaN(Number(v))||Number(v)<0)return;v=String(Number(v))}
   const o=OP();if(!o[mf].includes(v)){o[mf].push(v);await putOP(o)}$("mn").value=""});
 $("mn").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();$("ma").click()}};
+let drag=null;
+$("ml").addEventListener("pointerdown",e=>{const h=e.target.closest(".dh");if(!h)return;const li=h.closest("li");drag={li};li.classList.add("dragging");$("ml").setPointerCapture(e.pointerId);e.preventDefault()});
+$("ml").addEventListener("pointermove",e=>{if(!drag)return;const els=[...$("ml").querySelectorAll("li[data-v]")].filter(x=>x!==drag.li);let before=null;for(const x of els){const r=x.getBoundingClientRect();if(e.clientY<r.top+r.height/2){before=x;break}}if(drag.li.nextElementSibling!==before)$("ml").insertBefore(drag.li,before)});
+const endDrag=()=>{if(!drag)return;const li=drag.li;drag=null;if(!li.isConnected)return;li.classList.remove("dragging");const order=[...$("ml").querySelectorAll("li[data-v]")].map(x=>x.dataset.v),o=OP();
+  if(order.length===o[mf].length&&order.some((v,i)=>v!==o[mf][i])){o[mf]=order;run(()=>putOP(o))}else r3()};
+$("ml").addEventListener("pointerup",endDrag);$("ml").addEventListener("pointercancel",endDrag);
 $("ml").onclick=e=>{const d=e.target.dataset,b=e.target;
   if(d.rn!==undefined){medit=d.rn;r3()}else if(d.cn){medit=null;bedit=null;r3()}else if(d.bc!==undefined){bedit=d.bc;r3();$("bi")&&$("bi").focus()}
   else if(d.sb!==undefined)run(async()=>{const o=OP(),b=$("bi").value.trim();if(b){const hit=Object.keys(o.bc).find(k=>o.bc[k]===b&&k!==d.sb);if(hit){toast("此條碼已屬於「"+hit+"」");return}o.bc[d.sb]=b}else delete o.bc[d.sb];bedit=null;await putOP(o)})
   else if(d.sv!==undefined)run(async()=>{let nv=$("me").value.trim();const old=d.sv;if(F[mf].num&&nv!==""&&!isNaN(Number(nv)))nv=String(Number(nv));
     if(!nv||nv===old){medit=null;r3();return}
-    const o=OP();o[mf]=o[mf].filter(x=>x!==old);if(!o[mf].includes(nv))o[mf].push(nv);
+    const o=OP();{const ii=o[mf].indexOf(old);if(o[mf].includes(nv))o[mf].splice(ii,1);else o[mf][ii]=nv}
     if(mf==="p"&&o.bc[old]){if(!o.bc[nv])o.bc[nv]=o.bc[old];delete o.bc[old]}
     if(!F[mf].num)for(const r of rows.filter(r=>String(r[mf])===old))await putRow({...r,[mf]:nv});
     if(mf==="p")for(const r of sales.filter(r=>r.p===old))await putSale({...r,p:nv});
@@ -356,7 +363,7 @@ $("imf").onchange=e=>{const f=e.target.files[0];e.target.value="";if(!f)return;c
     if(isB)K.forEach(k=>{const v=String(o[k]??"");if(v&&!op[k].includes(v))op[k].push(v)});else if(!op.p.includes(o.p))op.p.push(o.p);
     b.set(db.collection(isB?"inv_entries":"inv_sales").doc(id),o);n++;
     if(n%400===0){await b.commit();b=db.batch()}}
-  await b.commit();K.forEach(k=>op[k]=srt(k,op[k]));await putOP(op);toast("已匯入 "+n+" 筆")});rd.readAsText(f)};
+  await b.commit();await putOP(op);toast("已匯入 "+n+" 筆")});rd.readAsText(f)};
 
 const authMsg=x=>({"auth/invalid-credential":"信箱或密碼錯誤","auth/wrong-password":"信箱或密碼錯誤","auth/user-not-found":"信箱或密碼錯誤","auth/invalid-email":"信箱格式不正確","auth/too-many-requests":"嘗試次數過多，請稍後再試","auth/network-request-failed":"網路連線失敗"}[x.code]||"登入失敗："+(x.code||x.message));
 let auth=null,unsubs=[];
