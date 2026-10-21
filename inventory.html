@@ -48,6 +48,7 @@ tfoot td,.tt td{font-weight:700;border-top:2px solid var(--bd);border-bottom:0}
 .mg{position:relative;display:flex;gap:10px;overflow-x:auto;padding:14px;margin-bottom:12px;background:var(--card);border:1px solid var(--bd);border-radius:18px;scrollbar-width:none}.mg::-webkit-scrollbar{display:none}.mg button{flex:none;min-width:66px;padding:12px 18px;border-radius:999px;background:transparent;color:var(--tx);border:2px solid var(--bd);font-weight:700}.mg button.on{background:var(--ac);color:var(--card);border-color:var(--ac)}
 .hd{display:flex;align-items:center;gap:12px}header small.nm{font-size:14px;letter-spacing:1px;color:var(--tx);font-weight:700}#hl img{display:block;width:54px;height:54px;border-radius:50%;object-fit:contain;background:var(--card);border:2px solid var(--bd)}
 .dh{touch-action:none;cursor:grab;color:var(--mu);padding:4px 10px 4px 2px;font-size:18px;user-select:none}#ml li.dragging{background:var(--ac2)}#ml li .nm{flex:1}
+.gh{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;font-size:13px;color:var(--ac);padding:12px 2px 4px}.gh span{color:var(--mu);font-weight:400;font-size:12px}#ml li.gh{border-bottom:0;padding:12px 2px 2px}
 .s3{grid-template-columns:repeat(3,1fr)!important}
 @media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}}
 </style>
@@ -105,7 +106,7 @@ tfoot td,.tt td{font-weight:700;border-top:2px solid var(--bd);border-bottom:0}
 <div class="card"><h2>🏷️ 管理選項</h2>
 <div class="seg" id="sg"><button data-f="c" class="on">分類</button><button data-f="p">商品</button><button data-f="q">數量</button><button data-f="s">購入來源</button></div>
 <div class="mrow" style="margin:10px 0 0"><input id="mn"><button id="ma">新增</button></div>
-<ul id="ml"></ul><div class="ft">改名會同步更新已記錄的資料（數量除外）。刪除選項不會改動已記錄的資料。按住 ☰ 上下拖曳可以調整順序，下拉選單會照這個順序顯示。</div></div>
+<ul id="ml"></ul><div class="ft">改名會同步更新已記錄的資料（數量除外）。刪除選項不會改動已記錄的資料。商品會依分類分組顯示，分類取自該商品最近一次進貨的分類。按住 ☰ 上下拖曳可以調整順序，商品只能在同一個分類內移動。</div></div>
 <div class="card"><h2>📤 資料</h2><button class="g" id="ex">匯出進貨 CSV</button> <button class="g" id="ex2">匯出銷貨 CSV</button> <div style="margin-top:8px"><button class="g" id="im1">匯入進貨 CSV</button> <button class="g" id="im2">匯入銷貨 CSV</button><input type="file" id="imf" accept=".csv,text/csv" hidden></div><div class="ft">匯入格式與匯出的 CSV 相同，可用來把舊資料搬進來；重複匯入會產生重複資料。</div></div>
 <div class="card"><h2>👤 帳號與同步</h2><div id="ac"></div></div>
 </section>
@@ -223,11 +224,12 @@ function r3(){
   document.querySelectorAll("#sg button").forEach(b=>b.classList.toggle("on",b.dataset.f===mf));
   const OPx=OP(),f=F[mf],o=OPx[mf];
   $("mn").type=f.num?"number":"text";$("mn").placeholder="輸入新"+f.lb;$("mn").disabled=$("ma").disabled=!canW;
-  $("ml").innerHTML=o.length?o.map(v=>{
+  const pc=pcat(),seq=mf==="p"?pgroups(o).flatMap(([c,l])=>[{h:c},...l.map(v=>({v}))]):o.map(v=>({v}));
+  $("ml").innerHTML=o.length?seq.map(x=>{if(x.h!==undefined)return`<li class="gh">${esc(x.h)}</li>`;const v=x.v;
     if(bedit===v&&mf==="p")return`<li><span>${esc(v)}</span><input id="bi" value="${esc(OPx.bc[v]||"")}" placeholder="條碼（留空＝清除）"><span><button data-sb="${esc(v)}">儲存</button><button class="g" data-cn="1">取消</button></span></li>`;
     if(medit===v)return`<li><input id="me" ${f.num?'type="number" step="any" min="0"':""} value="${esc(v)}"><span><button data-sv="${esc(v)}">儲存</button><button class="g" data-cn="1">取消</button></span></li>`;
     const n=rows.filter(r=>String(r[mf])===v).length+(mf==="p"?sales.filter(r=>r.p===v).length:0);
-    return`<li data-v="${esc(v)}">${canW?'<span class="dh">☰</span>':""}<span class="nm">${esc(v)}<span class="u">${n?"已用 "+n+" 筆":""}</span>${mf==="p"&&OPx.bc[v]?`<span class="u">條碼 ${esc(OPx.bc[v])}</span>`:""}</span>${canW?`<span>${mf==="p"?`<button class="g" data-bc="${esc(v)}">條碼</button>`:""}<button class="g" data-rn="${esc(v)}">改名</button><button class="g dg" data-dl="${esc(v)}">刪除</button></span>`:""}</li>`}).join(""):'<li class="em">尚無選項</li>';
+    return`<li data-v="${esc(v)}" data-g="${mf==="p"?esc(pc[v]||"未分類"):""}">${canW?'<span class="dh">☰</span>':""}<span class="nm">${esc(v)}<span class="u">${n?"已用 "+n+" 筆":""}</span>${mf==="p"&&OPx.bc[v]?`<span class="u">條碼 ${esc(OPx.bc[v])}</span>`:""}</span>${canW?`<span>${mf==="p"?`<button class="g" data-bc="${esc(v)}">條碼</button>`:""}<button class="g" data-rn="${esc(v)}">改名</button><button class="g dg" data-dl="${esc(v)}">刪除</button></span>`:""}</li>`}).join(""):'<li class="em">尚無選項</li>';
   if(medit!==null&&$("me"))$("me").focus();
   $("ac").innerHTML=mode==="cloud"||mode==="denied"?`登入帳號：${esc(who)}<div class="mrow" style="margin:10px 0 0"><button class="g" id="lo">登出</button><button class="g" id="pr">寄送重設密碼信</button></div><div class="ft">資料存在 Firebase 雲端，名單內的登入人員會看到同一份資料。${mode==="denied"?"<br>目前這個帳號沒有讀寫權限，請確認 Firestore 規則。":""}</div>`:"連線中…";
   
@@ -248,8 +250,15 @@ let FO={};
 const saleHtml=r=>{const c=FO[r.id]||0,g=tot(r)-c;return`<div class="it" data-sid="${esc(r.id)}"><div class="a"><span>${esc(r.p)}</span><span>${money(tot(r))}</span></div><div class="b">${esc(String(r.d).replace(/-/g,"/"))}・${num(r.q)} × ${money(r.m)}・先進先出成本 ${money(c)}${Math.abs(g)>.005?"・毛利 "+money(g):""}${r.n?"・"+esc(r.n):""}</div></div>`};
 function r4(){const l=sorted(inP(rows));$("b1").textContent=l.length;$("b2").textContent=num(l.reduce((a,r)=>a+Number(r.q),0));$("b3").textContent=money(l.reduce((a,r)=>a+tot(r),0));$("bt").textContent="📥 進貨紀錄（"+plab()+"）";$("tb1").innerHTML=l.length?l.map(rowHtml).join(""):empD}
 function r5(){FO=fifo().out;const l=sorted(inP(sales));$("x1").textContent=l.length;$("x2").textContent=num(l.reduce((a,r)=>a+Number(r.q),0));$("x3").textContent=money(l.reduce((a,r)=>a+tot(r),0));$("xt").textContent="📤 銷貨紀錄（"+plab()+"）";$("tb2").innerHTML=l.length?l.map(saleHtml).join(""):empD}
+function pcat(){const m={};[...rows].sort((a,b)=>String(a.d).localeCompare(String(b.d))||String(a.id).localeCompare(String(b.id))).forEach(r=>{if(r.p&&r.c)m[r.p]=r.c});return m}
+const catOrder=ks=>{const cs=OP().c;return ks.sort((a,b)=>{const x=cs.indexOf(a),y=cs.indexOf(b);return(x<0?999:x)-(y<0?999:y)||a.localeCompare(b,"zh-TW")})};
+function pgroups(list){const m=pcat(),g={};list.forEach(p=>{const c=m[p]||"未分類";(g[c]=g[c]||[]).push(p)});return catOrder(Object.keys(g)).map(c=>[c,g[c]])}
+const optHtml=v=>`<option value="${esc(v)}">${esc(v)}</option>`;
+const optsHtml=k=>{const op=OP()[k];return k==="p"?pgroups(op).map(([c,l])=>`<optgroup label="${esc(c)}">${l.map(optHtml).join("")}</optgroup>`).join(""):op.map(optHtml).join("")};
 function r6(){const bcm=OP().bc,v=Object.values(inv()).sort((a,b)=>a.st-b.st||a.p.localeCompare(b.p,"zh-TW"));$("i1").textContent=v.length;$("i2").textContent=money(v.reduce((a,o)=>a+Math.max(o.val,0),0));$("i3").textContent=v.filter(o=>o.st<=0).length;
-  $("tb3").innerHTML=v.length?v.map(o=>`<div class="it" data-pk="${esc(o.p)}"><div class="a"><span>${esc(o.p)}</span><span class="${o.st<=0?"dg":""}">庫存 ${num(o.st)}</span></div><div class="b">進貨 ${num(o.iq)}・銷貨 ${num(o.oq)}・平均進價 ${money(o.avg)}・庫存金額 ${money(o.val)}${bcm[o.p]?"・條碼 "+esc(bcm[o.p]):""}</div></div>`).join(""):empD}
+  const pc=pcat(),gg={};v.forEach(o=>{const c=pc[o.p]||"未分類";(gg[c]=gg[c]||[]).push(o)});
+  const item=o=>`<div class="it" data-pk="${esc(o.p)}"><div class="a"><span>${esc(o.p)}</span><span class="${o.st<=0?"dg":""}">庫存 ${num(o.st)}</span></div><div class="b">進貨 ${num(o.iq)}・銷貨 ${num(o.oq)}・平均進價 ${money(o.avg)}・庫存金額 ${money(o.val)}${bcm[o.p]?"・條碼 "+esc(bcm[o.p]):""}</div></div>`;
+  $("tb3").innerHTML=v.length?catOrder(Object.keys(gg)).map(c=>`<div class="gh">${esc(c)}<span>${gg[c].length} 項・庫存金額 ${money(gg[c].reduce((a,o)=>a+Math.max(o.val,0),0))}</span></div>`+gg[c].map(item).join("")).join(""):empD}
 function openH(p){hp=p;const F=fifo(),lots=(F.L[p]||[]).slice().sort((a,b)=>String(b.d).localeCompare(String(a.d))||String(b.id).localeCompare(String(a.id))),o=inv()[p]||{iq:0,st:0,val:0,avg:0};
   $("mt3").textContent="📦 "+p;
   $("g3s").textContent=`庫存 ${num(o.st)}・庫存金額 ${money(o.val)}・累計進貨 ${num(o.iq)}・平均進價 ${money(o.avg)}${OP().bc[p]?"・條碼 "+OP().bc[p]:""}`;
@@ -262,7 +271,7 @@ const getVal=k=>$("f_"+k).value==="__new"?$("f_"+k+"_n").value.trim():$("f_"+k).
 function tg(k){const on=$("f_"+k).value==="__new",n=$("f_"+k+"_n");n.hidden=!on;n.required=on;if(!on)n.value=""}
 function setVal(k,v){v=String(v??"");const sel=$("f_"+k);if(v&&![...sel.options].some(o=>o.value===v)){const o=document.createElement("option");o.value=o.textContent=v;sel.insertBefore(o,sel.lastElementChild)}sel.value=v;tg(k)}
 function fillSel(k){const f=F[k],sel=$("f_"+k),isNew=sel.value==="__new",cur=getVal(k);
-  sel.innerHTML=`<option value="">${f.ph}</option>`+OP()[k].map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("")+`<option value="__new">${f.nw}</option>`;
+  sel.innerHTML=`<option value="">${f.ph}</option>`+optsHtml(k)+`<option value="__new">${f.nw}</option>`;
   if(isNew)sel.value="__new";else setVal(k,cur)}
 const calc=()=>{$("f_t").value=money(Number(getVal("q"))*Number($("f_m").value))};
 function openM(r){edit=r?r.id:null;$("md").hidden=false;$("mt").textContent=r?"✏️ 編輯耗材":"➕ 新增耗材";$("f").reset();K.forEach(tg);K.forEach(fillSel);
@@ -296,7 +305,7 @@ function gauto(){gstock();const p=$("g_p").value,q=Number($("g_q").value),h=$("g
   const id="__t",F=fifo(sales.filter(x=>x.id!==edit2).concat({id,d:$("g_d").value||today(),p,q})),c=F.out[id],u=Math.round(c/q*1e6)/1e6;
   h.textContent="先進先出成本 "+money(c)+"（單價 "+money(u)+"）"+(F.sh[id]?"；庫存不足，缺 "+num(F.sh[id])+" 以最近進價估算":"");
   if($("g_m").dataset.man!=="1")$("g_m").value=u;gcalc()}
-function fillG(){const sel=$("g_p"),cur=sel.value;sel.innerHTML='<option value="">請選擇商品</option>'+OP().p.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");setG(cur);gstock()}
+function fillG(){const sel=$("g_p"),cur=sel.value;sel.innerHTML='<option value="">請選擇商品</option>'+optsHtml("p");setG(cur);gstock()}
 function openG(r){edit2=r?r.id:null;$("md2").hidden=false;$("mt2").textContent=r?"✏️ 編輯銷貨":"➕ 新增銷貨";$("f2").reset();fillG();$("g_d").value=r?r.d:today();if(r){setG(r.p);$("g_b").value=OP().bc[r.p]||"";$("g_q").value=r.q;$("g_m").value=r.m;$("g_n").value=r.n||""}$("g_m").dataset.man=r?"1":"0";gauto();$("dl2").hidden=!r}
 const closeG=()=>{$("md2").hidden=true;edit2=null};
 $("g_p").onchange=()=>{const v=$("g_p").value;$("g_b").value=v?OP().bc[v]||"":"";gauto()};
@@ -326,11 +335,13 @@ $("ma").onclick=()=>run(async()=>{let v=$("mn").value.trim();if(!v)return;if(F[m
   const o=OP();if(!o[mf].includes(v)){o[mf].push(v);await putOP(o)}$("mn").value=""});
 $("mn").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();$("ma").click()}};
 let drag=null;
-$("ml").addEventListener("pointerdown",e=>{const h=e.target.closest(".dh");if(!h)return;const li=h.closest("li");drag={li};li.classList.add("dragging");$("ml").setPointerCapture(e.pointerId);e.preventDefault()});
-$("ml").addEventListener("pointermove",e=>{if(!drag)return;const els=[...$("ml").querySelectorAll("li[data-v]")].filter(x=>x!==drag.li);let before=null;for(const x of els){const r=x.getBoundingClientRect();if(e.clientY<r.top+r.height/2){before=x;break}}if(drag.li.nextElementSibling!==before)$("ml").insertBefore(drag.li,before)});
-const endDrag=()=>{if(!drag)return;const li=drag.li;drag=null;if(!li.isConnected)return;li.classList.remove("dragging");const order=[...$("ml").querySelectorAll("li[data-v]")].map(x=>x.dataset.v),o=OP();
-  if(order.length===o[mf].length&&order.some((v,i)=>v!==o[mf][i])){o[mf]=order;run(()=>putOP(o))}else r3()};
-$("ml").addEventListener("pointerup",endDrag);$("ml").addEventListener("pointercancel",endDrag);
+$("ml").addEventListener("pointerdown",e=>{const h=e.target.closest(".dh");if(!h)return;const li=h.closest("li");drag={li,moved:false};li.classList.add("dragging");$("ml").setPointerCapture(e.pointerId);e.preventDefault()});
+$("ml").addEventListener("pointermove",e=>{if(!drag)return;const g=drag.li.dataset.g,els=[...$("ml").querySelectorAll("li[data-v]")].filter(x=>x!==drag.li&&x.dataset.g===g);if(!els.length)return;let before=null;for(const x of els){const r=x.getBoundingClientRect();if(e.clientY<r.top+r.height/2){before=x;break}}
+  if(!before)before=els[els.length-1].nextElementSibling;
+  if(drag.li.nextElementSibling!==before){$("ml").insertBefore(drag.li,before);drag.moved=true}});
+const endDrag=()=>{if(!drag)return;const{li,moved}=drag;drag=null;if(!li.isConnected)return;li.classList.remove("dragging");if(!moved)return;const order=[...$("ml").querySelectorAll("li[data-v]")].map(x=>x.dataset.v),o=OP();
+  if(order.length===o[mf].length){o[mf]=order;run(()=>putOP(o))}else r3()};
+$("ml").addEventListener("pointercancel",endDrag);
 $("ml").onclick=e=>{const d=e.target.dataset,b=e.target;
   if(d.rn!==undefined){medit=d.rn;r3()}else if(d.cn){medit=null;bedit=null;r3()}else if(d.bc!==undefined){bedit=d.bc;r3();$("bi")&&$("bi").focus()}
   else if(d.sb!==undefined)run(async()=>{const o=OP(),b=$("bi").value.trim();if(b){const hit=Object.keys(o.bc).find(k=>o.bc[k]===b&&k!==d.sb);if(hit){toast("此條碼已屬於「"+hit+"」");return}o.bc[d.sb]=b}else delete o.bc[d.sb];bedit=null;await putOP(o)})
