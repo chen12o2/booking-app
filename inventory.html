@@ -51,6 +51,7 @@ tfoot td,.tt td{font-weight:700;border-top:2px solid var(--bd);border-bottom:0}
 .gh{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;font-size:13px;color:var(--ac);padding:12px 2px 4px}.gh span{color:var(--mu);font-weight:400;font-size:12px}#ml li.gh{border-bottom:0;padding:12px 2px 2px}
 .ln{border:1px solid var(--bd);border-radius:12px;padding:10px;margin-top:10px}.lh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.lh button{padding:4px 10px;font-size:12px}
 .s3{grid-template-columns:repeat(3,1fr)!important}
+input,select{font-size:16px}
 @media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -133,7 +134,7 @@ tfoot td,.tt td{font-weight:700;border-top:2px solid var(--bd);border-bottom:0}
 
 <div class="mk" id="md3" hidden><div class="sh"><h2 id="mt3"></h2><div class="ft" id="g3s" style="margin:0 0 8px"></div><div id="g3l"></div><div class="bt"><button type="button" class="g" id="cx3">關閉</button></div></div></div>
 
-<div class="mk" id="lg" style="align-items:center;z-index:30;background:var(--bg)"><div class="sh" style="border-radius:18px;max-width:380px;margin:16px;border:1px solid var(--bd)"><h2>🔐 登入</h2><div class="ft" style="margin:0 0 10px">使用信箱與密碼登入進銷存後台</div>
+<div class="mk" id="lg" hidden style="align-items:center;z-index:30;background:var(--bg)"><div class="sh" style="border-radius:18px;max-width:380px;margin:16px;border:1px solid var(--bd)"><h2>🔐 登入</h2><div class="ft" style="margin:0 0 10px">使用信箱與密碼登入進銷存後台</div>
 <form id="lgf"><label>電子信箱<input type="email" id="lgm" autocomplete="username" required></label><label style="margin-top:8px">密碼<input type="password" id="lgp" autocomplete="current-password" required></label>
 <div class="bt"><button type="submit" id="lgb" style="flex:1">登入</button></div><div class="bt" style="margin-top:8px"><button type="button" class="g" id="lgr" style="flex:1">忘記密碼</button></div></form>
 <div class="ft dg" id="lge" style="margin-top:10px"></div></div></div>
@@ -151,6 +152,11 @@ const lset=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const fix=r=>{if(r.v===2)return{...r,q:Number(r.q),m:Number(r.m)};const q=Number(r.q);return{...r,v:2,c:r.c||"",q,m:q>0?Math.round(Number(r.m)/q*100)/100:Number(r.m)}};
 let rows=[],sales=[],edit2=null,hp=null,bedit=null,cedit=null,shop={name:"",logo:""},OPdoc=null,db=null,canW=true,mode="wait",who="",edit=null,py=String(new Date().getFullYear()),pm=py,pt="m",mf="c",medit=null;
 const tot=r=>Number(r.q)*Number(r.m);
+const fin=x=>{x=Number(x);return Number.isFinite(x)?x:0};
+const pdate=v=>{const m=String(v??"").trim().match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);if(!m)return"";const mo=+m[2],d=+m[3];if(mo<1||mo>12||d<1||d>31)return"";return m[1]+"-"+String(mo).padStart(2,"0")+"-"+String(d).padStart(2,"0")};
+const cleanR=r=>({...r,id:String(r.id),q:fin(r.q),m:fin(r.m),d:pdate(r.d)||String(r.d||"")});
+const nid=i=>String(Date.now()+(i||0))+"-"+Math.random().toString(36).slice(2,6);
+const bg=(ps,ok)=>{if(ok)toast(ok);Promise.all(ps).catch(e=>toast("儲存失敗"+(e&&e.code?"（"+e.code+"）":"")+"，請檢查網路後再試"))};
 const money=n=>"$"+Number(n||0).toLocaleString("zh-TW",{maximumFractionDigits:2});
 const num=n=>Number(n||0).toLocaleString("zh-TW");
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -177,12 +183,13 @@ function centerPill(){const on=$("mg").querySelector(".on");if(on)$("mg").scroll
 function go(p){$("pbar").hidden=!["p1","pbuy","psell"].includes(p);document.querySelectorAll(".pg").forEach(e=>e.classList.toggle("on",e.id===p));document.querySelectorAll("#nv button").forEach(b=>b.classList.toggle("on",b.dataset.p===p));scrollTo({top:0});if(!$("pbar").hidden)centerPill()}
 $("nv").onclick=e=>{const b=e.target.closest("button");if(b)go(b.dataset.p)};
 
-function head(){$("sy").textContent=mode==="cloud"?"☁️ 雲端同步"+(canW?"":"・僅檢視"):mode==="denied"?"⚠️ 沒有權限，請確認 Firestore 規則與帳號":"連線中…";shopHead()}
+function head(){$("sy").textContent=mode==="cloud"?(!navigator.onLine?"📴 離線中・資料會在連線後自動上傳":(typeof pendE!=="undefined"&&(pendE||pendS))?"⏳ 同步中…":"☁️ 雲端同步")+(canW?"":"・僅檢視"):mode==="denied"?"⚠️ 沒有權限，請確認 Firestore 規則與帳號":"連線中…";shopHead()}
 function shopHead(){$("hn").textContent="店面進銷存";$("hs").textContent=shop.name||"INVENTORY DASHBOARD";$("hs").className=shop.name?"nm":"";document.title=(shop.name?shop.name+" ":"")+"店面進銷存";const ok=/^data:image\//.test(shop.logo||"");$("hl").hidden=!ok;$("hl").innerHTML=ok?`<img src="${esc(shop.logo)}" alt="">`:""}
 function r1(){
   const mo=[...new Set(rows.map(r=>String(r.d).slice(0,7)))].sort().reverse();
   $("yr").textContent=py+"年";
-  $("mg").innerHTML=`<button data-m="${py}" class="${pm===py?"on":""}">全年</button>`+Array.from({length:12},(_,i)=>{const m=py+"-"+String(i+1).padStart(2,"0");return`<button data-m="${m}" class="${pm===m?"on":""}"${mo.includes(m)?"":' style="opacity:.55"'}>${i+1}月</button>`}).join("");
+  const moAll=new Set([...rows,...sales].map(r=>String(r.d).slice(0,7)));
+  $("mg").innerHTML=`<button data-m="${py}" class="${pm===py?"on":""}">全年</button>`+Array.from({length:12},(_,i)=>{const m=py+"-"+String(i+1).padStart(2,"0");return`<button data-m="${m}" class="${pm===m?"on":""}"${moAll.has(m)?"":' style="opacity:.55"'}>${i+1}月</button>`}).join("");
   const on=$("mg").querySelector(".on");if(on)$("mg").scrollLeft=on.offsetLeft-($("mg").clientWidth-on.offsetWidth)/2;
   const pl=pm.length===4?pm+"年全年":pm.slice(0,4)+"年"+Number(pm.slice(5))+"月";
   const rs=pm?rows.filter(r=>String(r.d).startsWith(pm)):rows;
@@ -196,7 +203,7 @@ function r1(){
   $("ctt").textContent="📂 "+pl+" 分類統計";
   $("ct").innerHTML=ck.length?ck.map(c=>`<tr><td>${esc(c)}</td><td class="n">${cg[c].n}</td><td class="n">${num(cg[c].q)}</td><td class="n">${money(cg[c].a)}</td><td class="n">${T?Math.round(cg[c].a/T*1000)/10:0}%</td></tr>`).join("")+`<tr class="tt"><td>合計</td><td class="n">${rs.length}</td><td class="n">${num(Q)}</td><td class="n">${money(T)}</td><td class="n">${T?"100%":"0%"}</td></tr>`:emp(5);
   document.querySelectorAll("#pg button").forEach(x=>x.classList.toggle("on",x.dataset.t===pt));
-  const cs=[...new Set(rows.map(r=>r.c||"未分類"))].sort((x,y)=>x.localeCompare(y,"zh-TW"));
+  const cs=catOrder([...new Set(rows.map(r=>r.c||"未分類"))]);
   const val=r=>pt==="q"?Number(r.q):tot(r),fmt=v=>pt==="q"?num(v):money(v);
   const sum=(m,c)=>rows.filter(r=>(!m||String(r.d).startsWith(m))&&(!c||(r.c||"未分類")===c)).reduce((x,r)=>x+val(r),0);
   const cell=v=>v?fmt(v):"-";
@@ -214,6 +221,7 @@ function r2(){
 }
 function r3(){
   document.querySelectorAll("#sg button").forEach(b=>b.classList.toggle("on",b.dataset.f===mf));
+  const keep={me:$("me")&&$("me").value,bi:$("bi")&&$("bi").value,ci:$("ci")&&$("ci").value};
   const OPx=OP(),f=F[mf],o=OPx[mf];
   $("mn").type=f.num?"number":"text";$("mn").placeholder="輸入新"+f.lb;$("mn").disabled=$("ma").disabled=$("mc").disabled=!canW;$("mc").hidden=mf!=="p";if(mf==="p"){const cur=$("mc").value;$("mc").innerHTML='<option value="">分類（可不選）</option>'+OPx.c.map(optHtml).join("");$("mc").value=OPx.c.includes(cur)?cur:""}
   const pc=pcat(),seq=mf==="p"?pgroups(o).flatMap(([c,l])=>[{h:c},...l.map(v=>({v}))]):o.map(v=>({v}));
@@ -223,6 +231,7 @@ function r3(){
     if(medit===v)return`<li><input id="me" ${f.num?'type="number" step="any" min="0"':""} value="${esc(v)}"><span><button data-sv="${esc(v)}">儲存</button><button class="g" data-cn="1">取消</button></span></li>`;
     const n=rows.filter(r=>String(r[mf])===v).length+(mf==="p"?sales.filter(r=>r.p===v).length:0);
     return`<li data-v="${esc(v)}" data-g="${mf==="p"?esc(pc[v]||"未分類"):""}">${canW?'<span class="dh">☰</span>':""}<span class="nm">${esc(v)}<span class="u">${n?"已用 "+n+" 筆":""}</span>${mf==="p"&&OPx.bc[v]?`<span class="u">條碼 ${esc(OPx.bc[v])}</span>`:""}</span>${canW?`<span>${mf==="p"?`<button class="g" data-ct="${esc(v)}">分類</button><button class="g" data-bc="${esc(v)}">條碼</button>`:""}<button class="g" data-rn="${esc(v)}">改名</button><button class="g dg" data-dl="${esc(v)}">刪除</button></span>`:""}</li>`}).join(""):'<li class="em">尚無選項</li>';
+  for(const k in keep)if(keep[k]!=null&&$(k))$(k).value=keep[k];
   if(medit!==null&&$("me"))$("me").focus();
   $("ac").innerHTML=mode==="cloud"||mode==="denied"?`登入帳號：${esc(who)}<div class="mrow" style="margin:10px 0 0"><button class="g" id="lo">登出</button><button class="g" id="pr">寄送重設密碼信</button></div><div class="ft">資料存在 Firebase 雲端，名單內的登入人員會看到同一份資料。${mode==="denied"?"<br>目前這個帳號沒有讀寫權限，請確認 Firestore 規則。":""}</div>`:"連線中…";
   
@@ -305,16 +314,16 @@ $("fadd").onclick=()=>addLine().scrollIntoView({block:"nearest"});
 $("cx").onclick=closeM;$("md").onclick=e=>{if(e.target===$("md"))closeM()};
 document.onkeydown=e=>{if(e.key==="Escape"){closeM();closeG();closeH()}};
 $("f").onsubmit=e=>{e.preventDefault();run(async()=>{
-  const op=OP();let ch=false;const recs=[],stamp=Date.now();
+  const op=OP();let ch=false;const recs=[];
   for(const[i,ln]of lines().entries()){
-    const o={id:edit||String(stamp+i),v:2,d:$("f_d").value,c:gv(ln,"c"),p:gv(ln,"p"),q:Number(gv(ln,"q")),m:Number(ln.querySelector(".l_m").value),s:getVal("s"),u:$("f_u").value.trim()};
+    const o={id:edit||nid(i),v:2,d:$("f_d").value,c:gv(ln,"c"),p:gv(ln,"p"),q:Number(gv(ln,"q")),m:Number(ln.querySelector(".l_m").value),s:getVal("s"),u:$("f_u").value.trim()};
     K.forEach(k=>{const v=String(o[k]);if(o[k]!==""&&!op[k].includes(v)){op[k].push(v);ch=true}});
     const b=ln.querySelector(".l_b").value.trim();
     if(b){const hit=Object.keys(op.bc).find(k=>op.bc[k]===b&&k!==String(o.p));if(hit){toast("條碼 "+b+" 已屬於「"+hit+"」");return}if(op.bc[o.p]!==b){op.bc[o.p]=b;ch=true}}
     if(o.c&&op.pc[o.p]!==o.c){op.pc[o.p]=o.c;ch=true}
     recs.push(o)}
-  for(const o of recs)await putRow(o);if(ch)await putOP(op);closeM();toast(recs.length>1?"已儲存 "+recs.length+" 筆":"已儲存")})};
-$("dl").onclick=e=>arm(e.target,()=>run(async()=>{await delRow(edit);closeM();toast("已刪除")}),"確認刪除");
+  const ps=recs.map(o=>putRow(o));if(ch)ps.push(putOP(op));closeM();bg(ps,recs.length>1?"已儲存 "+recs.length+" 筆":"已儲存")})};
+$("dl").onclick=e=>arm(e.target,()=>run(async()=>{const p=delRow(edit);closeM();bg([p],"已刪除")}),"確認刪除");
 const rowClick=e=>{if(e.target.closest("a")||!canW)return;const tr=e.target.closest(".it[data-id]");if(tr){const r=rows.find(x=>x.id===tr.dataset.id);if(r)openM(r)}};
 $("t1").onclick=rowClick;$("t2").onclick=rowClick;$("tb1").onclick=rowClick;
 
@@ -355,10 +364,10 @@ $("gl").addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.classList.co
 $("gl").addEventListener("click",e=>{const b=e.target.closest("[data-rm]");if(b){b.closest(".ln").remove();renum("#gl");gall()}});
 $("gadd").onclick=()=>addG().scrollIntoView({block:"nearest"});
 $("g_d").onchange=gall;$("cx2").onclick=closeG;$("md2").onclick=e=>{if(e.target===$("md2"))closeG()};
-$("f2").onsubmit=e=>{e.preventDefault();run(async()=>{const stamp=Date.now(),ls=lines2();
-  for(const[i,ln]of ls.entries())await putSale({id:edit2||String(stamp+i),v:1,d:$("g_d").value,p:ln.querySelector(".g_p").value,q:Number(ln.querySelector(".g_q").value),m:Number(ln.querySelector(".g_m").value),n:$("g_n").value.trim()});
-  closeG();toast(ls.length>1?"已儲存 "+ls.length+" 筆":"已儲存")})};
-$("dl2").onclick=e=>arm(e.target,()=>run(async()=>{await delSale(edit2);closeG();toast("已刪除")}),"確認刪除");
+$("f2").onsubmit=e=>{e.preventDefault();run(async()=>{const ls=lines2(),ps=[];
+  for(const[i,ln]of ls.entries())ps.push(putSale({id:edit2||nid(i),v:1,d:$("g_d").value,p:ln.querySelector(".g_p").value,q:Number(ln.querySelector(".g_q").value),m:Number(ln.querySelector(".g_m").value),n:$("g_n").value.trim()}));
+  closeG();bg(ps,ls.length>1?"已儲存 "+ls.length+" 筆":"已儲存")})};
+$("dl2").onclick=e=>arm(e.target,()=>run(async()=>{const p=delSale(edit2);closeG();bg([p],"已刪除")}),"確認刪除");
 $("tb2").onclick=e=>{if(!canW)return;const it=e.target.closest(".it[data-sid]");if(it){const r=sales.find(x=>x.id===it.dataset.sid);if(r)openG(r)}};
 $("tb3").onclick=e=>{const it=e.target.closest(".it[data-pk]");if(it)openH(it.dataset.pk)};
 $("cx3").onclick=closeH;$("md3").onclick=e=>{if(e.target===$("md3"))closeH()};
@@ -376,7 +385,7 @@ $("pv").onclick=e=>{if(e.target.dataset.m){e.preventDefault();pm=e.target.datase
 ["k","fc","fs","fa","fb"].forEach(i=>$(i).oninput=r2);
 $("rs0").onclick=()=>{["k","fc","fs","fa","fb"].forEach(i=>$(i).value="");r2()};
 
-$("sg").onclick=e=>{if(e.target.dataset.f){mf=e.target.dataset.f;medit=null;$("mn").value="";r3()}};
+$("sg").onclick=e=>{if(e.target.dataset.f){mf=e.target.dataset.f;medit=null;bedit=null;cedit=null;$("mn").value="";r3()}};
 $("ma").onclick=()=>run(async()=>{let v=$("mn").value.trim();if(!v)return;if(F[mf].num){if(isNaN(Number(v))||Number(v)<0)return;v=String(Number(v))}
   const o=OP();if(!o[mf].includes(v)){o[mf].push(v);if(mf==="p"&&$("mc").value)o.pc[v]=$("mc").value;await putOP(o)}$("mn").value="";$("mc").value=""});
 $("mn").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();$("ma").click()}};
@@ -387,10 +396,10 @@ $("ml").addEventListener("pointermove",e=>{if(!drag)return;const g=drag.li.datas
   if(drag.li.nextElementSibling!==before){$("ml").insertBefore(drag.li,before);drag.moved=true}});
 const endDrag=()=>{if(!drag)return;const{li,moved}=drag;drag=null;if(!li.isConnected)return;li.classList.remove("dragging");if(!moved)return;const order=[...$("ml").querySelectorAll("li[data-v]")].map(x=>x.dataset.v),o=OP();
   if(order.length===o[mf].length){o[mf]=order;run(()=>putOP(o))}else r3()};
-$("ml").addEventListener("pointercancel",endDrag);
+$("ml").addEventListener("pointerup",endDrag);$("ml").addEventListener("pointercancel",endDrag);
 $("ml").onclick=e=>{const d=e.target.dataset,b=e.target;
   if(d.rn!==undefined){medit=d.rn;r3()}else if(d.cn){medit=null;bedit=null;cedit=null;r3()}else if(d.ct!==undefined){cedit=d.ct;r3()}else if(d.bc!==undefined){bedit=d.bc;r3();$("bi")&&$("bi").focus()}
-  else if(d.sc!==undefined)run(async()=>{const o=OP(),c=$("ci").value,p=d.sc;if(c)o.pc[p]=c;else delete o.pc[p];cedit=null;await putOP(o);for(const r of rows.filter(r=>r.p===p&&(r.c||"")!==c))await putRow({...r,c})})
+  else if(d.sc!==undefined)run(async()=>{const o=OP(),c=$("ci").value,p=d.sc;if(c)o.pc[p]=c;else delete o.pc[p];cedit=null;const ps=[putOP(o),...rows.filter(r=>r.p===p&&(r.c||"")!==c).map(r=>putRow({...r,c}))];bg(ps)})
   else if(d.sb!==undefined)run(async()=>{const o=OP(),b=$("bi").value.trim();if(b){const hit=Object.keys(o.bc).find(k=>o.bc[k]===b&&k!==d.sb);if(hit){toast("此條碼已屬於「"+hit+"」");return}o.bc[d.sb]=b}else delete o.bc[d.sb];bedit=null;await putOP(o)})
   else if(d.sv!==undefined)run(async()=>{let nv=$("me").value.trim();const old=d.sv;if(F[mf].num&&nv!==""&&!isNaN(Number(nv)))nv=String(Number(nv));
     if(!nv||nv===old){medit=null;r3();return}
@@ -398,10 +407,10 @@ $("ml").onclick=e=>{const d=e.target.dataset,b=e.target;
     if(mf==="p"&&o.bc[old]){if(!o.bc[nv])o.bc[nv]=o.bc[old];delete o.bc[old]}
     if(mf==="p"&&o.pc[old]){if(!o.pc[nv])o.pc[nv]=o.pc[old];delete o.pc[old]}
     if(mf==="c")for(const k in o.pc)if(o.pc[k]===old)o.pc[k]=nv;
-    if(!F[mf].num)for(const r of rows.filter(r=>String(r[mf])===old))await putRow({...r,[mf]:nv});
-    if(mf==="p")for(const r of sales.filter(r=>r.p===old))await putSale({...r,p:nv});
-    medit=null;await putOP(o)});
-  else if(d.dl!==undefined)arm(b,()=>run(async()=>{const o=OP();o[mf]=o[mf].filter(x=>x!==d.dl);await putOP(o)}),"確認刪除")};
+    const ps=[];if(!F[mf].num)rows.filter(r=>String(r[mf])===old).forEach(r=>ps.push(putRow({...r,[mf]:nv})));
+    if(mf==="p")sales.filter(r=>r.p===old).forEach(r=>ps.push(putSale({...r,p:nv})));
+    medit=null;ps.push(putOP(o));bg(ps)});
+  else if(d.dl!==undefined)arm(b,()=>run(async()=>{const o=OP();o[mf]=o[mf].filter(x=>x!==d.dl);if(mf==="p"){delete o.bc[d.dl];delete o.pc[d.dl]}await putOP(o)}),"確認刪除")};
 
 async function dlCsv(name,hd,list){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';const csv="\ufeff"+[hd,...list.map(r=>r.map(q).join(","))].join("\r\n");
   try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=name;a.click()}catch(e){}}
@@ -415,32 +424,36 @@ $("imf").onchange=e=>{const f=e.target.files[0];e.target.value="";if(!f)return;c
   const t=parseCSV(rd.result),h=t.shift()||[],ix=n=>h.indexOf(n);
   if(!t.length||ix("日期")<0||ix("商品")<0){toast("CSV 格式不符，請使用本系統匯出的 CSV");return}
   if(!confirm("要匯入 "+t.length+" 筆資料嗎？重複匯入會產生重複資料。"))return;
-  const g=(r,n)=>{const i=ix(n);return i<0?"":(r[i]||"").trim()},op=OP(),stamp=Date.now();let n=0,b=db.batch();
-  for(const r of t){const d=g(r,"日期").replace(/\//g,"-");if(!d||!g(r,"商品"))continue;const id=String(stamp+n),isB=impKind==="b";
-    const q=Number(g(r,isB?"項目數量":"數量")),tt=Number(g(r,"總金額")),m=g(r,"單價")!==""?Number(g(r,"單價")):(q?tt/q:0);
+  const g=(r,n)=>{const i=ix(n);return i<0?"":(r[i]||"").trim()},pn=v=>{v=String(v).replace(/NT|[,\s$＄元]/gi,"");return v===""?NaN:Number(v)},op=OP();let n=0,bad=0,b=db.batch();
+  for(const r of t){if(!r.some(x=>x.trim()))continue;const d=pdate(g(r,"日期")),isB=impKind==="b",id=nid(n);
+    const q=pn(g(r,isB?"項目數量":"數量")),tt=pn(g(r,"總金額")),m=g(r,"單價")!==""?pn(g(r,"單價")):(q?tt/q:NaN);
+    if(!d||!g(r,"商品")||!Number.isFinite(q)||!Number.isFinite(m)){bad++;continue}
     const o=isB?{id,v:2,d,c:g(r,"分類"),p:g(r,"商品"),q,m,s:g(r,"購入來源"),u:g(r,"網址")}:{id,v:1,d,p:g(r,"商品"),q,m,n:g(r,"備註")};
     const bc=g(r,"條碼");if(bc&&!op.bc[o.p])op.bc[o.p]=bc;
     if(isB)K.forEach(k=>{const v=String(o[k]??"");if(v&&!op[k].includes(v))op[k].push(v)});else if(!op.p.includes(o.p))op.p.push(o.p);
     b.set(db.collection(isB?"inv_entries":"inv_sales").doc(id),o);n++;
     if(n%400===0){await b.commit();b=db.batch()}}
-  await b.commit();await putOP(op);toast("已匯入 "+n+" 筆")});rd.readAsText(f)};
+  const ps=[b.commit(),putOP(op)];bg(ps,"已匯入 "+n+" 筆"+(bad?"，略過 "+bad+" 筆格式不正確的資料":""))});rd.readAsText(f)};
 
-const authMsg=x=>({"auth/invalid-credential":"信箱或密碼錯誤","auth/wrong-password":"信箱或密碼錯誤","auth/user-not-found":"信箱或密碼錯誤","auth/invalid-email":"信箱格式不正確","auth/too-many-requests":"嘗試次數過多，請稍後再試","auth/network-request-failed":"網路連線失敗"}[x.code]||"登入失敗："+(x.code||x.message));
-let auth=null,unsubs=[];
+const authMsg=x=>({"auth/invalid-credential":"信箱或密碼錯誤","auth/invalid-login-credentials":"信箱或密碼錯誤","auth/missing-password":"請輸入密碼","auth/user-disabled":"此帳號已停用","auth/wrong-password":"信箱或密碼錯誤","auth/user-not-found":"信箱或密碼錯誤","auth/invalid-email":"信箱格式不正確","auth/too-many-requests":"嘗試次數過多，請稍後再試","auth/network-request-failed":"網路連線失敗"}[x.code]||"登入失敗："+(x.code||x.message));
+let auth=null,unsubs=[],pendE=false,pendS=false;
+addEventListener("online",()=>head());addEventListener("offline",()=>head());
+addEventListener("beforeunload",e=>{if(pendE||pendS){e.preventDefault();e.returnValue=""}});
 function fsErr(e){if(e&&e.code==="permission-denied"){mode="denied";canW=false;render();toast("沒有讀寫權限，請確認帳號與 Firestore 規則")}else toast("雲端同步中斷")}
 function listen(){
   unsubs.forEach(f=>f());unsubs=[];
-  unsubs.push(db.collection("inv_entries").onSnapshot(s=>{rows=s.docs.map(x=>x.data());render()},fsErr));
-  unsubs.push(db.collection("inv_sales").onSnapshot(s=>{sales=s.docs.map(x=>x.data());render()},fsErr));
+  const MD={includeMetadataChanges:true};
+  unsubs.push(db.collection("inv_entries").onSnapshot(MD,s=>{rows=s.docs.map(x=>cleanR(x.data()));pendE=s.metadata.hasPendingWrites;render()},fsErr));
+  unsubs.push(db.collection("inv_sales").onSnapshot(MD,s=>{sales=s.docs.map(x=>cleanR(x.data()));pendS=s.metadata.hasPendingWrites;render()},fsErr));
   unsubs.push(db.doc("inv_settings/shop").onSnapshot(s=>{shop={name:"",logo:"",...(s.exists?s.data():{})};render()},fsErr));
   unsubs.push(db.doc("inv_settings/options").onSnapshot(s=>{OPdoc=s.exists?s.data():null;render()},fsErr));
 }
 function boot(){
-  if(typeof firebase==="undefined"){$("lgf").hidden=true;$("lge").textContent="無法載入 Firebase，請檢查網路後重新整理。";return}
-  if(/貼上/.test(firebaseConfig.apiKey+firebaseConfig.appId)){$("lgf").hidden=true;$("lge").textContent="尚未設定 Firebase：請把 apiKey 與 appId 貼到檔案最上方的 firebaseConfig。";return}
-  firebase.initializeApp(firebaseConfig);auth=firebase.auth();
+  if(typeof firebase==="undefined"){$("lg").hidden=false;$("lgf").hidden=true;$("lge").textContent="無法載入 Firebase，請檢查網路後重新整理。";return}
+  if(/貼上/.test(firebaseConfig.apiKey+firebaseConfig.appId)){$("lg").hidden=false;$("lgf").hidden=true;$("lge").textContent="尚未設定 Firebase：請把 apiKey 與 appId 貼到檔案最上方的 firebaseConfig。";return}
+  const app=firebase.initializeApp(firebaseConfig,"inventory");auth=app.auth();
   auth.onAuthStateChanged(u=>{
-    if(u){who=u.email||"已登入";db=firebase.firestore();mode="cloud";canW=true;$("lg").hidden=true;listen();render()}
+    if(u){who=u.email||"已登入";db=app.firestore();mode="cloud";canW=true;$("lg").hidden=true;listen();render()}
     else{unsubs.forEach(f=>f());unsubs=[];db=null;rows=[];sales=[];OPdoc=null;shop={name:"",logo:""};mode="wait";$("lg").hidden=false;render()}
   });
   document.addEventListener("visibilitychange",()=>{if(!document.hidden&&db)db.disableNetwork().then(()=>db.enableNetwork()).catch(()=>{})});
